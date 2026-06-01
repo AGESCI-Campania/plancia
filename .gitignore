@@ -19,6 +19,8 @@ fixtures/prod_*.csv
 logs/
 # Screenshot del manuale (generati dallo script, non versionati)
 docs/manuale/screenshots/
+# PDF generati (artefatti, non versionati)
+docs/manuale/*.pdf
 # IDE
 .idea/
 *.iml

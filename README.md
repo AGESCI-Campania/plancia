@@ -203,12 +203,26 @@ La documentazione operativa per ruolo si trova in `docs/manuale/`:
 Le immagini sono in `docs/manuale/screenshots/` e vengono generate dallo script
 `docs/manuale/seed_e_screenshot.py` (richiede server in esecuzione su `localhost:8000`).
 
-## Pendenti / Roadmap
-Funzionalità non ancora implementate (in ordine di priorità):
+## Manuale — generazione PDF
 
-- [ ] PWA: service worker, autosave IndexedDB, coda di sync foto offline
-- [ ] Riconciliazione import con widget Tom Select (ora: input PK grezzo)
-- [ ] Import da file caricato via UI (ora: solo path su filesystem)
+Con [pandoc](https://pandoc.org/) installato:
+
+```bash
+make manual
+```
+
+Oppure direttamente:
+
+```bash
+cd docs/manuale && pandoc --pdf-engine=xelatex --toc --toc-depth=2 \
+  -V title="Plancia — Manuale d'uso" -V subtitle="Guidoncini Verdi · AGESCI Campania" \
+  -V date="$(date +'%B %Y')" -V lang="it" -V geometry="margin=2.5cm" \
+  -V colorlinks=true -V linkcolor="teal" -V linestretch="1.25" \
+  index.md csq.md crp.md pgv.md incaricato.md segreteria.md admin.md \
+  -o plancia_manuale.pdf
+```
+
+Il PDF è escluso dal repository (artefatto generato).
 
 ## Licenza
 [MIT](LICENSE) — Copyright © 2026 Andrea Bruno.

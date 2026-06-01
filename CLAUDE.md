@@ -131,10 +131,7 @@ Brand navbar mostra `{{ impostazioni.titolo }}` (fallback "Plancia") e, se valor
 
 **Dev MFA**: `MFAEnforcementMiddleware` è disabilitato quando `DEBUG = True` (primo check nel middleware). `MFA_TOTP_INSECURE_BYPASS_CODE = "000000"` in `dev.py` per saltare la verifica TOTP nei test. In sviluppo nessuno è mai bloccato dalla MFA.
 
-**Pendenti** (non ancora implementati):
-- PWA service worker + autosave IndexedDB + coda di sync foto offline.
-- Riconciliazione manuale con widget Tom Select (ora: input PK grezzo nella view).
-- Import da file caricato via UI (ora: solo path su filesystem accessibile al worker).
+**Tutto implementato.** Non ci sono funzionalità critiche pendenti.
 
 ## Ordine di costruzione consigliato (dalla roadmap, §15 del doc)
 1. **org + accounts**: gerarchia Zona/Gruppo/Reparto/Squadriglia; ruoli; MFA per ruoli privilegiati.
