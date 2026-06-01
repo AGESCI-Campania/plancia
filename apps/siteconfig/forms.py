@@ -1,12 +1,22 @@
 from django import forms
+from django.forms import inlineformset_factory
 from tinymce.widgets import TinyMCE
 
 from apps.notifications.models import MailTemplate, TAG_REGISTRY
-from apps.siteconfig.models import Impostazioni
+from apps.siteconfig.models import FooterLink, Impostazioni
 
 _ctrl = {"class": "form-control"}
 _sel = {"class": "form-select"}
 _sw = {"class": "form-check-input", "role": "switch"}
+
+_FOOTER_TINYMCE = TinyMCE(
+    attrs={"rows": 5},
+    mce_attrs={
+        "toolbar": "bold italic | link | code",
+        "height": 140,
+        "menubar": False,
+    },
+)
 
 
 class ImpostazioniForm(forms.ModelForm):
@@ -14,7 +24,7 @@ class ImpostazioniForm(forms.ModelForm):
         model = Impostazioni
         fields = [
             "titolo", "sottotitolo",
-            "footer_testo", "footer_link_label", "footer_link_url",
+            "footer_testo",
             "email_mode", "from_email",
             "smtp_host", "smtp_port", "smtp_user", "smtp_password", "smtp_use_tls",
             "manutenzione", "debug_toolbar", "debug_diagnostico",
@@ -22,9 +32,7 @@ class ImpostazioniForm(forms.ModelForm):
         widgets = {
             "titolo": forms.TextInput(attrs=_ctrl),
             "sottotitolo": forms.TextInput(attrs=_ctrl),
-            "footer_testo": forms.Textarea(attrs={**_ctrl, "rows": "3"}),
-            "footer_link_label": forms.TextInput(attrs=_ctrl),
-            "footer_link_url": forms.URLInput(attrs=_ctrl),
+            "footer_testo": _FOOTER_TINYMCE,
             "email_mode": forms.Select(attrs=_sel),
             "from_email": forms.EmailInput(attrs=_ctrl),
             "smtp_host": forms.TextInput(attrs=_ctrl),
@@ -36,6 +44,51 @@ class ImpostazioniForm(forms.ModelForm):
             "debug_toolbar": forms.CheckboxInput(attrs=_sw),
             "debug_diagnostico": forms.CheckboxInput(attrs=_sw),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and not self.instance.footer_testo:
+            titolo = self.instance.titolo or "Plancia"
+            self.initial["footer_testo"] = (
+                f"<strong>{titolo}</strong><br>Guidoncini Verdi — AGESCI Campania"
+            )
+
+
+class FooterLinkForm(forms.ModelForm):
+    class Meta:
+        model = FooterLink
+        fields = ["tipo", "url", "etichetta"]
+        widgets = {
+            "tipo": forms.Select(attrs=_sel),
+            "url": forms.TextInput(attrs={**_ctrl, "placeholder": "https://... oppure mailto:..."}),
+            "etichetta": forms.TextInput(attrs={**_ctrl, "placeholder": "es. Seguici", "maxlength": "20"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["tipo"].required = False
+        self.fields["url"].required = False
+        self.fields["etichetta"].required = False
+
+    def clean(self):
+        cd = super().clean()
+        tipo = cd.get("tipo", "")
+        url = cd.get("url", "").strip()
+        if url and not tipo:
+            cd["tipo"] = "sito_web"
+        if tipo and not url:
+            self.add_error("url", "Inserire l'URL per questo link.")
+        return cd
+
+
+FooterLinkFormSet = inlineformset_factory(
+    Impostazioni,
+    FooterLink,
+    form=FooterLinkForm,
+    extra=5,
+    max_num=5,
+    can_delete=True,
+)
 
 
 class MailTemplateForm(forms.ModelForm):

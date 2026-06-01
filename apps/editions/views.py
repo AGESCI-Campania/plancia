@@ -6,9 +6,22 @@ from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DetailView, ListView, TemplateView, UpdateView, View
 
+from django.db.models import Count
+
 from apps.accounts.mixins import StaffPlanciaRequiredMixin
 from apps.editions.forms import DilazioneForm, EdizioneForm
 from apps.editions.models import Dilazione, Edizione, StatoEdizione
+
+_STATO_COLORE = {
+    "in_compilazione": "info",
+    "relazione_finale": "warning",
+    "inviato": "primary",
+    "in_valutazione": "warning",
+    "in_revisione": "warning",
+    "approvato": "success",
+    "non_approvato": "danger",
+    "maggiori_info": "secondary",
+}
 
 
 class HomeView(LoginRequiredMixin, TemplateView):
@@ -48,7 +61,25 @@ class EdizioneDetailView(LoginRequiredMixin, DetailView):
         ctx["diari"] = self._diari_visibili(edizione, user)
         ctx["dilazione_form"] = DilazioneForm()
         ctx["puo_gestire"] = user.is_staff_plancia or user.is_superuser
+        if user.is_staff_plancia or user.is_superuser:
+            ctx["stats_diari"] = self._stats_diari(edizione)
         return ctx
+
+    def _stats_diari(self, edizione):
+        from apps.diaries.models import StatoDiario
+        counts = dict(edizione.diari.values_list("stato").annotate(n=Count("pk")))
+        totale = sum(counts.values())
+        per_stato = [
+            {
+                "stato": stato,
+                "label": label,
+                "totale": counts.get(stato, 0),
+                "colore": _STATO_COLORE.get(stato, "secondary"),
+                "percentuale": round(counts.get(stato, 0) / totale * 100) if totale else 0,
+            }
+            for stato, label in StatoDiario.choices
+        ]
+        return {"per_stato": per_stato, "totale": totale}
 
     def _diari_visibili(self, edizione, user):
         qs = edizione.diari.select_related("squadriglia", "csq", "crp")

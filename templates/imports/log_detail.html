@@ -46,7 +46,7 @@
 
   {% if righe_da_riconciliare %}
     <div class="d-flex align-items-center gap-3 mt-4 mb-1">
-      <h2 class="h5 mb-0">Anomalie da riconciliare <span class="text-muted">(CRP)</span></h2>
+      <h2 class="h5 mb-0">Anomalie da riconciliare <span class="text-muted">(Capo Reparto)</span></h2>
       {% if e_squadriglie %}
         <form method="post" action="{% url 'imports:riprova_anomalie' log.pk %}">
           {% csrf_token %}
@@ -58,7 +58,7 @@
     </div>
     <p class="text-muted small mb-3">
       {% if e_squadriglie %}
-        Clicca <strong>Riprova anomalie</strong> per abbinare automaticamente i CRP
+        Clicca <strong>Riprova anomalie</strong> per abbinare automaticamente i Capi Reparto
         ora presenti nel DB (dopo un nuovo import capi o inserimento manuale).
         Per le anomalie residue usa il form di riconciliazione manuale qui sotto.
       {% else %}
@@ -94,7 +94,7 @@
               <form method="post" action="{% url 'imports:riconcilia' riga.pk %}">
                 {% csrf_token %}
                 <label class="form-label fw-semibold small" for="socio-ts-{{ riga.pk }}">
-                  Seleziona il Socio capo (CRP)
+                  Seleziona il Capo Reparto
                 </label>
                 <select id="socio-ts-{{ riga.pk }}" name="socio_pk"
                         class="form-select form-select-sm" required>

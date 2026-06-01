@@ -1,0 +1,8 @@
+{% autoescape off %}Ciao da {{ impostazioni.titolo }}!
+
+{% block content %}{% endblock %}
+
+—
+{{ impostazioni.titolo }}{% if impostazioni.sottotitolo %}
+{{ impostazioni.sottotitolo }}{% endif %}
+{% endautoescape %}

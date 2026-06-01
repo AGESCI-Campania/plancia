@@ -1,0 +1,10 @@
+{% extends "account/email/base_message.txt" %}
+{% load account %}
+
+{% block content %}{% autoescape off %}{% user_display user as user_display %}Conferma l'indirizzo email per il tuo account su {{ impostazioni.titolo }}.
+
+{% if code %}Il codice di verifica è:
+
+{{ code }}{% else %}Clicca sul link per confermare:
+
+{{ activate_url }}{% endif %}{% endautoescape %}{% endblock %}

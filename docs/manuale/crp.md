@@ -1,7 +1,7 @@
-# Guida — Capo Reparto / CRP
+# Guida — Capo Reparto
 
-Il Capo Reparto (referente CRP) può leggere tutti i moduli del diario della propria squadriglia
-e ha l'esclusiva per compilare il **Modulo 6 — Relazione finale**, che non è mai visibile al CSQ.
+Il Capo Reparto può leggere tutti i moduli del diario della propria squadriglia
+e ha l'esclusiva per compilare il **Modulo 6 — Relazione finale**, che non è mai visibile al Capo Squadriglia.
 
 ---
 
@@ -9,13 +9,15 @@ e ha l'esclusiva per compilare il **Modulo 6 — Relazione finale**, che non è 
 
 La home mostra l'edizione attiva e il riepilogo dei diari del tuo reparto.
 
-![Home CRP](screenshots/10_home_crp.png)
+![Home Capo Reparto](screenshots/10_home_crp.png)
 
 ---
 
 ## Modulo 6 — Relazione finale
 
-Accessibile solo dopo che il CSQ ha completato tutti i moduli obbligatori.
+Accessibile **solo dopo** che il Capo Squadriglia ha cliccato "Invia al Capo Reparto"
+(il diario si trova nello stato *Relazione finale*). Finché il Capo Squadriglia non ha inviato
+la propria parte, il modulo 6 risulta bloccato.
 
 Compila:
 
@@ -31,14 +33,15 @@ Compila:
 
 ---
 
-## Invio del diario
+## Invio del diario allo staff
 
-Il CRP può usare il pulsante **Invia diario** al posto del CSQ se necessario
-(ad esempio se il CSQ non riesce ad accedere alla piattaforma a ridosso della scadenza).
+Dopo aver compilato la relazione finale, clicca il pulsante **"Invia diario allo staff"**.
+Il diario passa in stato *Inviato* e da questo momento non è più modificabile
+(salvo riapertura autorizzata dallo staff).
 
 ---
 
 ## Visibilità della valutazione
 
-La valutazione della PGV e l'esito finale non sono visibili al CRP fino a quando
+La valutazione della Pattuglia GV e l'esito finale non sono visibili al Capo Reparto fino a quando
 l'Incaricato EG non pubblica gli esiti.

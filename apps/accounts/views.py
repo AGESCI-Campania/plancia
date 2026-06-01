@@ -118,8 +118,10 @@ class NominaView(StaffPlanciaRequiredMixin, View):
             from apps.editions.models import Edizione
             edizione = get_object_or_404(Edizione, pk=edizione_pk)
 
+        scadenza = request.POST.get("scadenza") or None
+
         try:
-            service_nomina(request.user, utente, ruolo_target, edizione=edizione)
+            service_nomina(request.user, utente, ruolo_target, edizione=edizione, scadenza=scadenza)
             messages.success(
                 request,
                 f"Ruolo {Ruolo(ruolo_target).label} assegnato a {utente.nome_completo}.",
@@ -128,3 +130,30 @@ class NominaView(StaffPlanciaRequiredMixin, View):
             messages.error(request, str(e))
 
         return redirect("accounts:utente_detail", pk=pk)
+
+
+class CambiaRuoloView(LoginRequiredMixin, View):
+    """Cambia il ruolo attivo dell'utente corrente (POST).
+
+    Valida che il ruolo richiesto sia presente tra i ruoli attivi non scaduti
+    dell'utente prima di aggiornare User.ruolo.
+    """
+
+    def post(self, request):
+        ruolo_target = request.POST.get("ruolo", "")
+        next_url = request.POST.get("next") or "/"
+
+        if ruolo_target not in request.user.ruoli_attivi:
+            messages.error(request, "Non hai questo ruolo attivo.")
+            return redirect(next_url)
+
+        if ruolo_target == request.user.ruolo:
+            return redirect(next_url)
+
+        request.user.ruolo = ruolo_target
+        request.user.save(update_fields=["ruolo"])
+        messages.success(
+            request,
+            f"Stai operando come {Ruolo(ruolo_target).label}.",
+        )
+        return redirect(next_url)

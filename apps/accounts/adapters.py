@@ -1,3 +1,4 @@
+from allauth.account.adapter import DefaultAccountAdapter
 from allauth.mfa.adapter import DefaultMFAAdapter
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from django.contrib.auth import get_user_model
@@ -15,6 +16,60 @@ def ruolo_richiede_mfa(user) -> bool:
         or getattr(user, "mfa_obbligatoria", False)
         or getattr(user, "is_superuser", False)
     )
+
+
+class PlanciaAccountAdapter(DefaultAccountAdapter):
+    """Oggetto email con titolo piattaforma; template da DB se disponibile."""
+
+    _KEY_MAP = {
+        "account/email/password_reset_key": "password_reset",
+        "account/email/email_confirmation_signup": "email_confirmation",
+        "account/email/email_confirmation": "email_confirmation",
+    }
+
+    def format_email_subject(self, subject):
+        from apps.siteconfig.models import Impostazioni
+        titolo = Impostazioni.get().titolo
+        return f"[{titolo}] {subject}"
+
+    def send_mail(self, template_prefix, email, context):
+        from apps.notifications.models import MailTemplate, render_mail
+
+        plancia_key = self._KEY_MAP.get(template_prefix)
+        if plancia_key:
+            try:
+                MailTemplate.objects.get(chiave=plancia_key, attivo=True)
+                plancia_ctx = self._build_context(plancia_key, context)
+                oggetto, corpo_html = render_mail(plancia_key, plancia_ctx)
+                from django.core.mail import EmailMultiAlternatives
+                from django.utils.html import strip_tags
+                msg = EmailMultiAlternatives(
+                    subject=oggetto,
+                    body=strip_tags(corpo_html),
+                    to=[email],
+                )
+                msg.attach_alternative(corpo_html, "text/html")
+                msg.send()
+                return
+            except MailTemplate.DoesNotExist:
+                pass
+
+        super().send_mail(template_prefix, email, context)
+
+    def _build_context(self, chiave: str, allauth_ctx: dict) -> dict:
+        from apps.siteconfig.models import Impostazioni
+        user = allauth_ctx.get("user")
+        ctx = {
+            "nome": getattr(user, "first_name", "") if user else "",
+            "cognome": getattr(user, "last_name", "") if user else "",
+            "titolo_piattaforma": Impostazioni.get().titolo,
+        }
+        if chiave == "password_reset":
+            ctx["link_reset"] = allauth_ctx.get("password_reset_url", "")
+        elif chiave == "email_confirmation":
+            ctx["link_conferma"] = allauth_ctx.get("activate_url", "") or ""
+            ctx["codice"] = allauth_ctx.get("code", "") or ""
+        return ctx
 
 
 class PlanciaMFAAdapter(DefaultMFAAdapter):

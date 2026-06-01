@@ -1,4 +1,4 @@
-# Guida — Capo Squadriglia (CSQ)
+# Guida — Capo Squadriglia
 
 Il Capo Squadriglia è il responsabile della compilazione del Diario di Bordo della propria squadriglia.
 
@@ -8,7 +8,7 @@ Il Capo Squadriglia è il responsabile della compilazione del Diario di Bordo de
 
 Dopo il login, la home page mostra l'edizione attiva con un riepilogo dello stato del tuo diario.
 
-![Home CSQ](screenshots/02_home_csq.png)
+![Home Capo Squadriglia](screenshots/02_home_csq.png)
 
 ---
 
@@ -25,7 +25,7 @@ Dalla voce **Diari** nella barra di navigazione accedi all'elenco dei diari dell
 La pagina di dettaglio mostra lo stato attuale del diario e lo stato di compilazione di ciascun modulo.
 Da qui puoi accedere direttamente ai singoli moduli cliccando sui pulsanti corrispondenti.
 
-Quando tutti i moduli obbligatori sono completati, compare il pulsante **Invia** per consegnare il diario.
+Quando tutti i moduli obbligatori sono completati, compare il pulsante **"Invia al Capo Reparto"**.
 
 ![Dettaglio diario](screenshots/04_diario_dettaglio.png)
 
@@ -94,11 +94,13 @@ Puoi allegare foto anche qui.
 
 ---
 
-## Inviare il diario
+## Inviare la propria parte al Capo Reparto
 
 Quando tutti i moduli obbligatori sono completi, nel dettaglio del diario compare il pulsante
-**Invia diario**. L'invio è irreversibile: il diario passa in stato *Inviato* e non sarà
-più modificabile dal CSQ (salvo riapertura autorizzata).
+**"Invia al Capo Reparto"**. Cliccandolo il diario passa in stato *Relazione finale* e il Capo
+Reparto può compilare il modulo 6.
+
+Da questo momento i tuoi moduli non sono più modificabili (salvo riapertura autorizzata dallo staff).
 
 ---
 

@@ -8,6 +8,7 @@
     <p class="text-muted mb-1">{{ diario.edizione }} &mdash; {{ diario.squadriglia.reparto }}</p>
     <span class="badge
       {% if diario.stato == 'in_compilazione' %}bg-info text-dark
+      {% elif diario.stato == 'relazione_finale' %}bg-warning text-dark
       {% elif diario.stato == 'inviato' %}bg-primary
       {% elif diario.stato == 'in_valutazione' or diario.stato == 'in_revisione' %}bg-warning text-dark
       {% elif diario.stato == 'approvato' %}bg-success
@@ -18,10 +19,16 @@
     <span class="badge bg-light text-dark ms-1">{{ diario.get_tipo_display }}</span>
   </div>
   <div class="d-flex gap-2">
+    {% if puo_inviare_csq %}
+      <form method="post" action="{% url 'diaries:invia' diario.pk %}">
+        {% csrf_token %}
+        <button class="btn btn-primary">Invia al Capo Reparto</button>
+      </form>
+    {% endif %}
     {% if puo_inviare %}
       <form method="post" action="{% url 'diaries:invia' diario.pk %}">
         {% csrf_token %}
-        <button class="btn btn-success">Invia diario</button>
+        <button class="btn btn-success">Invia diario allo staff</button>
       </form>
     {% endif %}
     {% if puo_riapire %}
@@ -64,10 +71,10 @@
           </div>
         {% endif %}
         {% if not is_csq %}
-          {% if moduli_csq_completi %}
-            {% include "diaries/_modulo_stato.html" with ok=has_relazione label="Relazione CRP" url_name="diaries:relazione" pk=diario.pk %}
+          {% if diario.stato == 'relazione_finale' or has_relazione %}
+            {% include "diaries/_modulo_stato.html" with ok=has_relazione label="Relazione Capo Reparto" url_name="diaries:relazione" pk=diario.pk %}
           {% else %}
-            {% include "diaries/_modulo_stato.html" with ok=has_relazione label="Relazione CRP" url_name="diaries:relazione" pk=diario.pk disabled=True %}
+            {% include "diaries/_modulo_stato.html" with ok=has_relazione label="Relazione Capo Reparto" url_name="diaries:relazione" pk=diario.pk disabled=True %}
           {% endif %}
         {% endif %}
       </div>
@@ -89,8 +96,8 @@
       </div>
       {% if has_anagrafica %}
         <div class="card-body row g-2 small">
-          <div class="col-sm-4"><strong>CRP:</strong> {{ diario.anagrafica.crp_cognome }} {{ diario.anagrafica.crp_nome }}</div>
-          <div class="col-sm-4"><strong>Email CRP:</strong> {{ diario.anagrafica.crp_email|default:"—" }}</div>
+          <div class="col-sm-4"><strong>Capo Reparto:</strong> {{ diario.anagrafica.crp_cognome }} {{ diario.anagrafica.crp_nome }}</div>
+          <div class="col-sm-4"><strong>Email Capo Reparto:</strong> {{ diario.anagrafica.crp_email|default:"—" }}</div>
           <div class="col-sm-4"><strong>Specialità:</strong> {{ diario.anagrafica.specialita|default:"—" }}</div>
           <div class="col-sm-4"><strong>Partecipa evento:</strong> {{ diario.anagrafica.partecipa_evento|yesno:"Sì,No" }}</div>
         </div>
@@ -181,10 +188,10 @@
   <!-- Modulo 6: Relazione finale (mai al CSQ) -->
   {% if mostra_relazione %}
     <div class="col-12">
-      <div class="card {% if not moduli_csq_completi %}border-secondary{% endif %}">
+      <div class="card {% if diario.stato == 'in_compilazione' %}border-secondary{% endif %}">
         <div class="card-header d-flex justify-content-between">
-          <span><strong>Modulo 6</strong> — Relazione finale CRP</span>
-          {% if puo_editare and moduli_csq_completi %}
+          <span><strong>Modulo 6</strong> — Relazione finale Capo Reparto</span>
+          {% if diario.stato == 'relazione_finale' or has_relazione %}
             <a href="{% url 'diaries:relazione' diario.pk %}" class="btn btn-sm btn-outline-primary">Compila</a>
           {% endif %}
         </div>
@@ -194,9 +201,9 @@
               {{ diario.relazione_finale.specialita_conquistata|yesno:"Sì,No,Non indicato" }}
             </p>
           </div>
-        {% elif not moduli_csq_completi %}
+        {% elif diario.stato == 'in_compilazione' %}
           <div class="card-body text-muted fst-italic">
-            Disponibile dopo il completamento dei moduli CSQ obbligatori.
+            Disponibile dopo che il Capo Squadriglia ha inviato la propria parte.
           </div>
         {% else %}
           <div class="card-body text-muted fst-italic">Non ancora compilato.</div>

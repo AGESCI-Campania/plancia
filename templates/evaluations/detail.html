@@ -37,7 +37,7 @@
             <dt class="col-sm-4">Stato val.</dt>
             <dd class="col-sm-8">{{ valutazione.get_stato_display }}</dd>
             {% if valutazione.proposta_esito %}
-              <dt class="col-sm-4">Proposta PGV</dt>
+              <dt class="col-sm-4">Proposta Pattuglia</dt>
               <dd class="col-sm-8">{{ valutazione.get_proposta_esito_display }}</dd>
             {% endif %}
             {% if valutazione.note %}
@@ -76,7 +76,7 @@
 
       {% if puo_proporre and not diario.pubblicato_at %}
         <div class="card mb-3">
-          <div class="card-header"><strong>Proponi valutazione (PGV)</strong></div>
+          <div class="card-header"><strong>Proponi valutazione</strong></div>
           <div class="card-body">
             <form method="post" action="{% url 'evaluations:proponi' diario.pk %}">
               {% csrf_token %}
@@ -100,7 +100,7 @@
         <div class="card mb-3 border-warning">
           <div class="card-header bg-warning text-dark"><strong>Proposta in revisione</strong></div>
           <div class="card-body">
-            <p>Proposta PGV: <strong>{{ valutazione.get_proposta_esito_display }}</strong></p>
+            <p>Proposta Pattuglia: <strong>{{ valutazione.get_proposta_esito_display }}</strong></p>
             <div class="d-flex gap-2">
               <form method="post" action="{% url 'evaluations:conferma' diario.pk %}">
                 {% csrf_token %}
@@ -127,12 +127,12 @@
     {% if puo_assegnare_pgv %}
       <div class="col-12">
         <div class="card">
-          <div class="card-header"><strong>Assegnazioni PGV</strong></div>
+          <div class="card-header"><strong>Assegnazioni Pattuglia GV</strong></div>
           <div class="card-body">
             {% for ass in assegnazioni %}
               <span class="badge bg-secondary me-1">{{ ass.pgv.get_full_name|default:ass.pgv.email }}</span>
             {% empty %}
-              <em>Nessun PGV assegnato.</em>
+              <em>Nessun membro assegnato.</em>
             {% endfor %}
             <form class="mt-2 d-flex gap-2 align-items-center flex-wrap" method="post" action="{% url 'evaluations:assegna_pgv' diario.pk %}">
               {% csrf_token %}
@@ -166,7 +166,7 @@
     preload: false,
     persist: false,
     maxItems: 1,
-    placeholder: "Cerca PGV per nome, cognome o gruppo…",
+    placeholder: "Cerca membro Pattuglia GV per nome, cognome o gruppo…",
     load: function (query, callback) {
       if (query.length < 2) { callback(); return; }
       fetch(AUTOCOMPLETE_URL + "?q=" + encodeURIComponent(query) + "&categoria=capo&ruolo=pgv")
@@ -182,7 +182,7 @@
         return '<div>' + escape(item.label) + '</div>';
       },
       no_results: function () {
-        return '<div class="no-results p-2 text-muted small">Nessun PGV trovato.</div>';
+        return '<div class="no-results p-2 text-muted small">Nessun membro trovato.</div>';
       },
       loading: function () {
         return '<div class="p-2 text-muted small">Ricerca in corso…</div>';

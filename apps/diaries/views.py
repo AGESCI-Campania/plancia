@@ -61,14 +61,18 @@ class DiarioAccessMixin(LoginRequiredMixin):
         raise PermissionDenied
 
     def _puo_editare(self, diario: Diario) -> bool:
-        """True se l'utente può editare il contenuto del diario."""
+        """True se l'utente può editare i moduli CSQ (1-5) del diario."""
         user = self.request.user
         if user.is_superuser or user.is_staff_plancia:
             return True
-        return (
-            diario.stato == StatoDiario.IN_COMPILAZIONE
-            and user.ruolo in (Ruolo.CSQ, Ruolo.CRP)
-        )
+        return diario.stato == StatoDiario.IN_COMPILAZIONE and user.ruolo == Ruolo.CSQ
+
+    def _puo_editare_relazione(self, diario: Diario) -> bool:
+        """True se il Capo Reparto può compilare la relazione finale (modulo 6)."""
+        user = self.request.user
+        if user.is_superuser or user.is_staff_plancia:
+            return True
+        return diario.stato == StatoDiario.RELAZIONE_FINALE and user.ruolo == Ruolo.CRP
 
 
 # ---------------------------------------------------------------------------
@@ -132,10 +136,16 @@ class DiarioDetailView(DiarioAccessMixin, DetailView):
         ctx["has_imp2"] = diario.imprese.filter(numero=2).exists()
         ctx["has_missione"] = hasattr(diario, "missione")
         ctx["has_relazione"] = hasattr(diario, "relazione_finale")
-        ctx["puo_inviare"] = (
+        # Capo Squadriglia può inviare la propria parte (→ Relazione finale)
+        ctx["puo_inviare_csq"] = (
             diario.stato == StatoDiario.IN_COMPILAZIONE
             and diario.moduli_csq_completi
-            and user.ruolo in (Ruolo.CSQ, Ruolo.CRP)
+            and (user.ruolo == Ruolo.CSQ or user.is_superuser or user.is_staff_plancia)
+        )
+        # Capo Reparto può inviare il diario allo staff (→ Inviato)
+        ctx["puo_inviare"] = (
+            diario.stato == StatoDiario.RELAZIONE_FINALE
+            and (user.ruolo == Ruolo.CRP or user.is_superuser or user.is_staff_plancia)
         )
         ctx["puo_riapire"] = diario.puo_essere_riaperto() and user.is_staff_plancia
         return ctx
@@ -320,38 +330,34 @@ class MissioneUpdateView(DiarioAccessMixin, View):
 class RelazioneFinaleUpdateView(DiarioAccessMixin, View):
     template_name = "diaries/modules/relazione.html"
 
-    def _setup(self, pk):
-        diario = self._get_diario(pk)
-        user = self.request.user
-        # Solo CRP/staff, mai CSQ (docs sez. 5)
+    def _check_permessi(self, diario, user):
+        """Verifica accesso e precondizioni; lancia PermissionDenied o redirect se non ok."""
         if user.ruolo == Ruolo.CSQ and not user.is_superuser:
             raise PermissionDenied
-        if not self._puo_editare(diario):
-            raise PermissionDenied
-        # Compilabile solo dopo che i moduli CSQ obbligatori sono completi
-        if not diario.moduli_csq_completi and not user.is_superuser:
-            messages.warning(self.request, "La relazione CRP è disponibile dopo il completamento dei moduli CSQ.")
-            return redirect("diaries:detail", pk=pk), None, None
-        relazione, _ = RelazioneFinale.objects.get_or_create(diario=diario)
-        return diario, relazione, None
+        if not self._puo_editare_relazione(diario):
+            messages.warning(
+                self.request,
+                "La relazione del Capo Reparto è disponibile solo dopo che il Capo Squadriglia ha inviato la propria parte.",
+            )
+            return redirect("diaries:detail", pk=diario.pk)
+        return None
 
     def get(self, request, pk):
         from django.shortcuts import render
-        result = self._setup(pk)
-        if isinstance(result[0], type(redirect("/").__class__)):
-            return result[0]
-        diario, relazione, _ = result
+        diario = self._get_diario(pk)
+        esito = self._check_permessi(diario, request.user)
+        if esito is not None:
+            return esito
+        relazione, _ = RelazioneFinale.objects.get_or_create(diario=diario)
         form = RelazioneFinaleForm(instance=relazione)
         return render(request, self.template_name, {"form": form, "diario": diario})
 
     def post(self, request, pk):
         from django.shortcuts import render
         diario = self._get_diario(pk)
-        user = request.user
-        if user.ruolo == Ruolo.CSQ and not user.is_superuser:
-            raise PermissionDenied
-        if not self._puo_editare(diario):
-            raise PermissionDenied
+        esito = self._check_permessi(diario, request.user)
+        if esito is not None:
+            return esito
         relazione, _ = RelazioneFinale.objects.get_or_create(diario=diario)
         form = RelazioneFinaleForm(request.POST, instance=relazione)
         if form.is_valid():
@@ -366,16 +372,27 @@ class RelazioneFinaleUpdateView(DiarioAccessMixin, View):
 # ---------------------------------------------------------------------------
 
 class DiarioInviaView(DiarioAccessMixin, View):
-    """IN_COMPILAZIONE → INVIATO."""
+    """Gestisce le due fasi di invio:
+    - Capo Squadriglia: IN_COMPILAZIONE → RELAZIONE_FINALE
+    - Capo Reparto: RELAZIONE_FINALE → INVIATO
+    """
 
     def post(self, request, pk):
         diario = self._get_diario(pk)
         user = request.user
-        if user.ruolo not in (Ruolo.CSQ, Ruolo.CRP) and not user.is_superuser:
-            raise PermissionDenied
         try:
-            diario.invia()
-            messages.success(request, "Diario inviato con successo.")
+            if diario.stato == StatoDiario.IN_COMPILAZIONE:
+                if user.ruolo != Ruolo.CSQ and not user.is_superuser and not user.is_staff_plancia:
+                    raise PermissionDenied
+                diario.csq_invia()
+                messages.success(request, "Parte del Capo Squadriglia inviata. Il Capo Reparto può ora compilare la relazione finale.")
+            elif diario.stato == StatoDiario.RELAZIONE_FINALE:
+                if user.ruolo != Ruolo.CRP and not user.is_superuser and not user.is_staff_plancia:
+                    raise PermissionDenied
+                diario.invia()
+                messages.success(request, "Diario inviato allo staff.")
+            else:
+                messages.error(request, "Invio non consentito nello stato attuale.")
         except ValueError as exc:
             messages.error(request, str(exc))
         return redirect("diaries:detail", pk=pk)

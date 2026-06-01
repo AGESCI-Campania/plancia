@@ -45,11 +45,14 @@ def categoria_compatibile(ruolo_target: str, categoria_socio: str | None) -> boo
     return richiesta is None or richiesta == categoria_socio
 
 
-def nomina(attore: "User", utente: "User", ruolo: str, edizione=None) -> "Nomina":
+def nomina(attore: "User", utente: "User", ruolo: str, edizione=None, scadenza=None) -> "Nomina":
     """Assegna *ruolo* a *utente* per conto di *attore*.
 
-    Applica puo_nominare + categoria_compatibile, aggiorna utente.ruolo e crea il
-    record Nomina (audit). Solleva PermissionError o ValueError in caso di violazione.
+    Applica puo_nominare + categoria_compatibile + esclusività CSQ, crea il record
+    Nomina e (solo al primo ruolo) aggiorna utente.ruolo. Solleva PermissionError o
+    ValueError in caso di violazione.
+
+    Per passare al nuovo ruolo usa CambiaRuoloView o imposta utente.ruolo manualmente.
     """
     from apps.accounts.models import Nomina
 
@@ -57,6 +60,18 @@ def nomina(attore: "User", utente: "User", ruolo: str, edizione=None) -> "Nomina
         raise PermissionError(
             f"{attore.ruolo} non può nominare al ruolo {ruolo}."
         )
+
+    # Esclusività CSQ nella stessa edizione (prima del check categoria per messaggio chiaro)
+    if edizione is not None:
+        if ruolo == Ruolo.CSQ:
+            altri = Nomina.objects.filter(utente=utente, edizione=edizione, attiva=True).exclude(ruolo=Ruolo.CSQ)
+            if altri.exists():
+                raise ValueError("Nella stessa edizione, un CSQ non può avere altri ruoli.")
+        else:
+            csq = Nomina.objects.filter(utente=utente, edizione=edizione, ruolo=Ruolo.CSQ, attiva=True)
+            if csq.exists():
+                raise ValueError("Nella stessa edizione, un CSQ non può avere altri ruoli.")
+
     socio = getattr(utente, "socio", None)
     categoria = socio.categoria if socio else None
     if not categoria_compatibile(ruolo, categoria):
@@ -65,14 +80,19 @@ def nomina(attore: "User", utente: "User", ruolo: str, edizione=None) -> "Nomina
             f"Il ruolo {ruolo} richiede categoria '{richiesta}', "
             f"ma il socio ha categoria '{categoria}'."
         )
-    utente.ruolo = ruolo
-    utente.save(update_fields=["ruolo"])
+
+    # Primo ruolo: attiva subito; altrimenti l'utente sceglie dal selettore.
+    if not utente.ruoli_attivi:
+        utente.ruolo = ruolo
+        utente.save(update_fields=["ruolo"])
+
     return Nomina.objects.create(
         utente=utente,
         socio=socio,
         ruolo=ruolo,
         nominato_da=attore,
         edizione=edizione,
+        scadenza=scadenza,
     )
 
 
@@ -91,17 +111,28 @@ ROLE_RANK: dict[str, int] = {
 IMPERSONATORI = {Ruolo.ADMIN, Ruolo.SEGRETERIA}
 
 
+def _rango_massimo(utente) -> int:
+    """Rango più alto tra tutti i ruoli attivi dell'utente."""
+    try:
+        ruoli = utente.ruoli_attivi
+    except AttributeError:
+        ruoli = []
+    if not ruoli:
+        ruoli = [getattr(utente, "ruolo", None)]
+    return max((ROLE_RANK.get(r, 0) for r in ruoli if r), default=0)
+
+
 def puo_impersonare(attore, target) -> bool:
     """True se 'attore' puo' impersonare 'target': attore in {Admin, Segreteria}
-    e rango(target) <= rango(attore) (la Segreteria non impersona un Admin).
+    e rango_massimo(target) <= rango(attore) (la Segreteria non impersona un Admin,
+    neanche se l'Admin ha il ruolo attivo a CSQ).
     """
     if attore is None or target is None or attore.pk == target.pk:
         return False
     a = getattr(attore, "ruolo", None)
-    t = getattr(target, "ruolo", None)
     if a not in IMPERSONATORI:
         return False
-    return ROLE_RANK.get(t, 0) <= ROLE_RANK.get(a, 0)
+    return _rango_massimo(target) <= ROLE_RANK.get(a, 0)
 
 
 def can_hijack(hijacker, hijacked) -> bool:

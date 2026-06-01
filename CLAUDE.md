@@ -100,13 +100,17 @@ Il `mt-auto` è **obbligatorio** per il corretto funzionamento del layout sticky
 (`body { height: 100vh; d-flex flex-column }`). Non sostituire con `mt-5` o margini fissi.
 
 App con modelli e UI completi:
-- **`accounts`** — `User` (+ `socio` OneToOneField), `Nomina`, `LoginEvent`; `roles.py` (+ service `nomina()`); `signals.py` (+ `ensure_superuser_ruolo`: imposta automaticamente `ruolo=ADMIN` quando `is_superuser=True` viene salvato — corregge il default CSQ di `createsuperuser`); `mixins.py`; `forms.py` (Bootstrap mixin + form allauth); `views.py` (`ProfiloView`, `UtenteListView`, `UtenteDetailView`, `NominaView`); `urls.py` (namespace `accounts`, mountato su `utenti/`). Template: `accounts/profilo|utente_list|utente_detail`. Test: `apps/accounts/tests/`.
+- **`accounts`** — `User` (+ `socio` OneToOneField), `Nomina`, `LoginEvent`; `roles.py` (+ service `nomina()`); `signals.py` (+ `ensure_superuser_ruolo`: imposta automaticamente `ruolo=ADMIN` quando `is_superuser=True` viene salvato — corregge il default CSQ di `createsuperuser`); `mixins.py`; `forms.py` (Bootstrap mixin + form allauth); `views.py` (`ProfiloView`, `UtenteListView`, `UtenteDetailView`, `NominaView`, `CambiaRuoloView`); `urls.py` (namespace `accounts`, mountato su `utenti/`). Template: `accounts/profilo|utente_list|utente_detail`. Test: `apps/accounts/tests/`.
+  **Multi-ruolo**: un utente può avere più ruoli simultanei (sorgente: `Nomina.attiva + Nomina.scadenza`). `User.ruolo` = ruolo attivo corrente; `User.ruoli_attivi` = lista chiavi; `User.ruoli_attivi_choices` = lista (chiave, etichetta). `CambiaRuoloView` (POST `/utenti/cambia-ruolo/`) cambia il ruolo attivo. La navbar mostra un selettore se l'utente ha >1 ruolo attivo. Eccezione: CSQ e altri ruoli non possono coesistere nella stessa edizione (controllato in `nomina()`). Scadenza opzionale per PGV, IABR, Segreteria: campo `Nomina.scadenza` (DateField). `create_superuser` crea l'utente con `ruolo=csq` di default → il signal `ensure_superuser_ruolo` lo corregge a DB, ma **l'oggetto in memoria resta con il vecchio valore**: fare sempre `admin.refresh_from_db()` dopo `create_superuser` nei test.
 - **`org`** — `Zona`, `Gruppo`, `Reparto`, `Squadriglia`, `Socio`; autocomplete `GET /api/soci/?q=&categoria=` (login required).
 - **`editions`** — `Edizione` (FSM 4 stati), `Dilazione`; CRUD views + template. Namespace `editions`.
   Campi evento: `data_evento_inizio`/`fine`, `evento_comune` (autocomplete comuni-ita), `evento_localita`.
   Drive: `drive_folder_allegati_id` (ex `foto`), `drive_folder_output_id`, `drive_oauth_account`.
   `HomeView` (root `/`): reindirizza all'edizione con stato `APERTA`/`IN_VALUTAZIONE` più recente per anno; se nessuna attiva mostra `templates/home_no_edizione.html`.
-- **`diaries`** — `Diario` (FSM 7 stati), moduli 1–6, `Allegato`; views + template. Namespace `diaries`. Test FSM + visibilità: `apps/diaries/tests/`.
+- **`diaries`** — `Diario` (FSM **8 stati**), moduli 1–6, `Allegato`; views + template. Namespace `diaries`. Test FSM + visibilità: `apps/diaries/tests/`.
+  **FSM stati**: `in_compilazione` → (CSQ: `csq_invia()`) → `relazione_finale` → (CRP: `invia()`) → `inviato` → `in_valutazione` → `in_revisione`/`approvato`/`non_approvato`/`maggiori_info` → `in_compilazione` (riapertura). Il Capo Reparto può compilare il modulo 6 **solo** nello stato `relazione_finale`; i moduli 1–5 del Capo Squadriglia sono editabili **solo** in `in_compilazione`.
+  `DiarioInviaView` detecta lo stato corrente: se `IN_COMPILAZIONE` chiama `csq_invia()`, se `RELAZIONE_FINALE` chiama `invia()`.
+  `_puo_editare()` controlla `stato == IN_COMPILAZIONE` (solo Capo Squadriglia). `_puo_editare_relazione()` controlla `stato == RELAZIONE_FINALE` (solo Capo Reparto).
   Costanti ufficiali in cima a `models.py`: `SPECIALITA_SQUADRIGLIA` (12, Allegato 3), `SPECIALITA_INDIVIDUALI` (66, Allegato 2), `BREVETTI_COMPETENZA` (15, Allegato 4).
   `Anagrafica.specialita` usa queste choices. `MembroSq.ruolo` ha choices `RuoloSq` (csq/vcsq/squadrigliere/altro). `SentieroCammino` ha valori `scoperta/competenza/responsabilita/non_specificato`.
   `EsitoSpecialita` ha campo `tipo` (`TipoEsito.SPECIALITA` / `TipoEsito.BREVETTO`); i form impresa usano due formset separati (`SpecialitaFormSet` + `BrevettoFormSet`) con prefissi `specialita`/`brevetti`.
@@ -119,12 +123,12 @@ App con modelli e UI completi:
 - **`helpdesk`** — `Ticket`, `RispostaTicket`; views CRUD + rispondi/chiudi/prendi. Namespace `helpdesk`.
 - **`stats`** — dashboard per zona (esiti, tempi, ticket); visibile a staff. Namespace `stats`.
 - **`siteconfig`** — `Impostazioni` singleton, middleware manutenzione, backend email custom; `forms.py` (`ImpostazioniForm` con widget Bootstrap, `MailTemplateForm` con TinyMCE). Namespace `siteconfig`.
-  Campi footer: `footer_testo`, `footer_link_label` (default `campania.agesci.it`), `footer_link_url` (default `https://campania.agesci.it`).
-  Context processor `apps.siteconfig.context_processors.impostazioni` inietta `impostazioni` in ogni template: usare `{{ impostazioni.titolo }}` ecc. senza passarlo esplicitamente nelle viste.
+  Footer: `footer_testo` (rich text TinyMCE) + modello `FooterLink` (FK → Impostazioni, max 5, campi `tipo` `TipoLink`/`url`/`etichetta`/`ordine`). `TipoLink` choices: `sito_web`, `email`, `facebook`, `instagram`, `tiktok`. I link appaiono nel footer con icona `{% bs_icon %}` corrispondente.
+  Context processor `apps.siteconfig.context_processors.impostazioni` inietta `impostazioni` in ogni template: usare `{{ impostazioni.titolo }}` ecc. senza passarlo esplicitamente nelle viste. I link footer si leggono con `{{ impostazioni.footer_links.all }}`.
   Pagina impostazioni suddivisa in sezioni (Identità, Footer, Posta elettronica, Stato, Import, Template email).
-  **Gestione MailTemplate da UI**: `MailTemplateEditView` (GET/POST `/impostazioni/mail/<chiave>/`), `MailTemplateImportaView` (POST `/impostazioni/mail/<chiave>/importa/` — legge il file di default `templates/mail/<chiave>.html` e crea il record), `MailTemplateDeleteView` (POST `/impostazioni/mail/<chiave>/elimina/` — solo Admin, ripristina fallback su file). Template editor: `templates/siteconfig/mail_template_edit.html` (TinyMCE + sidebar tag copiabili).
+  **Gestione MailTemplate da UI**: `MailTemplateEditView` (GET/POST `/impostazioni/mail/<chiave>/`), `MailTemplateImportaView` (POST `/impostazioni/mail/<chiave>/importa/`), `MailTemplateDeleteView` (POST `/impostazioni/mail/<chiave>/elimina/`), `MailTemplateCopiaView` (POST `/impostazioni/mail/<chiave>/copia/` — duplica verso altra chiave). Editor: TinyMCE + sidebar tag copiabili + upload immagini (`MailTemplateImageUploadView` — `@csrf_exempt`, ruolo ≥ Admin/Segreteria/IABR, salva in `media/mail_images/`).
   Partial: `siteconfig/_campo.html`, `siteconfig/_switch.html`.
-- **`imports`** — `LogImportazione`, `RigaImportazione`; management commands `import_coca/ragazzi/squadriglie` (upsert idempotente, riconciliazione CRP); task Celery; view riconciliazione. Namespace `imports`.
+- **`imports`** — `LogImportazione`, `RigaImportazione`; management commands `import_coca/ragazzi/squadriglie` (upsert idempotente, riconciliazione Capo Reparto); task Celery; view riconciliazione. Namespace `imports`.
 - **`editions`** — management command `archivia_edizione --genera/--purga --conferma`.
 
 **`Diario.pubblicato`** è una property (`pubblicato_at is not None`). Usare `pubblicato_at__isnull=False` nelle query e assegnare `pubblicato_at = timezone.now()` per pubblicare.
@@ -162,15 +166,13 @@ Brand navbar mostra `{{ impostazioni.titolo }}` (fallback "Plancia") e, se valor
 8. **helpdesk + stats**: ticket e statistiche di chiusura (per zona, tempi, difficoltà).
 
 ## Regole di dominio da non sbagliare
-- **Visibilità**: la Relazione finale CRP e la Valutazione non sono **mai** visibili al CSQ; la
-  valutazione non è visibile a CSQ/CRP **finché non è pubblicata**. Applica la protezione a tre
-  livelli: UI, view, queryset/serializer.
-- **Rinnovo**: moduli 4 e 5 non obbligatori ma compilabili (decide il CSQ). Obbligatori solo se Nuovo.
-- **`IN_REVISIONE`** solo per *Approvata*/*Non approvata* proposte da un membro PGV (richiedono
-  conferma Incaricato). *Maggiori informazioni* non passa di lì.
+- **Visibilità**: la Relazione finale del Capo Reparto e la Valutazione non sono **mai** visibili al Capo Squadriglia; la valutazione non è visibile a Capo Squadriglia/Capo Reparto **finché non è pubblicata**. Applica la protezione a tre livelli: UI, view, queryset/serializer.
+- **Flusso diario a due fasi**: il Capo Reparto può accedere al modulo 6 **solo** dopo che il Capo Squadriglia ha cliccato "Invia al Capo Reparto" (stato `RELAZIONE_FINALE`). Non usare `moduli_csq_completi` come guardia — usare `stato == RELAZIONE_FINALE`.
+- **Rinnovo**: moduli 4 e 5 non obbligatori ma compilabili (decide il Capo Squadriglia). Obbligatori solo se Nuovo.
+- **`IN_REVISIONE`** solo per *Approvata*/*Non approvata* proposte da un membro della Pattuglia GV (richiedono conferma Incaricato). *Maggiori informazioni* non passa di lì.
 - Gli **Incaricati EG** possono modificare qualunque decisione **fino alla pubblicazione**.
 - **Riapertura** per integrazioni solo se valutazione su 1ª scadenza e 2ª non ancora passata.
-- **PGV** valuta solo i diari assegnati e **non può ri-delegare**.
+- **Pattuglia GV** valuta solo i diari assegnati e **non può ri-delegare**.
 
 ## Sicurezza (requisito, non opzione)
 La piattaforma tratta **dati e foto di minori**. Minimizza i dati raccolti; cifra in transito e a
@@ -219,17 +221,22 @@ valutazioni; permessi object-level rigorosi. Mai esporre esiti non pubblicati. V
 
 ## Ruoli: creazione e nomina (§2)
 - Regole in `apps.accounts.roles` (`ROLE_REQUIRES_CATEGORY`, `ROLE_CREATABLE_BY`, `puo_nominare`,
-  `categoria_compatibile`) + modello `apps.accounts.models.Nomina` (audit).
+  `categoria_compatibile`) + modello `apps.accounts.models.Nomina` (fonte di verità multi-ruolo).
 - Admin creato solo da Admin (+ `createsuperuser`); Segreteria da Admin; IABR da Admin/Segreteria.
 - Segreteria e IABR **devono essere capi**; Admin può essere un account senza Socio.
 - PGV/CRP solo a *capi*; CSQ solo a *ragazzi* (vincolo validato in fase di nomina).
+- `Nomina.attiva` (bool) + `Nomina.scadenza` (DateField opzionale): se `attiva=False` il ruolo è revocato (record mantenuto per audit). Scadenza si usa per PGV, IABR, Segreteria.
+- `nomina()` in `roles.py`: check esclusività CSQ **prima** del check categoria; al primo ruolo aggiorna `User.ruolo`, altrimenti non tocca il ruolo attivo.
 
 ## Impersonazione (§2)
-- Solo **Admin** e **Segreteria** impersonano; solo verso utenti con **rango ≤ al proprio**
-  (la Segreteria non impersona un Admin). Ranghi e logica in `apps.accounts.roles`
-  (`ROLE_RANK`, `puo_impersonare`, `can_hijack`).
+- Solo **Admin** e **Segreteria** impersonano; il controllo usa il **rango massimo** tra tutti i
+  ruoli attivi del target (`_rango_massimo()`), non solo il ruolo corrente.
+  (La Segreteria non impersona un utente che ha nomina Admin, anche se opera come CSQ.)
+  Ranghi e logica in `apps.accounts.roles` (`ROLE_RANK`, `puo_impersonare`, `can_hijack`).
 - Implementata con **django-hijack**: `HIJACK_PERMISSION_CHECK = "apps.accounts.roles.can_hijack"`,
   urls `hijack/`, banner di sessione. Logga ogni impersonazione (audit).
+- **Attenzione**: in questa versione di django-hijack il templatetag `{% hijack_button %}` **non esiste**. Il bottone va costruito manualmente con `<form method="post" action="{% url 'hijack:acquire' %}"><input type="hidden" name="user_pk" value="{{ utente.pk }}">`. La libreria `{% load hijack %}` fornisce solo il filtro `|can_hijack`. Il `{% load %}` deve stare in cima al template (fuori da blocchi `{% if %}`).
+- **Abbreviazioni nel frontend**: CSQ, CRP e PGV **non devono apparire nell'interfaccia utente**. Usare sempre i nomi completi: "Capo Squadriglia", "Capo Reparto", "Pattuglia GV" / "Pattuglia Guidoncini Verdi". Le abbreviazioni rimangono nei nomi di variabili Python e nei commenti del codice.
 
 ## Retention / archiviazione (§7, §12)
 - Comando `archivia_edizione` (app `editions`) in due passi su edizioni **chiuse**:

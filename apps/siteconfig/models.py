@@ -9,6 +9,14 @@ class EmailMode(models.TextChoices):
     SIMULATO_PIU_INVIO = "simulato_piu_invio", "Simulato + invio reale"
 
 
+class TipoLink(models.TextChoices):
+    SITO_WEB = "sito_web", "Sito web"
+    EMAIL = "email", "Email"
+    FACEBOOK = "facebook", "Facebook"
+    INSTAGRAM = "instagram", "Instagram"
+    TIKTOK = "tiktok", "TikTok"
+
+
 class Impostazioni(models.Model):
     """Configurazione di piattaforma. Singleton: esiste una sola riga (pk=1).
     Modificabile SOLO dagli amministratori. Vedi docs sez. 15.
@@ -34,12 +42,6 @@ class Impostazioni(models.Model):
     footer_testo = models.TextField(
         blank=True, verbose_name="testo footer",
         help_text="Testo centrale del footer. Se vuoto usa il default.",
-    )
-    footer_link_label = models.CharField(
-        max_length=100, default="campania.agesci.it", verbose_name="etichetta link footer"
-    )
-    footer_link_url = models.URLField(
-        default="https://campania.agesci.it", verbose_name="URL link footer"
     )
 
     # Stato piattaforma / diagnostica
@@ -70,3 +72,26 @@ class Impostazioni(models.Model):
             obj, _ = cls.objects.get_or_create(pk=1)
             cache.set(cls.CACHE_KEY, obj, 300)
         return obj
+
+
+class FooterLink(models.Model):
+    """Uno dei link (fino a 5) mostrati nella colonna destra del footer."""
+
+    impostazioni = models.ForeignKey(
+        Impostazioni, on_delete=models.CASCADE, related_name="footer_links"
+    )
+    tipo = models.CharField(max_length=20, choices=TipoLink.choices, blank=True, default="")
+    url = models.CharField(max_length=500, blank=True, default="", verbose_name="URL")
+    etichetta = models.CharField(
+        max_length=20, blank=True, default="", verbose_name="etichetta",
+        help_text="Se vuota usa il nome del tipo (es. 'Sito web').",
+    )
+    ordine = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["ordine", "pk"]
+        verbose_name = "Link footer"
+        verbose_name_plural = "Link footer"
+
+    def __str__(self) -> str:
+        return f"{self.get_tipo_display()} — {self.url}"

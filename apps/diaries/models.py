@@ -41,6 +41,7 @@ BREVETTI_COMPETENZA = [
 
 class StatoDiario(models.TextChoices):
     IN_COMPILAZIONE = "in_compilazione", "In compilazione"
+    RELAZIONE_FINALE = "relazione_finale", "Relazione finale"
     INVIATO = "inviato", "Inviato"
     IN_VALUTAZIONE = "in_valutazione", "In valutazione"
     IN_REVISIONE = "in_revisione", "In revisione"
@@ -61,7 +62,8 @@ class ScadenzaRiferimento(models.TextChoices):
 
 # Transizioni ammesse per la FSM del Diario (docs sez. 6).
 _TRANSIZIONI: dict[str, list[str]] = {
-    StatoDiario.IN_COMPILAZIONE: [StatoDiario.INVIATO],
+    StatoDiario.IN_COMPILAZIONE: [StatoDiario.RELAZIONE_FINALE],
+    StatoDiario.RELAZIONE_FINALE: [StatoDiario.INVIATO],
     StatoDiario.INVIATO: [StatoDiario.IN_VALUTAZIONE],
     StatoDiario.IN_VALUTAZIONE: [
         StatoDiario.IN_REVISIONE,
@@ -190,8 +192,12 @@ class Diario(models.Model):
         self.stato = nuovo_stato
         self.save()
 
+    def csq_invia(self) -> None:
+        """IN_COMPILAZIONE → RELAZIONE_FINALE (CSQ completa la propria parte)."""
+        self._transita(StatoDiario.RELAZIONE_FINALE)
+
     def invia(self) -> None:
-        """IN_COMPILAZIONE → INVIATO (invio staff o scadenza)."""
+        """RELAZIONE_FINALE → INVIATO (CRP invia il diario allo staff)."""
         self._transita(StatoDiario.INVIATO)
         self.inviato_at = timezone.now()
         self.save(update_fields=["inviato_at"])

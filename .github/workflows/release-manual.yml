@@ -1,0 +1,38 @@
+name: Genera manuale PDF e allega alla release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-manual:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Installa pandoc e xelatex
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y pandoc texlive-xetex texlive-lang-italian fonts-liberation
+
+      - name: Genera PDF manuale
+        run: |
+          cd docs/manuale
+          pandoc --pdf-engine=xelatex --toc --toc-depth=2 \
+            -V title="Plancia — Manuale d'uso" \
+            -V subtitle="Guidoncini Verdi · AGESCI Campania" \
+            -V date="$(date +'%B %Y')" \
+            -V lang="it" \
+            -V geometry="margin=2.5cm" \
+            -V colorlinks=true \
+            -V linkcolor="teal" \
+            -V linestretch="1.25" \
+            index.md csq.md crp.md pgv.md incaricato.md segreteria.md admin.md \
+            -o plancia_manuale.pdf
+
+      - name: Allega PDF alla release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: docs/manuale/plancia_manuale.pdf

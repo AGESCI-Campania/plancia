@@ -1,0 +1,10 @@
+<p>Ciao {{ nome }},</p>
+
+<p>conferma l'indirizzo email per il tuo account su <strong>{{ titolo_piattaforma }}</strong>.</p>
+
+{% if codice %}
+<p>Il codice di verifica è: <strong>{{ codice }}</strong></p>
+{% else %}
+<p>Clicca sul link per confermare:</p>
+<p><a href="{{ link_conferma }}">{{ link_conferma }}</a></p>
+{% endif %}

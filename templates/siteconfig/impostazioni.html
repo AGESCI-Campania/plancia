@@ -5,6 +5,7 @@
 
 {% block extra_head %}
 {{ block.super }}
+{{ form.media }}
 {% endblock %}
 
 {% block content %}
@@ -44,10 +45,43 @@
       <span class="fw-semibold">Footer</span>
     </div>
     <div class="card-body">
-      <div class="row g-3">
+      <div class="row g-3 mb-4">
         {% include "siteconfig/_campo.html" with field=form.footer_testo col="col-12" %}
-        {% include "siteconfig/_campo.html" with field=form.footer_link_label col="col-md-5" %}
-        {% include "siteconfig/_campo.html" with field=form.footer_link_url col="col-md-7" %}
+      </div>
+
+      <p class="small fw-semibold text-muted mb-2 border-top pt-3">
+        Link laterali <span class="fw-normal">(fino a 5 — lascia vuoto per non usare la riga)</span>
+      </p>
+      {{ link_formset.management_form }}
+      <div class="d-flex flex-column gap-2">
+        {% for lf in link_formset %}
+          {{ lf.id }}
+          <div class="row g-2 align-items-start">
+            <div class="col-md-3">
+              {{ lf.tipo }}
+              {% for e in lf.tipo.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-2">
+              {{ lf.etichetta }}
+              {% for e in lf.etichetta.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col">
+              {{ lf.url }}
+              {% for e in lf.url.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              {% for e in lf.non_field_errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+            </div>
+            {% if lf.instance.pk %}
+            <div class="col-auto d-flex align-items-center pt-1">
+              <div class="form-check mb-0" title="Elimina questo link">
+                {{ lf.DELETE }}
+                <label class="form-check-label text-danger" for="{{ lf.DELETE.id_for_label }}">
+                  {% bs_icon "trash" size="14" %}
+                </label>
+              </div>
+            </div>
+            {% endif %}
+          </div>
+        {% endfor %}
       </div>
     </div>
   </div>
@@ -119,7 +153,7 @@
       <strong>1. Capi</strong> → <strong>2. Squadriglie iscritte</strong> → <strong>3. Ragazzi</strong> (opzionale).
     </p>
     <p class="text-muted small mb-3">
-      L'import squadriglie iscritte crea i CSQ (ragazzi) direttamente dal file;
+      L'import squadriglie iscritte crea i Capi Squadriglia (ragazzi) direttamente dal file;
       l'import Ragazzi è opzionale e aggiorna i dati tramite codice socio.
     </p>
 
@@ -133,8 +167,8 @@
           </div>
           <div class="card-body">
             <p class="small text-muted mb-2">
-              Importa i capi dal tracciato Co.Ca. Deve essere eseguito prima dell'import
-              squadriglie per consentire l'abbinamento del CRP.
+              Importa i capi dal tracciato Co.Ca. (export da <strong>BuonaStrada</strong>).
+              Deve essere eseguito prima dell'import squadriglie per consentire l'abbinamento del Capo Reparto.
             </p>
             <form method="post" action="{% url 'siteconfig:lancia_import' 'coca' %}"
                   enctype="multipart/form-data">
@@ -158,7 +192,8 @@
           </div>
           <div class="card-body">
             <p class="small text-muted mb-2">
-              Crea i diari e abbina il CRP per email. Le anomalie (CRP non trovato)
+              Importa le squadriglie dal CSV dell'evento su <strong>BuonaCaccia</strong>.
+              Crea i diari e abbina il Capo Reparto per email. Le anomalie (Capo Reparto non trovato)
               si recuperano con "Riprova anomalie" dopo aver completato l'import capi.
             </p>
             <form method="post" action="{% url 'siteconfig:lancia_import' 'squadriglie' %}"
@@ -191,8 +226,9 @@
           </div>
           <div class="card-body">
             <p class="small text-muted mb-2">
-              Arricchisce i dati dei CSQ tramite codice socio. Se non eseguito,
-              i CSQ potranno correggere i propri dati in autonomia dalla piattaforma.
+              Importa i ragazzi dal tracciato (export da <strong>BuonaStrada</strong>).
+              Arricchisce i dati dei Capi Squadriglia tramite codice socio. Se non eseguito,
+              i Capi Squadriglia potranno correggere i propri dati in autonomia dalla piattaforma.
             </p>
             <form method="post" action="{% url 'siteconfig:lancia_import' 'ragazzi' %}"
                   enctype="multipart/form-data">

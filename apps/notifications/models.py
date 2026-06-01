@@ -16,6 +16,9 @@ TAG_REGISTRY: dict[str, list[str]] = {
     "dilazione": ["nome", "cognome", "titolo_piattaforma", "squadriglia",
                   "nuova_scadenza", "motivazione"],
     "richiesta_info": ["nome", "cognome", "titolo_piattaforma", "squadriglia", "note"],
+    # Email di sistema (allauth) — personalizzabili da impostazioni
+    "password_reset": ["nome", "cognome", "titolo_piattaforma", "link_reset"],
+    "email_confirmation": ["nome", "cognome", "titolo_piattaforma", "link_conferma", "codice"],
 }
 
 

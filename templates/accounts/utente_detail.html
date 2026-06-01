@@ -48,8 +48,11 @@
       </div>
       {% if puo_impersonare %}
         <div class="card-footer">
-          {% load hijack_tags %}
-          {% hijack_button utente %}
+          <form method="post" action="{% url 'hijack:acquire' %}">
+            {% csrf_token %}
+            <input type="hidden" name="user_pk" value="{{ utente.pk }}">
+            <button type="submit" class="btn btn-warning btn-sm">Impersona utente</button>
+          </form>
         </div>
       {% endif %}
     </div>
@@ -73,7 +76,7 @@
             </div>
             <div class="mb-2">
               <label class="form-label" for="id_edizione">
-                Edizione <small class="text-muted">(solo CRP/CSQ)</small>
+                Edizione <small class="text-muted">(solo Capo Reparto/Capo Squadriglia)</small>
               </label>
               <select name="edizione" id="id_edizione" class="form-select">
                 <option value="">— nessuna —</option>

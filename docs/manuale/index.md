@@ -3,8 +3,8 @@
 **Piattaforma Guidoncini Verdi · AGESCI Campania**
 
 Plancia è la piattaforma web per la gestione del concorso Guidoncini Verdi della Branca E/G.
-Permette alle squadriglie di compilare il Diario di Bordo, ai Capi Reparto di integrarlo, ai
-Pattugliatori di valutarlo e alla Segreteria di amministrare l'intera edizione.
+Permette alle squadriglie di compilare il Diario di Bordo, ai Capi Reparto di integrarlo, alla
+Pattuglia Guidoncini Verdi di valutarlo e alla Segreteria di amministrare l'intera edizione.
 
 ---
 
@@ -12,9 +12,9 @@ Pattugliatori di valutarlo e alla Segreteria di amministrare l'intera edizione.
 
 | Ruolo | Funzione principale |
 |---|---|
-| [Capo Squadriglia (CSQ)](csq.md) | Compila i moduli del Diario di Bordo |
-| [Capo Reparto / CRP](crp.md) | Integra il diario con la Relazione finale |
-| [Pattuglia GV (PGV)](pgv.md) | Valuta i diari assegnati |
+| [Capo Squadriglia](csq.md) | Compila i moduli del Diario di Bordo |
+| [Capo Reparto](crp.md) | Integra il diario con la Relazione finale |
+| [Pattuglia Guidoncini Verdi](pgv.md) | Valuta i diari assegnati |
 | [Incaricato EG](incaricato.md) | Supervisiona le valutazioni e pubblica gli esiti |
 | [Segreteria](segreteria.md) | Gestisce utenti, edizioni e import |
 | [Amministratore](admin.md) | Configura la piattaforma, OAuth e autenticazione social |
@@ -23,16 +23,23 @@ Pattugliatori di valutarlo e alla Segreteria di amministrare l'intera edizione.
 
 ## Struttura del Diario di Bordo
 
-Il Diario è composto da sei moduli, compilati in ordine:
+Il Diario è composto da sei moduli e segue un flusso a due fasi:
 
 | Modulo | Titolo | Chi compila |
 |---|---|---|
-| 1 | Anagrafica | CSQ / CRP |
-| 2 | Presentazione squadriglia | CSQ |
-| 3 | 1ª Impresa | CSQ |
-| 4 | 2ª Impresa *(Rinnovo: facoltativo)* | CSQ |
-| 5 | Missione | CSQ |
-| 6 | Relazione finale CRP | CRP *(mai visibile al CSQ)* |
+| 1 | Anagrafica | Capo Squadriglia / Capo Reparto |
+| 2 | Presentazione squadriglia | Capo Squadriglia |
+| 3 | 1ª Impresa | Capo Squadriglia |
+| 4 | 2ª Impresa *(Rinnovo: facoltativo)* | Capo Squadriglia |
+| 5 | Missione | Capo Squadriglia |
+| 6 | Relazione finale | Capo Reparto *(mai visibile al Capo Squadriglia)* |
+
+### Flusso di compilazione
+
+1. Il **Capo Squadriglia** compila i moduli 1–5 e clicca **"Invia al Capo Reparto"** quando ha finito.
+2. Il diario passa in stato **Relazione finale**: il **Capo Reparto** può ora compilare il modulo 6.
+3. Il Capo Reparto clicca **"Invia diario allo staff"** per consegnare il diario completo.
+4. Da questo momento il diario è in stato **Inviato** e non è più modificabile (salvo riapertura autorizzata).
 
 ---
 

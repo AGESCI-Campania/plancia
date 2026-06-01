@@ -117,9 +117,11 @@ uv run python manage.py import_coca    fixtures/sample_coca.csv    --dry-run
 uv run python manage.py import_ragazzi fixtures/sample_ragazzi.csv --dry-run
 uv run python manage.py import_squadriglie fixtures/sample_evento.csv  --edizione 1 --dry-run
 ```
-Sorgenti: **Co.Ca.** (capi → tutti i ruoli tranne CSQ), **ragazzi** (solo CSQ, senza email),
-**Evento** (anagrafiche diari; collega CSQ via codice socio e CRP via referente). Mappatura completa
-in `docs/Plancia_Progettazione.md`, Appendice D. **I CSV reali non vanno versionati** (dati di minori).
+Sorgenti: **Co.Ca. (BuonaStrada)** (capi → tutti i ruoli tranne Capo Squadriglia),
+**ragazzi (BuonaStrada)** (solo Capi Squadriglia, senza email),
+**Squadriglie iscritte (BuonaCaccia)** (anagrafiche diari; collega Capo Squadriglia via codice socio
+e Capo Reparto via email referente). Mappatura completa in `docs/Plancia_Progettazione.md`, Appendice D.
+**I CSV reali non vanno versionati** (dati di minori).
 
 ## Impostazioni di piattaforma (solo Admin)
 Pagina `/impostazioni/` riservata ad Admin, IABR e Segreteria, organizzata in sezioni:
@@ -127,7 +129,7 @@ Pagina `/impostazioni/` riservata ad Admin, IABR e Segreteria, organizzata in se
 | Sezione | Campi |
 |---|---|
 | **Identità** | Titolo · Sottotitolo (visualizzati nella navbar) |
-| **Footer** | Testo · Etichetta link · URL link |
+| **Footer** | Testo rich text · Fino a 5 link tipizzati (Sito web, Email, Facebook, Instagram, TikTok) con etichetta opzionale |
 | **Posta elettronica** | Modalità email · From · SMTP host/porta/TLS/credenziali |
 | **Stato e diagnostica** | Manutenzione · Debug toolbar · Debug diagnostico |
 | **Import tracciati** | Avvia import Co.Ca. / Ragazzi / Evento + link storico |
@@ -178,8 +180,8 @@ La navbar in `templates/base.html` è **role-aware**: mostra le voci rilevanti p
 |---|---|
 | **Admin / Incaricato EG** | Home · Diari · Helpdesk · Gestione ▾ · badge utente |
 | **Segreteria** | Home · Diari · Helpdesk · Gestione ▾ (no Impostazioni/Admin) · badge utente |
-| **PGV** | Home · Diari assegnati · Helpdesk · badge utente |
-| **CSQ / CRP** | Home · Diari · Helpdesk · badge utente |
+| **Pattuglia GV** | Home · Diari assegnati · Helpdesk · badge utente |
+| **Capo Squadriglia / Capo Reparto** | Home · Diari · Helpdesk · badge utente |
 
 Il **badge utente** (cerchio con iniziale) apre un dropdown con: Profilo, Email account,
 Cambia password, Sicurezza (MFA), Esci. L'intestazione mostra nome e chip con il ruolo.
@@ -213,13 +215,10 @@ Le immagini sono in `docs/manuale/screenshots/` e vengono generate dallo script
 
 ## Manuale — generazione PDF
 
-Con [pandoc](https://pandoc.org/) installato:
+Il PDF del manuale viene **generato automaticamente** da GitHub Actions ad ogni nuova release
+e allegato come asset di rilascio (`.github/workflows/release-manual.yml`).
 
-```bash
-make manual
-```
-
-Oppure direttamente:
+Per generarlo localmente con [pandoc](https://pandoc.org/):
 
 ```bash
 cd docs/manuale && pandoc --pdf-engine=xelatex --toc --toc-depth=2 \

@@ -2,15 +2,22 @@
 """Vista dedicata Impostazioni fuori dall'admin (Admin/IABR/Segreteria)."""
 from __future__ import annotations
 
+import os
+import uuid
+
+from django.conf import settings
 from django.contrib import messages
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.decorators import method_decorator
 from django.views import View
+from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import UpdateView
 
 from apps.accounts.mixins import RuoloRequiredMixin
 from apps.accounts.models import Ruolo
 from apps.notifications.models import MailTemplate, TAG_REGISTRY
-from apps.siteconfig.forms import ImpostazioniForm, MailTemplateForm
+from apps.siteconfig.forms import FooterLinkFormSet, ImpostazioniForm, MailTemplateForm
 from apps.siteconfig.models import Impostazioni
 
 
@@ -25,19 +32,15 @@ class ImpostazioniView(RuoloRequiredMixin, UpdateView):
     def get_object(self, queryset=None):
         return Impostazioni.get()
 
-    def form_valid(self, form):
-        messages.success(self.request, "Impostazioni salvate.")
-        return super().form_valid(form)
-
     def get_success_url(self):
         return self.request.path
 
     def get_context_data(self, **kwargs):
+        if "link_formset" not in kwargs:
+            kwargs["link_formset"] = FooterLinkFormSet(instance=self.get_object())
         ctx = super().get_context_data(**kwargs)
-        # Edizioni disponibili per il form import squadriglie
         from apps.editions.models import Edizione
         ctx["edizioni_import"] = Edizione.objects.order_by("-anno")
-        # Mappa chiave → oggetto DB (o None) per mostrare lo stato di ogni template
         db_map = {t.chiave: t for t in MailTemplate.objects.all()}
         ctx["mail_template_righe"] = [
             {
@@ -48,6 +51,19 @@ class ImpostazioniView(RuoloRequiredMixin, UpdateView):
             for chiave in TAG_REGISTRY
         ]
         return ctx
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        form = self.get_form()
+        link_formset = FooterLinkFormSet(request.POST, instance=self.object)
+        if form.is_valid() and link_formset.is_valid():
+            form.save()
+            link_formset.save()
+            messages.success(request, "Impostazioni salvate.")
+            return redirect(self.get_success_url())
+        return self.render_to_response(
+            self.get_context_data(form=form, link_formset=link_formset)
+        )
 
 
 class LanciaImportView(RuoloRequiredMixin, View):
@@ -132,11 +148,14 @@ class MailTemplateEditView(RuoloRequiredMixin, View):
 
     def _ctx(self, form, chiave, instance):
         tags = TAG_REGISTRY.get(chiave, [])
+        db_keys = set(MailTemplate.objects.values_list("chiave", flat=True))
+        chiavi_senza_record = [k for k in TAG_REGISTRY if k != chiave and k not in db_keys]
         return {
             "form": form,
             "chiave": chiave,
             "tag_disponibili": [{"nome": t, "tpl": "{{ " + t + " }}"} for t in tags],
             "instance": instance,
+            "chiavi_senza_record": chiavi_senza_record,
         }
 
 
@@ -170,6 +189,63 @@ class MailTemplateImportaView(RuoloRequiredMixin, View):
         )
         messages.success(request, f"Template «{chiave}» importato dal file di default.")
         return redirect("siteconfig:mail_template_edit", chiave=chiave)
+
+
+class MailTemplateCopiaView(RuoloRequiredMixin, View):
+    """Duplica oggetto e corpo_html di un MailTemplate verso una nuova chiave senza record DB."""
+
+    ruoli_ammessi = (Ruolo.ADMIN, Ruolo.SEGRETERIA, Ruolo.INCARICATO_EG)
+
+    def post(self, request, chiave):
+        source = get_object_or_404(MailTemplate, chiave=chiave)
+        target_chiave = request.POST.get("target_chiave", "").strip()
+        if target_chiave not in TAG_REGISTRY:
+            messages.error(request, "Chiave target non valida.")
+            return redirect("siteconfig:mail_template_edit", chiave=chiave)
+        if MailTemplate.objects.filter(chiave=target_chiave).exists():
+            messages.warning(request, f"Il template «{target_chiave}» esiste già.")
+            return redirect("siteconfig:mail_template_edit", chiave=target_chiave)
+        MailTemplate.objects.create(
+            chiave=target_chiave,
+            oggetto=source.oggetto,
+            corpo_html=source.corpo_html,
+            attivo=source.attivo,
+        )
+        messages.success(request, f"Template «{target_chiave}» creato da «{chiave}».")
+        return redirect("siteconfig:mail_template_edit", chiave=target_chiave)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class MailTemplateImageUploadView(RuoloRequiredMixin, View):
+    """Endpoint upload immagini per TinyMCE nei template email."""
+
+    ruoli_ammessi = (Ruolo.ADMIN, Ruolo.SEGRETERIA, Ruolo.INCARICATO_EG)
+    _ALLOWED_TYPES = frozenset({"image/jpeg", "image/png", "image/gif", "image/webp"})
+    _MAX_SIZE = 2 * 1024 * 1024  # 2 MB
+
+    def post(self, request):
+        upload = request.FILES.get("file")
+        if not upload:
+            return JsonResponse({"error": "Nessun file ricevuto."}, status=400)
+        if upload.content_type not in self._ALLOWED_TYPES:
+            return JsonResponse(
+                {"error": "Tipo non supportato. Usa JPEG, PNG, GIF o WebP."}, status=400
+            )
+        if upload.size > self._MAX_SIZE:
+            return JsonResponse({"error": "File troppo grande (max 2 MB)."}, status=400)
+
+        ext = os.path.splitext(upload.name)[1].lower() or ".jpg"
+        filename = f"{uuid.uuid4().hex}{ext}"
+        save_dir = os.path.join(settings.MEDIA_ROOT, "mail_images")
+        os.makedirs(save_dir, exist_ok=True)
+
+        with open(os.path.join(save_dir, filename), "wb") as fh:
+            for chunk in upload.chunks():
+                fh.write(chunk)
+
+        media_prefix = "/" + settings.MEDIA_URL.lstrip("/")
+        location = request.build_absolute_uri(f"{media_prefix}mail_images/{filename}")
+        return JsonResponse({"location": location})
 
 
 class MailTemplateDeleteView(RuoloRequiredMixin, View):

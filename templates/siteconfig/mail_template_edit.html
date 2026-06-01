@@ -27,7 +27,13 @@
       <small class="text-warning">{% bs_icon "plus-circle" size="14" extra_classes="me-1" %}Nuovo template — non ancora salvato</small>
     {% endif %}
   </div>
-  <div class="d-flex gap-2">
+  <div class="d-flex gap-2 flex-wrap">
+    {% if instance and chiavi_senza_record %}
+      <button type="button" class="btn btn-outline-primary btn-sm"
+              data-bs-toggle="modal" data-bs-target="#modalCopia">
+        {% bs_icon "copy" size="14" extra_classes="me-1" %}Crea nuovo da attuale
+      </button>
+    {% endif %}
     {% if instance %}
       <form method="post" action="{% url 'siteconfig:mail_template_elimina' chiave %}"
             onsubmit="return confirm('Eliminare il template? Verrà ripristinato il file di default.')">
@@ -41,6 +47,43 @@
       {% bs_icon "arrow-left" size="14" extra_classes="me-1" %}Torna alle impostazioni
     </a>
   </div>
+
+  {# ── Modale copia template ─────────────────────────────────────────── #}
+  {% if instance and chiavi_senza_record %}
+  <div class="modal fade" id="modalCopia" tabindex="-1" aria-labelledby="modalCopiaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+      <form method="post" action="{% url 'siteconfig:mail_template_copia' chiave %}">
+        {% csrf_token %}
+        <div class="modal-content">
+          <div class="modal-header py-2">
+            <h6 class="modal-title" id="modalCopiaLabel">
+              {% bs_icon "copy" size="14" extra_classes="me-1" %}Crea nuovo da attuale
+            </h6>
+            <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <p class="small text-muted mb-2">
+              Scegli la chiave di destinazione. Il template <code>{{ chiave }}</code>
+              verrà duplicato (oggetto + corpo HTML) come punto di partenza.
+            </p>
+            <select name="target_chiave" class="form-select form-select-sm" required>
+              <option value="">— Seleziona chiave —</option>
+              {% for k in chiavi_senza_record %}
+                <option value="{{ k }}">{{ k }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="modal-footer py-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annulla</button>
+            <button type="submit" class="btn btn-primary btn-sm">
+              {% bs_icon "copy" size="14" extra_classes="me-1" %}Duplica e apri editor
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
 </div>
 
 

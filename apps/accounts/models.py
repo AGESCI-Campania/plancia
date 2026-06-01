@@ -1,6 +1,8 @@
 # apps/accounts/models.py
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.db.models import Q
+from django.utils import timezone
 
 
 class Ruolo(models.TextChoices):
@@ -17,6 +19,9 @@ class User(AbstractUser):
 
     Il campo `socio` collega l'account all'anagrafica (1:1); null=True perché
     gli Admin possono non avere un Socio associato. Vedi docs sez. 2.
+
+    `ruolo` = ruolo attivo corrente (quello con cui l'utente sta operando adesso).
+    L'insieme completo dei ruoli assegnati si legge da `Nomina` (vedi `ruoli_attivi`).
     """
 
     email = models.EmailField("indirizzo email", unique=True)
@@ -51,9 +56,31 @@ class User(AbstractUser):
         """Admin, Segreteria e Incaricati EG: gestiscono la piattaforma."""
         return self.ruolo in (Ruolo.ADMIN, Ruolo.SEGRETERIA, Ruolo.INCARICATO_EG)
 
+    @property
+    def ruoli_attivi(self) -> list[str]:
+        """Chiavi di tutti i ruoli attivi e non scaduti (da Nomina)."""
+        oggi = timezone.now().date()
+        return list(
+            self.nomine.filter(attiva=True)
+            .filter(Q(scadenza__isnull=True) | Q(scadenza__gte=oggi))
+            .values_list("ruolo", flat=True)
+            .distinct()
+        )
+
+    @property
+    def ruoli_attivi_choices(self) -> list[tuple[str, str]]:
+        """Lista (chiave, etichetta) dei ruoli attivi non scaduti, per i template."""
+        return [(r, Ruolo(r).label) for r in self.ruoli_attivi]
+
 
 class Nomina(models.Model):
-    """Traccia l'assegnazione di un ruolo a una persona (audit). Vedi docs sez. 2."""
+    """Assegnazione di un ruolo a un utente.
+
+    È sia un record di audit sia la fonte di verità per i ruoli multipli.
+    `attiva=False` equivale a revoca senza cancellazione (per l'audit trail).
+    `scadenza` è opzionale e si usa per PGV, IABR e Segreteria.
+    Vedi docs sez. 2.
+    """
 
     socio = models.ForeignKey(
         "org.Socio", on_delete=models.CASCADE, related_name="nomine", null=True, blank=True
@@ -72,6 +99,15 @@ class Nomina(models.Model):
         blank=True,
         related_name="nomine",
         help_text="Valorizzato solo per i ruoli contestuali CRP/CSQ.",
+    )
+    attiva = models.BooleanField(
+        default=True,
+        help_text="False se revocata. Il record rimane per l'audit trail.",
+    )
+    scadenza = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Scadenza opzionale (PGV, IABR, Segreteria). Null = nessuna scadenza.",
     )
     creato_at = models.DateTimeField(auto_now_add=True)
 

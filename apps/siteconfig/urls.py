@@ -10,5 +10,7 @@ urlpatterns = [
     path("import/<str:tracciato>/", views.LanciaImportView.as_view(), name="lancia_import"),
     path("mail/<str:chiave>/", views.MailTemplateEditView.as_view(), name="mail_template_edit"),
     path("mail/<str:chiave>/importa/", views.MailTemplateImportaView.as_view(), name="mail_template_importa"),
+    path("mail/<str:chiave>/copia/", views.MailTemplateCopiaView.as_view(), name="mail_template_copia"),
     path("mail/<str:chiave>/elimina/", views.MailTemplateDeleteView.as_view(), name="mail_template_elimina"),
+    path("mail/upload-immagine/", views.MailTemplateImageUploadView.as_view(), name="mail_image_upload"),
 ]

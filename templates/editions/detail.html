@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load bootstrap_icons %}
 {% block title %}{{ edizione }} — Plancia{% endblock %}
 
 {% block content %}
@@ -66,6 +67,48 @@
   {% endif %}
 </div>
 
+{% if stats_diari %}
+{# ── Statistiche stati diari (solo staff) ──────────────────────────────── #}
+<div class="card mb-4 shadow-sm">
+  <div class="card-header d-flex align-items-center gap-2">
+    {% bs_icon "bar-chart" size="18" extra_classes="text-primary" %}
+    <span class="fw-semibold">Avanzamento diari</span>
+    <span class="ms-auto text-muted small">{{ stats_diari.totale }} diari totali</span>
+  </div>
+  <div class="card-body pb-2">
+
+    {# Barra progress composita #}
+    {% if stats_diari.totale %}
+    <div class="progress mb-3" style="height:18px;" role="progressbar">
+      {% for s in stats_diari.per_stato %}{% if s.totale %}
+      <div class="progress-bar {% if s.colore == 'warning' %}bg-warning text-dark{% else %}bg-{{ s.colore }}{% endif %}"
+           style="width:{{ s.percentuale }}%"
+           title="{{ s.label }}: {{ s.totale }}">
+      </div>
+      {% endif %}{% endfor %}
+    </div>
+    {% endif %}
+
+    {# Contatori per stato #}
+    <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-7 g-2">
+      {% for s in stats_diari.per_stato %}
+      <div class="col">
+        <div class="text-center py-2 px-1 rounded border
+          {% if s.totale %}border-{{ s.colore }}{% else %}border-light text-muted{% endif %}">
+          <div class="fw-bold fs-5
+            {% if s.totale %}text-{{ s.colore }}{% if s.colore == 'warning' %} text-dark{% endif %}{% endif %}">
+            {{ s.totale }}
+          </div>
+          <div class="small lh-sm" style="font-size:.72rem">{{ s.label }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+  </div>
+</div>
+{% endif %}
+
 <!-- Lista diari -->
 <h4 class="mb-3">Diari di bordo</h4>
 {% if diari %}
@@ -77,8 +120,8 @@
           <th>Reparto</th>
           <th>Tipo</th>
           <th>Stato</th>
-          <th>CSQ</th>
-          <th>CRP</th>
+          <th>Capo Squadriglia</th>
+          <th>Capo Reparto</th>
           <th></th>
         </tr>
       </thead>
@@ -91,6 +134,7 @@
             <td>
               <span class="badge
                 {% if d.stato == 'in_compilazione' %}bg-info text-dark
+                {% elif d.stato == 'relazione_finale' %}bg-warning text-dark
                 {% elif d.stato == 'inviato' %}bg-primary
                 {% elif d.stato == 'in_valutazione' %}bg-warning text-dark
                 {% elif d.stato == 'in_revisione' %}bg-warning text-dark

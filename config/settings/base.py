@@ -180,6 +180,7 @@ SOCIALACCOUNT_QUERY_EMAIL = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
 SOCIALACCOUNT_ADAPTER = "apps.accounts.adapters.PlanciaSocialAccountAdapter"
+ACCOUNT_ADAPTER = "apps.accounts.adapters.PlanciaAccountAdapter"
 
 # --- MFA (allauth.mfa) -------------------------------------------------------
 MFA_ADAPTER = "apps.accounts.adapters.PlanciaMFAAdapter"
@@ -286,6 +287,21 @@ LOGGING = {
 # --- AGESCI Theme -----------------------------------------------------------
 AGESCI_THEME_BRANCA = "eg"
 AGESCI_THEME_NOME = "AGESCI Campania"
+
+# --- TinyMCE ----------------------------------------------------------------
+TINYMCE_DEFAULT_CONFIG = {
+    "plugins": "link code lists image",
+    "toolbar": "undo redo | bold italic | bullist numlist | link image | code",
+    "menubar": False,
+    "height": 400,
+    "link_assume_external_targets": True,
+    "default_link_target": "_blank",
+    "link_title": False,
+    "images_upload_url": "/impostazioni/mail/upload-immagine/",
+    "automatic_uploads": True,
+    "file_picker_types": "image",
+    "images_reuse_filename": False,
+}
 
 # --- Impersonazione (django-hijack) -----------------------------------------
 # Autorizzazione per rango: Admin/Segreteria possono impersonare ruoli con
