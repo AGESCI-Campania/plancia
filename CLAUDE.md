@@ -21,11 +21,13 @@ inventare requisiti.
 ## Stack
 - Python **≥ 3.14**, Django **≥ 6.0** (usa Background Tasks e CSP nativi dove utile).
 - PostgreSQL **≥ 17**. Redis + **Celery** per i job asincroni.
-- **uv** per dipendenze/venv. **Bootstrap 5** lato frontend. **WeasyPrint** (PDF), **openpyxl** (Excel).
+- **uv** per dipendenze/venv. **Bootstrap 5** lato frontend via **`django-agesci-campania-theme` 1.1.0**.
+  Icone SVG inline con **`django-bootstrap-icons`**. **WeasyPrint** (PDF), **openpyxl** (Excel).
 - Auth: **django-allauth** (email + social Google/Microsoft/Apple, **MFA**, log sessioni).
   Permessi object-level con **django-guardian**, brute-force con **django-axes**.
 - PWA con **django-pwa** + service worker/IndexedDB costruiti sopra.
-- File su **Google Drive** via OAuth.
+- File su **Google Drive** via OAuth (guida: `docs/guide/google_drive_oauth.md`).
+- Social login Google/Microsoft/Apple (guida: `docs/guide/social_auth.md`).
 
 ## Layout del repository
 ```
@@ -75,13 +77,27 @@ uv run celery -A config worker -l info
 
 ## Stato dell'implementazione
 
-**UI**: usa `django-agesci-campania-theme` (installato). Template estendono `base.html` → `agesci_theme/base.html`. Setting: `AGESCI_THEME_BRANCA = "eg"`.
+**UI**: usa `django-agesci-campania-theme` **1.1.0** (installato). Template estendono `base.html` → `agesci_theme/base.html`. Setting: `AGESCI_THEME_BRANCA = "eg"`.
 
 **CRITICO — navbar e blocchi del tema**: `{% block %}` nei template `{% include %}` **non** partecipano
 all'ereditarietà Django. Il tema usa `{% include "agesci_theme/partials/navbar.html" %}`, quindi
 `{% block brand_text %}` e `{% block nav_items %}` al suo interno sono opachi. Per personalizzare la
 navbar, sovrascrivere **completamente** `{% block navbar %}` in `base.html` senza usare `{{ block.super }}`
 per la parte delle voci. Vedi `templates/base.html` come riferimento.
+
+**`{% block messages %}` globale (tema 1.1.0)**: il tema gestisce automaticamente i messaggi Django
+nel blocco `{% block messages %}` di `agesci_theme/base.html`. **Non aggiungere `{% if messages %}`
+nei singoli template** — causerebbe messaggi duplicati. Il blocco può essere sovrascritto se serve
+posizionarlo diversamente in un template specifico.
+
+**Icone — `django-bootstrap-icons`**: tutti i template usano icone SVG inline via
+`{% load bootstrap_icons %}` + `{% bs_icon "nome-icona" size="14" extra_classes="..." %}`.
+Le SVG vengono scaricate da CDN al primo uso e cachate in `.icon_cache/` (esclusa da `.gitignore`).
+Non usare `<i class="bi bi-*">` né il CDN Bootstrap Icons via `<link>`.
+
+**Footer sticky**: il footer in `{% block footer %}` di `templates/base.html` usa `class="footer-agesci mt-auto"`.
+Il `mt-auto` è **obbligatorio** per il corretto funzionamento del layout sticky del tema
+(`body { height: 100vh; d-flex flex-column }`). Non sostituire con `mt-5` o margini fissi.
 
 App con modelli e UI completi:
 - **`accounts`** — `User` (+ `socio` OneToOneField), `Nomina`, `LoginEvent`; `roles.py` (+ service `nomina()`); `signals.py` (+ `ensure_superuser_ruolo`: imposta automaticamente `ruolo=ADMIN` quando `is_superuser=True` viene salvato — corregge il default CSQ di `createsuperuser`); `mixins.py`; `forms.py` (Bootstrap mixin + form allauth); `views.py` (`ProfiloView`, `UtenteListView`, `UtenteDetailView`, `NominaView`); `urls.py` (namespace `accounts`, mountato su `utenti/`). Template: `accounts/profilo|utente_list|utente_detail`. Test: `apps/accounts/tests/`.
@@ -239,3 +255,7 @@ richiesto.
 - Non versionare né includere nei pacchetti i CSV reali (minori/dati sensibili): usa solo `fixtures/`.
 - Non rendere il codice socio editabile a mano dove deve restare la chiave d'import; validalo come
   numerico 4–8 cifre.
+- Non aggiungere `{% if messages %}` nei template: il tema 1.1.0 gestisce i messaggi Django
+  globalmente via `{% block messages %}` in `agesci_theme/base.html`.
+- Non usare `<i class="bi bi-*">` per le icone: usare `{% bs_icon %}` da `django-bootstrap-icons`.
+- Non usare `mt-5` sul footer: usare `mt-auto` per il layout sticky del tema.

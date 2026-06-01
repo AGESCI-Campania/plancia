@@ -1,5 +1,12 @@
 # Plancia
 
+[![Python](https://img.shields.io/badge/python-3.14%2B-blue.svg)](https://www.python.org/)
+[![Django](https://img.shields.io/badge/Django-6.0%2B-092E20.svg?logo=django&logoColor=white)](https://www.djangoproject.com/)
+[![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3-7952B3.svg?logo=bootstrap&logoColor=white)](https://getbootstrap.com/)
+[![uv](https://img.shields.io/badge/packaged%20with-uv-DE5FE9.svg?logo=uv&logoColor=white)](https://github.com/astral-sh/uv)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 Piattaforma di gestione dei **Guidoncini Verdi** — AGESCI Campania, Branca E/G.
 Le squadriglie compilano il *Diario di Bordo*, i capi lo integrano, gli Incaricati EG valutano e
 pubblicano l'esito; output in PDF ed Excel, file su Google Drive, frontend responsive e PWA.
@@ -9,7 +16,8 @@ pubblicano l'esito; output in PDF ed Excel, file su Google Drive, frontend respo
 
 ## Stack
 Python ≥ 3.14 · Django ≥ 6.0 · PostgreSQL ≥ 17 · Redis + Celery · django-allauth (MFA, social) ·
-django-guardian · django-axes · django-pwa · Bootstrap 5 · WeasyPrint · openpyxl · Google Drive (OAuth).
+django-guardian · django-axes · django-pwa · Bootstrap 5 · django-agesci-campania-theme 1.1.0 ·
+django-bootstrap-icons · WeasyPrint · openpyxl · Google Drive (OAuth).
 Gestione dipendenze con **uv**; ambiente opzionale con **mise**.
 
 ## Prerequisiti
