@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load bootstrap_icons %}
 {% block title %}Import {{ log.get_tipo_display }} — {{ log.creato_at|date:"d/m/Y" }}{% endblock %}
 
 {% block extra_head %}
@@ -58,7 +59,7 @@
         <form method="post" action="{% url 'imports:riprova_anomalie' log.pk %}">
           {% csrf_token %}
           <button class="btn btn-warning btn-sm">
-            <i class="bi bi-arrow-repeat me-1"></i> Riprova anomalie
+            {% bs_icon "arrow-repeat" size="14" extra_classes="me-1" %} Riprova anomalie
           </button>
         </form>
       {% endif %}

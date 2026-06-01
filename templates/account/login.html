@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n socialaccount %}
+{% load i18n socialaccount bootstrap_icons %}
 
 {% block title %}Accedi — {{ block.super }}{% endblock %}
 
@@ -47,7 +47,7 @@
 
           <div class="d-grid mt-4">
             <button type="submit" class="btn btn-primary btn-lg">
-              {% trans "Accedi" %}
+              {% bs_icon "box-arrow-in-right" extra_classes="me-2" %}{% trans "Accedi" %}
             </button>
           </div>
         </form>
@@ -57,7 +57,12 @@
         <hr class="my-3">
         <div class="d-grid gap-2">
           {% for provider in socialaccount_providers %}
-          <a href="{% provider_login_url provider.id %}" class="btn btn-outline-secondary">
+          <a href="{% provider_login_url provider.id %}" class="btn btn-outline-secondary d-flex align-items-center justify-content-center gap-2">
+            {% if provider.id == "google" %}{% bs_icon "google" size="18" %}
+            {% elif provider.id == "microsoft" %}{% bs_icon "microsoft" size="18" %}
+            {% elif provider.id == "apple" %}{% bs_icon "apple" size="18" %}
+            {% else %}{% bs_icon "box-arrow-in-right" size="18" %}
+            {% endif %}
             {% blocktrans with name=provider.name %}Accedi con {{ name }}{% endblocktrans %}
           </a>
           {% endfor %}

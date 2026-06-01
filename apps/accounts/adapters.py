@@ -21,6 +21,11 @@ class PlanciaMFAAdapter(DefaultMFAAdapter):
     """Impedisce agli utenti privilegiati di disattivare il TOTP."""
 
     def can_delete_authenticator(self, authenticator) -> bool:
+        from django.conf import settings
+
+        if settings.DEBUG:
+            return True
+
         from allauth.mfa.models import Authenticator
 
         user = authenticator.user

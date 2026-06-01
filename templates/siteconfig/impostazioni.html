@@ -1,11 +1,10 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load i18n bootstrap_icons %}
 
 {% block title %}Impostazioni — {{ block.super }}{% endblock %}
 
 {% block extra_head %}
 {{ block.super }}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 {% endblock %}
 
 {% block content %}
@@ -16,7 +15,7 @@
     <small class="text-muted">Aggiornato il {{ object.aggiornato_at|date:"d/m/Y alle H:i" }}</small>
   </div>
   <button type="submit" form="form-impostazioni" class="btn btn-primary">
-    <i class="bi bi-check-lg me-1"></i> Salva impostazioni
+    {% bs_icon "check-lg" size="14" extra_classes="me-1" %} Salva impostazioni
   </button>
 </div>
 
@@ -35,7 +34,7 @@
   {# ── 1. Identità ───────────────────────────────────────────────────── #}
   <div class="card mb-4 shadow-sm">
     <div class="card-header d-flex align-items-center gap-2">
-      <i class="bi bi-card-heading text-primary"></i>
+      {% bs_icon "card-heading" size="20" extra_classes="text-primary" %}
       <span class="fw-semibold">Identità</span>
     </div>
     <div class="card-body">
@@ -49,7 +48,7 @@
   {# ── 2. Footer ──────────────────────────────────────────────────────── #}
   <div class="card mb-4 shadow-sm">
     <div class="card-header d-flex align-items-center gap-2">
-      <i class="bi bi-layout-text-window-reverse text-secondary"></i>
+      {% bs_icon "layout-text-window-reverse" size="20" extra_classes="text-secondary" %}
       <span class="fw-semibold">Footer</span>
     </div>
     <div class="card-body">
@@ -64,7 +63,7 @@
   {# ── 3. Posta elettronica ───────────────────────────────────────────── #}
   <div class="card mb-4 shadow-sm">
     <div class="card-header d-flex align-items-center gap-2">
-      <i class="bi bi-envelope text-info"></i>
+      {% bs_icon "envelope" size="20" extra_classes="text-info" %}
       <span class="fw-semibold">Posta elettronica</span>
     </div>
     <div class="card-body">
@@ -94,7 +93,7 @@
   {# ── 4. Stato e diagnostica ─────────────────────────────────────────── #}
   <div class="card mb-4 shadow-sm">
     <div class="card-header d-flex align-items-center gap-2">
-      <i class="bi bi-sliders text-warning"></i>
+      {% bs_icon "sliders" size="20" extra_classes="text-warning" %}
       <span class="fw-semibold">Stato e diagnostica</span>
     </div>
     <div class="card-body">
@@ -108,7 +107,7 @@
 
   <div class="d-flex justify-content-end mb-5">
     <button type="submit" class="btn btn-primary px-4">
-      <i class="bi bi-check-lg me-1"></i> Salva impostazioni
+      {% bs_icon "check-lg" size="14" extra_classes="me-1" %} Salva impostazioni
     </button>
   </div>
 </form>
@@ -116,7 +115,7 @@
 {# ── 5. Import tracciati ───────────────────────────────────────────────── #}
 <div class="card mb-4 shadow-sm">
   <div class="card-header d-flex align-items-center gap-2">
-    <i class="bi bi-cloud-upload text-success"></i>
+    {% bs_icon "cloud-upload" size="20" extra_classes="text-success" %}
     <span class="fw-semibold">Import tracciati</span>
     <a href="{% url 'imports:log_list' %}" class="btn btn-outline-secondary btn-sm ms-auto">
       Storico import
@@ -138,7 +137,7 @@
       <div class="col-md-4">
         <div class="card h-100 border-secondary">
           <div class="card-header bg-light py-2 small fw-semibold">
-            <i class="bi bi-person-badge me-1"></i> 1. Capi (Co.Ca.)
+            {% bs_icon "person-badge" size="14" extra_classes="me-1" %} 1. Capi (Co.Ca.)
           </div>
           <div class="card-body">
             <p class="small text-muted mb-2">
@@ -152,7 +151,7 @@
                 <input type="file" name="file" accept=".csv" class="form-control form-control-sm" required>
               </div>
               <button class="btn btn-outline-secondary btn-sm w-100">
-                <i class="bi bi-upload me-1"></i> Importa Capi
+                {% bs_icon "upload" size="14" extra_classes="me-1" %} Importa Capi
               </button>
             </form>
           </div>
@@ -163,7 +162,7 @@
       <div class="col-md-4">
         <div class="card h-100 border-primary">
           <div class="card-header bg-light py-2 small fw-semibold">
-            <i class="bi bi-flag me-1"></i> 2. Squadriglie iscritte
+            {% bs_icon "flag" size="14" extra_classes="me-1" %} 2. Squadriglie iscritte
           </div>
           <div class="card-body">
             <p class="small text-muted mb-2">
@@ -185,7 +184,7 @@
                 <input type="file" name="file" accept=".csv" class="form-control form-control-sm" required>
               </div>
               <button class="btn btn-outline-primary btn-sm w-100">
-                <i class="bi bi-upload me-1"></i> Importa Squadriglie iscritte
+                {% bs_icon "upload" size="14" extra_classes="me-1" %} Importa Squadriglie iscritte
               </button>
             </form>
           </div>
@@ -196,7 +195,7 @@
       <div class="col-md-4">
         <div class="card h-100 border-secondary border-opacity-50">
           <div class="card-header bg-light py-2 small fw-semibold text-muted">
-            <i class="bi bi-people me-1"></i> 3. Ragazzi <span class="badge bg-secondary fw-normal ms-1">opzionale</span>
+            {% bs_icon "people" size="14" extra_classes="me-1" %} 3. Ragazzi <span class="badge bg-secondary fw-normal ms-1">opzionale</span>
           </div>
           <div class="card-body">
             <p class="small text-muted mb-2">
@@ -210,7 +209,7 @@
                 <input type="file" name="file" accept=".csv" class="form-control form-control-sm" required>
               </div>
               <button class="btn btn-outline-secondary btn-sm w-100">
-                <i class="bi bi-upload me-1"></i> Importa Ragazzi
+                {% bs_icon "upload" size="14" extra_classes="me-1" %} Importa Ragazzi
               </button>
             </form>
           </div>
@@ -224,7 +223,7 @@
 {# ── 6. Template email ─────────────────────────────────────────────────── #}
 <div class="card shadow-sm">
   <div class="card-header d-flex align-items-center gap-2">
-    <i class="bi bi-file-earmark-text text-secondary"></i>
+    {% bs_icon "file-earmark-text" size="20" extra_classes="text-secondary" %}
     <span class="fw-semibold">Template email</span>
     <span class="badge bg-secondary ms-1">{{ mail_template_righe|length }}</span>
   </div>
@@ -261,19 +260,19 @@
             <td class="text-center">
               {% if riga.template %}
                 {% if riga.template.attivo %}
-                  <i class="bi bi-check-circle-fill text-success"></i>
+                  {% bs_icon "check-circle-fill" size="14" extra_classes="text-success" %}
                 {% else %}
-                  <i class="bi bi-dash-circle text-muted"></i>
+                  {% bs_icon "dash-circle" size="14" extra_classes="text-muted" %}
                 {% endif %}
               {% else %}
-                <i class="bi bi-file-earmark text-muted" title="File di default"></i>
+                {% bs_icon "file-earmark" size="14" extra_classes="text-muted" %}
               {% endif %}
             </td>
             <td class="text-end pe-3">
               {% if riga.template %}
                 <a href="{% url 'siteconfig:mail_template_edit' riga.chiave %}"
                    class="btn btn-outline-primary btn-sm">
-                  <i class="bi bi-pencil me-1"></i>Modifica
+                  {% bs_icon "pencil" size="14" extra_classes="me-1" %}Modifica
                 </a>
               {% else %}
                 <div class="d-flex gap-1 justify-content-end">
@@ -281,13 +280,13 @@
                     {% csrf_token %}
                     <button type="submit" class="btn btn-outline-secondary btn-sm"
                             title="Importa il file di default e apri l'editor">
-                      <i class="bi bi-download me-1"></i>Importa da file
+                      {% bs_icon "download" size="14" extra_classes="me-1" %}Importa da file
                     </button>
                   </form>
                   <a href="{% url 'siteconfig:mail_template_edit' riga.chiave %}"
                      class="btn btn-outline-success btn-sm"
                      title="Crea un template personalizzato da zero">
-                    <i class="bi bi-plus-lg me-1"></i>Crea nuovo
+                    {% bs_icon "plus-lg" size="14" extra_classes="me-1" %}Crea nuovo
                   </a>
                 </div>
               {% endif %}

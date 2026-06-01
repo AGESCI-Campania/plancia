@@ -21,6 +21,8 @@ logs/
 docs/manuale/screenshots/
 # PDF generati (artefatti, non versionati)
 docs/manuale/*.pdf
+# Cache SVG icone (django-bootstrap-icons)
+.icon_cache/
 # IDE
 .idea/
 *.iml

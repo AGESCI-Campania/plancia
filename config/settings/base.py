@@ -45,6 +45,7 @@ THIRD_PARTY_APPS = [
     "tinymce",
     "hijack",
     "hijack.contrib.admin",
+    "django_bootstrap_icons",
 ]
 
 LOCAL_APPS = [
@@ -232,6 +233,11 @@ PWA_SERVICE_WORKER_PATH = BASE_DIR / "static" / "js" / "plancia-sw.js"
 PWA_APP_ICONS = []
 PWA_APP_ICONS_APPLE = []
 PWA_APP_SPLASH_SCREEN = []
+
+# --- Bootstrap Icons (django-bootstrap-icons) --------------------------------
+# Versione CDN allineata a quella usata nei template; cache su disco in .icon_cache/
+BS_ICONS_BASE_URL = "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/"
+BS_ICONS_CACHE = BASE_DIR / ".icon_cache"
 
 # --- Google Drive (storage_drive) ------------------------------------------
 GOOGLE_OAUTH_CLIENT_ID = env.str("GOOGLE_OAUTH_CLIENT_ID", default="")
