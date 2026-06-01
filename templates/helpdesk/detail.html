@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Ticket #{{ ticket.pk }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex align-items-center gap-2 mb-3">
+    <a href="{% url 'helpdesk:list' %}" class="btn btn-outline-secondary btn-sm">← Helpdesk</a>
+    <h1 class="h4 mb-0">Ticket #{{ ticket.pk }}: {{ ticket.oggetto }}</h1>
+    <span class="badge {% if ticket.stato == 'aperto' %}bg-danger{% elif ticket.stato == 'in_lavorazione' %}bg-warning text-dark{% else %}bg-success{% endif %}">{{ ticket.get_stato_display }}</span>
+  </div>
+
+  {% if messages %}
+    {% for msg in messages %}
+      <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    {% endfor %}
+  {% endif %}
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <dl class="row mb-0">
+        <dt class="col-sm-3">Aperto da</dt>
+        <dd class="col-sm-9">{{ ticket.aperto_da.get_full_name|default:ticket.aperto_da.email }} — {{ ticket.creato_at|date:"d/m/Y H:i" }}</dd>
+        <dt class="col-sm-3">Categoria</dt>
+        <dd class="col-sm-9">{{ ticket.get_categoria_display }}</dd>
+        {% if ticket.diario %}<dt class="col-sm-3">Diario</dt><dd class="col-sm-9"><a href="{% url 'diaries:detail' ticket.diario.pk %}">{{ ticket.diario }}</a></dd>{% endif %}
+        {% if ticket.assegnato_a %}<dt class="col-sm-3">Assegnato a</dt><dd class="col-sm-9">{{ ticket.assegnato_a.get_full_name|default:ticket.assegnato_a.email }}</dd>{% endif %}
+      </dl>
+      <hr>
+      <p>{{ ticket.corpo|linebreaks }}</p>
+    </div>
+  </div>
+
+  <!-- Risposte -->
+  {% for r in risposte %}
+    <div class="card mb-2 {% if r.autore == ticket.aperto_da %}border-start border-primary border-3{% endif %}">
+      <div class="card-body py-2">
+        <small class="text-muted">{{ r.autore.get_full_name|default:r.autore.email }} — {{ r.creata_at|date:"d/m/Y H:i" }}</small>
+        <p class="mb-0 mt-1">{{ r.testo|linebreaks }}</p>
+      </div>
+    </div>
+  {% endfor %}
+
+  <!-- Aggiungi risposta (se ticket non chiuso) -->
+  {% if ticket.stato != 'chiuso' %}
+    <form method="post" action="{% url 'helpdesk:rispondi' ticket.pk %}" class="mt-3">
+      {% csrf_token %}
+      <textarea name="testo" class="form-control mb-2" rows="3" placeholder="Scrivi una risposta…" required></textarea>
+      <div class="d-flex gap-2">
+        <button class="btn btn-primary btn-sm">Rispondi</button>
+        {% if is_staff_helpdesk and ticket.stato == 'aperto' %}
+          <form method="post" action="{% url 'helpdesk:prendi' ticket.pk %}" style="display:inline">
+            {% csrf_token %}
+            <button class="btn btn-outline-secondary btn-sm">Prendi in carico</button>
+          </form>
+        {% endif %}
+        <form method="post" action="{% url 'helpdesk:chiudi' ticket.pk %}" style="display:inline" onsubmit="return confirm('Chiudere il ticket?')">
+          {% csrf_token %}
+          <button class="btn btn-outline-danger btn-sm">Chiudi ticket</button>
+        </form>
+      </div>
+    </form>
+  {% else %}
+    <div class="alert alert-secondary mt-3">Ticket chiuso il {{ ticket.chiuso_at|date:"d/m/Y H:i" }}.</div>
+  {% endif %}
+</div>
+{% endblock %}

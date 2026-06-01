@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Genera codici di recupero — {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-sm-8 col-md-6 col-lg-5">
+    <div class="card shadow-sm {% if unused_code_count %}border-warning{% endif %}">
+      <div class="card-header">
+        <h1 class="h5 mb-0">{% trans "Genera codici di recupero" %}</h1>
+      </div>
+      <div class="card-body p-4">
+        <p class="mb-3">
+          Stai per generare un nuovo set di codici di recupero per il tuo account.
+          {% if unused_code_count %}
+            <strong class="text-warning">
+              Questa operazione invaliderà i {{ unused_code_count }} codici esistenti.
+            </strong>
+          {% endif %}
+          Sei sicuro?
+        </p>
+
+        <form method="post" action="{% url 'mfa_generate_recovery_codes' %}">
+          {% csrf_token %}
+          {% for field in form %}{{ field.as_hidden }}{% endfor %}
+
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger py-2">
+              {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+            </div>
+          {% endif %}
+
+          <div class="d-flex gap-2 justify-content-between mt-3">
+            <a href="{% url 'mfa_index' %}" class="btn btn-outline-secondary btn-sm">
+              {% trans "Annulla" %}
+            </a>
+            <button type="submit"
+                    class="btn {% if unused_code_count %}btn-warning{% else %}btn-primary{% endif %}">
+              {% trans "Genera" %}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

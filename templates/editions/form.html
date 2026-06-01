@@ -1,0 +1,316 @@
+{% extends "base.html" %}
+{% block title %}{{ titolo }} — Plancia{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <h2 class="mb-4">{{ titolo }}</h2>
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      {# ── Dati generali ──────────────────────────────────────────────── #}
+      <div class="card mb-4">
+        <div class="card-header fw-semibold">Dati generali</div>
+        <div class="card-body row g-3">
+          <div class="col-sm-3">{% include "editions/_field.html" with field=form.anno %}</div>
+          <div class="col-sm-9">{% include "editions/_field.html" with field=form.stato %}</div>
+        </div>
+      </div>
+
+      {# ── Scadenze ───────────────────────────────────────────────────── #}
+      <div class="card mb-4">
+        <div class="card-header fw-semibold">Scadenze</div>
+        <div class="card-body row g-3">
+          <div class="col-sm-6">{% include "editions/_field.html" with field=form.scadenza_evento %}</div>
+          <div class="col-sm-6">{% include "editions/_field.html" with field=form.scadenza_assemblea %}</div>
+        </div>
+      </div>
+
+      {# ── Evento Guidoncini Verdi ─────────────────────────────────────── #}
+      <div class="card mb-4">
+        <div class="card-header fw-semibold">Evento Guidoncini Verdi</div>
+        <div class="card-body">
+
+          <div class="row g-3 mb-3">
+            <div class="col-sm-6">{% include "editions/_field.html" with field=form.data_evento_inizio %}</div>
+            <div class="col-sm-6">{% include "editions/_field.html" with field=form.data_evento_fine %}</div>
+          </div>
+
+          {# Campo hidden valorizzato dal JS #}
+          {{ form.evento_comune }}
+
+          {# Autocomplete comune #}
+          <div class="mb-3">
+            <label for="comune_display" class="form-label fw-semibold">Comune</label>
+            <div class="position-relative">
+              <input type="text" id="comune_display" class="form-control"
+                     placeholder="Digita il nome del comune…"
+                     autocomplete="off"
+                     value="{{ form.instance.evento_comune }}">
+              <ul id="comune_suggestions"
+                  class="list-group position-absolute w-100 shadow-sm d-none"
+                  style="z-index:1050;top:100%;left:0;max-height:220px;overflow-y:auto"></ul>
+            </div>
+            {% for error in form.evento_comune.errors %}
+              <div class="invalid-feedback d-block">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="mb-1">{% include "editions/_field.html" with field=form.evento_localita %}</div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2 mb-5">
+        <button type="submit" class="btn btn-primary">Salva edizione</button>
+        <a href="{% url 'editions:list' %}" class="btn btn-outline-secondary">Annulla</a>
+      </div>
+    </form>
+
+    {# ── Sezione Drive (solo in modifica) ───────────────────────────── #}
+    {% if object %}
+    <div class="card mb-4">
+      <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
+        <span>Google Drive</span>
+        {% if object.drive_oauth_account %}
+          <span class="badge bg-success">{{ object.drive_oauth_account }}</span>
+        {% else %}
+          <span class="badge bg-secondary">Non collegato</span>
+        {% endif %}
+      </div>
+      <div class="card-body">
+
+        <div class="mb-4">
+          <a href="{% url 'storage_drive:oauth_init' %}?edizione={{ object.pk }}"
+             class="btn btn-outline-primary btn-sm">
+            {% if object.drive_oauth_account %}Cambia account Drive{% else %}Connetti account Google Drive{% endif %}
+          </a>
+          {% if not object.drive_oauth_account %}
+            <p class="text-muted small mt-2 mb-0">Connetti un account per scegliere le cartelle.</p>
+          {% endif %}
+        </div>
+
+        {% if object.drive_oauth_account %}
+        <form method="post" action="{% url 'storage_drive:edizione_folder_update' object.pk %}">
+          {% csrf_token %}
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Cartella Allegati</label>
+            <div class="input-group">
+              <input type="text" name="drive_folder_allegati_id"
+                     id="id_folder_allegati"
+                     class="form-control font-monospace"
+                     placeholder="ID cartella Drive"
+                     value="{{ object.drive_folder_allegati_id }}">
+              <button type="button" class="btn btn-outline-secondary"
+                      onclick="apriFolderPicker('allegati')">Sfoglia</button>
+            </div>
+            <div id="folder_label_allegati" class="form-text text-success"></div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Cartella Output</label>
+            <div class="input-group">
+              <input type="text" name="drive_folder_output_id"
+                     id="id_folder_output"
+                     class="form-control font-monospace"
+                     placeholder="ID cartella Drive"
+                     value="{{ object.drive_folder_output_id }}">
+              <button type="button" class="btn btn-outline-secondary"
+                      onclick="apriFolderPicker('output')">Sfoglia</button>
+            </div>
+            <div id="folder_label_output" class="form-text text-success"></div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-sm">Salva cartelle</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+{# ── Modal folder picker ─────────────────────────────────────────────── #}
+<div class="modal fade" id="folderPickerModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Scegli cartella Drive</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="input-group mb-3">
+          <input type="text" id="folder_search" class="form-control"
+                 placeholder="Cerca per nome…">
+          <button class="btn btn-outline-secondary" type="button"
+                  onclick="cercaCartelle()">Cerca</button>
+        </div>
+        <div id="folder_list" class="list-group mb-3"
+             style="max-height:320px;overflow-y:auto">
+          <p class="text-muted small p-2 mb-0">Digita per cercare o lascia vuoto per le prime 20 cartelle.</p>
+        </div>
+        <hr>
+        <div class="d-flex gap-2 align-items-center">
+          <input type="text" id="nuova_cartella_nome" class="form-control"
+                 placeholder="Nome nuova cartella…">
+          <button class="btn btn-success btn-sm text-nowrap" type="button"
+                  onclick="creaCartella()">+ Crea nuova</button>
+        </div>
+        <div id="folder_error" class="text-danger small mt-2"></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+// ── Comuni autocomplete ───────────────────────────────────────────────────
+const comuneDisplay = document.getElementById('comune_display');
+const comuneHidden  = document.getElementById('{{ form.evento_comune.id_for_label }}');
+const suggestions   = document.getElementById('comune_suggestions');
+
+// Inizializza il valore hidden se il campo display è già valorizzato
+if (comuneDisplay && comuneHidden && comuneDisplay.value) {
+  comuneHidden.value = comuneDisplay.value;
+}
+
+let _acTimer = null;
+if (comuneDisplay) {
+  comuneDisplay.addEventListener('input', () => {
+    clearTimeout(_acTimer);
+    const q = comuneDisplay.value.trim();
+    if (q.length < 2) { suggestions.classList.add('d-none'); return; }
+    _acTimer = setTimeout(() => fetchComuni(q), 300);
+  });
+
+  comuneDisplay.addEventListener('blur', () => {
+    setTimeout(() => suggestions.classList.add('d-none'), 200);
+  });
+
+  // Mantiene sincronizzato il campo hidden anche se l'utente scrive manualmente
+  comuneDisplay.addEventListener('change', () => {
+    comuneHidden.value = comuneDisplay.value;
+  });
+}
+
+async function fetchComuni(q) {
+  try {
+    const url = `https://comuni-ita.nicolorebaioli.dev/comuni?q=${encodeURIComponent(q)}&pagesize=10&fields=nome,provincia`;
+    const res = await fetch(url);
+    const data = await res.json();
+    mostraSuggerimenti(Array.isArray(data) ? data : (data.data || []));
+  } catch {
+    suggestions.classList.add('d-none');
+  }
+}
+
+function mostraSuggerimenti(comuni) {
+  suggestions.innerHTML = '';
+  if (!comuni.length) { suggestions.classList.add('d-none'); return; }
+  comuni.forEach(c => {
+    const li = document.createElement('li');
+    li.className = 'list-group-item list-group-item-action py-1 px-2 small';
+    li.textContent = c.nome + (c.provincia ? ` (${c.provincia})` : '');
+    li.style.cursor = 'pointer';
+    li.addEventListener('mousedown', () => {
+      comuneDisplay.value = c.nome;
+      comuneHidden.value  = c.nome;
+      suggestions.classList.add('d-none');
+    });
+    suggestions.appendChild(li);
+  });
+  suggestions.classList.remove('d-none');
+}
+
+// ── Drive folder picker ───────────────────────────────────────────────────
+{% if object and object.drive_oauth_account %}
+const DRIVE_ACCOUNT    = "{{ object.drive_oauth_account }}";
+const FOLDER_LIST_URL  = "{% url 'storage_drive:folder_list' %}";
+const FOLDER_CREATE_URL = "{% url 'storage_drive:folder_create' %}";
+const CSRF_TOKEN = "{{ csrf_token }}";
+
+let _pickerTarget = null;
+let _folderModal  = null;
+
+function apriFolderPicker(target) {
+  _pickerTarget = target;
+  document.getElementById('folder_search').value = '';
+  document.getElementById('folder_list').innerHTML =
+    '<p class="text-muted small p-2 mb-0">Digita per cercare o lascia vuoto per le prime 20.</p>';
+  document.getElementById('folder_error').textContent = '';
+  document.getElementById('nuova_cartella_nome').value = '';
+  _folderModal = _folderModal || new bootstrap.Modal(document.getElementById('folderPickerModal'));
+  _folderModal.show();
+}
+
+async function cercaCartelle() {
+  const q = document.getElementById('folder_search').value.trim();
+  const listEl = document.getElementById('folder_list');
+  listEl.innerHTML = '<p class="text-muted small p-2 mb-0">Caricamento…</p>';
+  try {
+    const url = `${FOLDER_LIST_URL}?account=${encodeURIComponent(DRIVE_ACCOUNT)}&q=${encodeURIComponent(q)}`;
+    const res  = await fetch(url);
+    const data = await res.json();
+    if (data.error) {
+      listEl.innerHTML = `<p class="text-danger p-2">${data.error}</p>`;
+      return;
+    }
+    if (!data.cartelle.length) {
+      listEl.innerHTML = '<p class="text-muted small p-2 mb-0">Nessuna cartella trovata.</p>';
+      return;
+    }
+    listEl.innerHTML = '';
+    data.cartelle.forEach(f => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'list-group-item list-group-item-action py-2 d-flex justify-content-between';
+      btn.innerHTML = `<span>📁 ${f.name}</span><small class="text-muted font-monospace">${f.id}</small>`;
+      btn.addEventListener('click', () => selezionaCartella(f.id, f.name));
+      listEl.appendChild(btn);
+    });
+  } catch (e) {
+    listEl.innerHTML = `<p class="text-danger p-2">Errore di rete: ${e}</p>`;
+  }
+}
+
+function selezionaCartella(id, nome) {
+  if (_pickerTarget === 'allegati') {
+    document.getElementById('id_folder_allegati').value = id;
+    document.getElementById('folder_label_allegati').textContent = `📁 ${nome}`;
+  } else {
+    document.getElementById('id_folder_output').value = id;
+    document.getElementById('folder_label_output').textContent = `📁 ${nome}`;
+  }
+  _folderModal.hide();
+}
+
+async function creaCartella() {
+  const nome  = document.getElementById('nuova_cartella_nome').value.trim();
+  const errEl = document.getElementById('folder_error');
+  if (!nome) { errEl.textContent = 'Inserisci un nome per la nuova cartella.'; return; }
+  errEl.textContent = '';
+  try {
+    const res  = await fetch(FOLDER_CREATE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+      body: JSON.stringify({ account: DRIVE_ACCOUNT, nome }),
+    });
+    const data = await res.json();
+    if (data.error) { errEl.textContent = data.error; return; }
+    selezionaCartella(data.id, data.nome);
+  } catch (e) {
+    errEl.textContent = `Errore: ${e}`;
+  }
+}
+
+document.getElementById('folderPickerModal')
+  .addEventListener('shown.bs.modal', cercaCartelle);
+document.getElementById('folder_search')
+  .addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); cercaCartelle(); } });
+{% endif %}
+</script>
+{% endblock %}

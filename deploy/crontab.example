@@ -1,0 +1,10 @@
+# Plancia - esempio di pianificazione cron del backup
+# Installa con: crontab -e   (oppure copia in /etc/cron.d/plancia con l'utente giusto)
+#
+# Variabili (opzionali) lette dallo script:
+#   BACKUP_DIR (default /srv/plancia/backups)
+#   RETENTION_DAYS (default 30)
+#   BACKUP_NOTIFY (email per la notifica di esito)
+#
+# Backup ogni notte alle 02:30, log in /var/log/plancia_backup.log
+30 2 * * *  cd /srv/plancia && BACKUP_NOTIFY=segreteria@agescicampania.org ./deploy/backup.sh >> /var/log/plancia_backup.log 2>&1

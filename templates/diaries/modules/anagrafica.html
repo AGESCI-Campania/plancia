@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Anagrafica — {{ diario }} — Plancia{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'diaries:list' %}">Diari</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'diaries:detail' diario.pk %}">{{ diario.squadriglia.nome }}</a></li>
+    <li class="breadcrumb-item active">Anagrafica</li>
+  </ol>
+</nav>
+
+<h3 class="mb-1">Modulo 1 — Anagrafica
+  <small class="text-muted fs-6">— {{ diario }}</small>
+</h3>
+<p class="text-muted small mb-4">I campi CRP (nome, cognome, email) sono leggibili solo dai Capi Reparto e dallo staff.</p>
+
+<form method="post" novalidate data-autosave-key="diario-anagrafica-{{ diario.pk }}">
+  {% csrf_token %}
+  <div class="row g-3">
+    <div class="col-12"><h5 class="border-bottom pb-1">Capo Reparto</h5></div>
+    <div class="col-md-4">
+      <label class="form-label">{{ form.crp_cognome.label }}</label>
+      {{ form.crp_cognome }}
+      {% for e in form.crp_cognome.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">{{ form.crp_nome.label }}</label>
+      {{ form.crp_nome }}
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">{{ form.crp_cell.label }}</label>
+      {{ form.crp_cell }}
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">{{ form.crp_email.label }}
+        {% if form.crp_email.field.disabled %}<span class="badge bg-secondary ms-1">solo staff</span>{% endif %}
+      </label>
+      {{ form.crp_email }}
+    </div>
+
+    <div class="col-12 mt-2"><h5 class="border-bottom pb-1">Specialità e partecipazione</h5></div>
+    <div class="col-md-8">
+      <label class="form-label">{{ form.specialita.label }}</label>
+      {{ form.specialita }}
+    </div>
+    <div class="col-md-4 d-flex align-items-end">
+      <div class="form-check mb-2">
+        {{ form.partecipa_evento }}
+        <label class="form-check-label ms-2">{{ form.partecipa_evento.label }}</label>
+      </div>
+    </div>
+
+    <div class="col-12 mt-2"><h5 class="border-bottom pb-1">Note da import (preseminazione)</h5></div>
+    <div class="col-12">
+      <label class="form-label">{{ form.desc_prima_impresa.label }}</label>
+      {{ form.desc_prima_impresa }}
+    </div>
+    <div class="col-12">
+      <label class="form-label">{{ form.desc_seconda_impresa.label }}</label>
+      {{ form.desc_seconda_impresa }}
+    </div>
+    <div class="col-12">
+      <label class="form-label">{{ form.tecniche.label }}</label>
+      {{ form.tecniche }}
+    </div>
+  </div>
+
+  <div class="mt-4 d-flex gap-2">
+    <button type="submit" class="btn btn-primary">Salva</button>
+    <a href="{% url 'diaries:detail' diario.pk %}" class="btn btn-outline-secondary">Annulla</a>
+  </div>
+</form>
+{% endblock %}

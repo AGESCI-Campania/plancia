@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Conferma email — {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-sm-8 col-md-5">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h1 class="h4 card-title mb-3 text-center">{% trans "Conferma email" %}</h1>
+        {% if confirmation %}
+          <p>
+            {% blocktrans with email=confirmation.email_address.email %}
+              Conferma che <strong>{{ email }}</strong> è il tuo indirizzo email.
+            {% endblocktrans %}
+          </p>
+          <form method="post">
+            {% csrf_token %}
+            <div class="d-grid">
+              <button type="submit" class="btn btn-primary btn-lg">
+                {% trans "Conferma" %}
+              </button>
+            </div>
+          </form>
+        {% else %}
+          <div class="alert alert-warning">
+            {% trans "Il link di conferma non è valido o è scaduto." %}
+          </div>
+          <a href="{% url 'account_login' %}" class="btn btn-outline-primary">
+            {% trans "Torna al login" %}
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

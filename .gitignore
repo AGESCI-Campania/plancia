@@ -1,0 +1,30 @@
+# Python / uv
+__pycache__/
+*.py[cod]
+.venv/
+.uv/
+# Django
+*.log
+db.sqlite3
+/staticfiles/
+/media/
+# Env
+.env
+.env.dev
+.env.prod
+# Dati sensibili — mai versionare CSV reali (contengono dati di minori)
+fixtures/real_*.csv
+fixtures/prod_*.csv
+# Email simulate (possono contenere dati utente)
+logs/
+# Screenshot del manuale (generati dallo script, non versionati)
+docs/manuale/screenshots/
+# IDE
+.idea/
+*.iml
+.DS_Store
+# Test / coverage
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/

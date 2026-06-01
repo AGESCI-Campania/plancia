@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Plancia — Guidoncini Verdi{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+  <div class="col-md-6 text-center">
+    <div class="display-1 mb-3">🏕️</div>
+    <h1 class="h3 mb-3">Nessuna edizione attiva</h1>
+    <p class="text-muted">
+      Al momento non ci sono edizioni dei Guidoncini Verdi aperte o in corso di valutazione.
+    </p>
+    {% if user.is_staff_plancia or user.is_superuser %}
+      <p class="text-muted mb-4">
+        Puoi creare una nuova edizione o aprire un'edizione in bozza.
+      </p>
+      <div class="d-flex gap-2 justify-content-center">
+        <a href="{% url 'editions:list' %}" class="btn btn-outline-primary">
+          Elenco edizioni
+        </a>
+        <a href="{% url 'editions:create' %}" class="btn btn-primary">
+          Nuova edizione
+        </a>
+      </div>
+    {% else %}
+      <p class="text-muted">Contatta lo staff per informazioni sull'edizione corrente.</p>
+      <a href="{% url 'helpdesk:create' %}" class="btn btn-outline-primary">
+        Apri una richiesta di supporto
+      </a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

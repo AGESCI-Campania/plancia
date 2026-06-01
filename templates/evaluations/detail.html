@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% block title %}Valutazione — {{ diario }}{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2/dist/css/tom-select.bootstrap5.min.css">
+<style>
+  .ts-wrapper.single .ts-control { cursor: text; }
+  .ts-dropdown .option { font-size: .875rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex align-items-center gap-2 mb-3">
+    <a href="{% url 'diaries:detail' diario.pk %}" class="btn btn-outline-secondary btn-sm">← Diario</a>
+    <h1 class="h4 mb-0">Valutazione: {{ diario }}</h1>
+  </div>
+
+  {% if messages %}
+    {% for msg in messages %}
+      <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    {% endfor %}
+  {% endif %}
+
+  <div class="row g-4">
+    <!-- Stato attuale -->
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header"><strong>Stato valutazione</strong></div>
+        <div class="card-body">
+          <dl class="row mb-0">
+            <dt class="col-sm-4">Stato diario</dt>
+            <dd class="col-sm-8"><span class="badge bg-secondary">{{ diario.get_stato_display }}</span></dd>
+            <dt class="col-sm-4">Esito</dt>
+            <dd class="col-sm-8">
+              {% if valutazione.esito %}
+                <span class="badge {% if valutazione.esito == 'approvata' %}bg-success{% elif valutazione.esito == 'non_approvata' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+                  {{ valutazione.get_esito_display }}
+                </span>
+              {% else %}—{% endif %}
+            </dd>
+            <dt class="col-sm-4">Stato val.</dt>
+            <dd class="col-sm-8">{{ valutazione.get_stato_display }}</dd>
+            {% if valutazione.proposta_esito %}
+              <dt class="col-sm-4">Proposta PGV</dt>
+              <dd class="col-sm-8">{{ valutazione.get_proposta_esito_display }}</dd>
+            {% endif %}
+            {% if valutazione.note %}
+              <dt class="col-sm-4">Note</dt>
+              <dd class="col-sm-8">{{ valutazione.note }}</dd>
+            {% endif %}
+            <dt class="col-sm-4">Pubblicato</dt>
+            <dd class="col-sm-8">{% if diario.pubblicato_at %}<span class="badge bg-success">Sì</span>{% else %}No{% endif %}</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+
+    <!-- Azioni -->
+    <div class="col-md-6">
+      {% if puo_valutare_direttamente and not diario.pubblicato_at %}
+        <div class="card mb-3">
+          <div class="card-header"><strong>Valuta direttamente</strong></div>
+          <div class="card-body">
+            <form method="post" action="{% url 'evaluations:valuta' diario.pk %}">
+              {% csrf_token %}
+              <div class="mb-2">
+                <select name="esito" class="form-select form-select-sm" required>
+                  <option value="">— Scegli esito —</option>
+                  {% for val, label in esiti %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+                </select>
+              </div>
+              <div class="mb-2">
+                <textarea name="note" class="form-control form-control-sm" rows="2" placeholder="Note (opzionale)"></textarea>
+              </div>
+              <button class="btn btn-primary btn-sm">Conferma valutazione</button>
+            </form>
+          </div>
+        </div>
+      {% endif %}
+
+      {% if puo_proporre and not diario.pubblicato_at %}
+        <div class="card mb-3">
+          <div class="card-header"><strong>Proponi valutazione (PGV)</strong></div>
+          <div class="card-body">
+            <form method="post" action="{% url 'evaluations:proponi' diario.pk %}">
+              {% csrf_token %}
+              <div class="mb-2">
+                <select name="esito" class="form-select form-select-sm" required>
+                  <option value="">— Scegli —</option>
+                  <option value="approvata">Approvata</option>
+                  <option value="non_approvata">Non approvata</option>
+                </select>
+              </div>
+              <div class="mb-2">
+                <textarea name="note" class="form-control form-control-sm" rows="2" placeholder="Note"></textarea>
+              </div>
+              <button class="btn btn-primary btn-sm">Proponi</button>
+            </form>
+          </div>
+        </div>
+      {% endif %}
+
+      {% if puo_confermare and valutazione.stato == 'in_revisione' %}
+        <div class="card mb-3 border-warning">
+          <div class="card-header bg-warning text-dark"><strong>Proposta in revisione</strong></div>
+          <div class="card-body">
+            <p>Proposta PGV: <strong>{{ valutazione.get_proposta_esito_display }}</strong></p>
+            <div class="d-flex gap-2">
+              <form method="post" action="{% url 'evaluations:conferma' diario.pk %}">
+                {% csrf_token %}
+                <button class="btn btn-success btn-sm">Conferma</button>
+              </form>
+              <form method="post" action="{% url 'evaluations:rigetta' diario.pk %}">
+                {% csrf_token %}
+                <button class="btn btn-outline-danger btn-sm">Rigetta</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+
+      {% if puo_pubblicare and valutazione.esito and not diario.pubblicato_at %}
+        <form method="post" action="{% url 'evaluations:pubblica' diario.pk %}">
+          {% csrf_token %}
+          <button class="btn btn-success btn-sm w-100">Pubblica esito</button>
+        </form>
+      {% endif %}
+    </div>
+
+    <!-- Assegnazioni PGV -->
+    {% if puo_assegnare_pgv %}
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header"><strong>Assegnazioni PGV</strong></div>
+          <div class="card-body">
+            {% for ass in assegnazioni %}
+              <span class="badge bg-secondary me-1">{{ ass.pgv.get_full_name|default:ass.pgv.email }}</span>
+            {% empty %}
+              <em>Nessun PGV assegnato.</em>
+            {% endfor %}
+            <form class="mt-2 d-flex gap-2 align-items-center flex-wrap" method="post" action="{% url 'evaluations:assegna_pgv' diario.pk %}">
+              {% csrf_token %}
+              <div style="min-width:280px;max-width:400px;flex:1;">
+                <select id="pgv-ts" name="pgv_pk" class="form-select form-select-sm" required>
+                  <option value=""></option>
+                </select>
+              </div>
+              <button class="btn btn-outline-primary btn-sm">Assegna</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if puo_assegnare_pgv %}
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2/dist/js/tom-select.complete.min.js"></script>
+<script>
+(function () {
+  const AUTOCOMPLETE_URL = "{% url 'soci_cerca' %}";
+  const el = document.getElementById("pgv-ts");
+  if (!el) return;
+  new TomSelect(el, {
+    valueField: "user_pk",
+    labelField: "label",
+    searchField: [],
+    preload: false,
+    persist: false,
+    maxItems: 1,
+    placeholder: "Cerca PGV per nome, cognome o gruppo…",
+    load: function (query, callback) {
+      if (query.length < 2) { callback(); return; }
+      fetch(AUTOCOMPLETE_URL + "?q=" + encodeURIComponent(query) + "&categoria=capo&ruolo=pgv")
+        .then(function (r) { return r.json(); })
+        .then(function (data) { callback(data.results); })
+        .catch(function () { callback(); });
+    },
+    render: {
+      option: function (item, escape) {
+        return '<div class="py-1">' + escape(item.label) + '</div>';
+      },
+      item: function (item, escape) {
+        return '<div>' + escape(item.label) + '</div>';
+      },
+      no_results: function () {
+        return '<div class="no-results p-2 text-muted small">Nessun PGV trovato.</div>';
+      },
+      loading: function () {
+        return '<div class="p-2 text-muted small">Ricerca in corso…</div>';
+      },
+    },
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

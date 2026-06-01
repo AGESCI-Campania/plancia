@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#5AA02C">
+  <title>Offline — Plancia</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: system-ui, sans-serif;
+      min-height: 100dvh; display: flex; align-items: center;
+      justify-content: center; background: #f8f9fa; color: #212529;
+    }
+    .card {
+      max-width: 420px; width: 90%; padding: 2.5rem 2rem;
+      background: #fff; border-radius: .75rem;
+      box-shadow: 0 4px 24px rgba(0,0,0,.08); text-align: center;
+    }
+    .icon { font-size: 3.5rem; margin-bottom: 1rem; }
+    h1 { font-size: 1.5rem; margin: 0 0 .5rem; }
+    p  { color: #6c757d; font-size: .9rem; margin: 0 0 1.5rem; }
+    .btn {
+      display: inline-block; padding: .5rem 1.25rem;
+      border-radius: .375rem; font-size: .9rem; cursor: pointer;
+      border: 1px solid transparent; text-decoration: none;
+    }
+    .btn-primary { background: #5AA02C; color: #fff; border-color: #5AA02C; }
+    .btn-secondary {
+      background: #fff; color: #495057;
+      border-color: #dee2e6; margin-left: .5rem;
+    }
+    .btn:hover { opacity: .88; }
+    .brand { font-size: .75rem; color: #adb5bd; margin-top: 2rem; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">📡</div>
+    <h1>Sei offline</h1>
+    <p>
+      Non è possibile raggiungere il server.<br>
+      Se stavi compilando un modulo, le tue modifiche e le foto
+      selezionate sono salvate localmente e verranno sincronizzate
+      automaticamente quando torni online.
+    </p>
+    <div>
+      <button class="btn btn-primary" onclick="location.reload()">Riprova</button>
+      <button class="btn btn-secondary" onclick="history.back()">Indietro</button>
+    </div>
+    <p class="brand">Plancia · AGESCI Campania</p>
+  </div>
+</body>
+</html>

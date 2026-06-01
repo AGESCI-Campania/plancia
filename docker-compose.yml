@@ -1,0 +1,57 @@
+# Produzione: tutto dockerizzato TRANNE il proxy (configurabile).
+# Modalita' proxy (vedi deploy/configure-prod.sh):
+#   - nginx-docker : COMPOSE_PROFILES=proxy-nginx  (avvia il servizio nginx)
+#   - nginx-host / apache-host : COMPOSE_PROFILES vuoto (proxy esterno -> 127.0.0.1:${APP_PORT})
+services:
+  web:
+    build: .
+    env_file: [.env.prod]
+    # Esposta solo su loopback: la raggiunge il proxy (host o nginx-docker via rete interna)
+    ports:
+      - "127.0.0.1:${APP_PORT:-8000}:8000"
+    depends_on: [db, redis]
+    restart: unless-stopped
+
+  worker:
+    build: .
+    command: uv run celery -A config worker -l info
+    env_file: [.env.prod]
+    depends_on: [db, redis]
+    restart: unless-stopped
+
+  beat:
+    build: .
+    command: uv run celery -A config beat -l info
+    env_file: [.env.prod]
+    depends_on: [db, redis]
+    restart: unless-stopped
+
+  db:
+    image: postgres:17
+    env_file: [.env.prod]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-plancia}
+      POSTGRES_USER: ${POSTGRES_USER:-plancia}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - plancia_db:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.27
+    profiles: ["proxy-nginx"]
+    depends_on: [web]
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./deploy/certs:/etc/nginx/certs:ro
+    restart: unless-stopped
+
+volumes:
+  plancia_db:

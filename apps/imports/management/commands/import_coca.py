@@ -1,0 +1,114 @@
+# apps/imports/management/commands/import_coca.py
+"""Import capi dal tracciato Co.Ca. (Appendice D.2).
+
+CSV: prima riga 'sep=,', valori come ="..." da ripulire, separatore ','.
+Upsert idempotente su Socio(categoria=capo) per codice_socio.
+L'email del capo NON è modificabile dal capo stesso.
+
+Uso: uv run python manage.py import_coca path/al/file.csv [--dry-run]
+"""
+from __future__ import annotations
+
+import csv
+
+from django.core.management.base import BaseCommand, CommandError
+from django.db import transaction
+
+from apps.imports.models import LogImportazione, RigaImportazione, StatoMatch, TipoImport
+from apps.org.models import Categoria, Gruppo, Socio, Zona
+
+
+def _clean(v: str) -> str:
+    v = (v or "").strip()
+    if v.startswith('="') and v.endswith('"'):
+        v = v[2:-1]
+    return v.strip()
+
+
+def _get_or_create_zona_gruppo(zona_nome: str, gruppo_nome: str):
+    zona, _ = Zona.objects.get_or_create(nome=zona_nome)
+    gruppo, _ = Gruppo.objects.get_or_create(nome=gruppo_nome, zona=zona)
+    return zona, gruppo
+
+
+class Command(BaseCommand):
+    help = "Importa i capi dal tracciato Co.Ca. (upsert per codice_socio)."
+
+    def add_arguments(self, parser):
+        parser.add_argument("path", help="Percorso del file CSV")
+        parser.add_argument("--dry-run", action="store_true", help="Non scrivere sul DB")
+
+    def handle(self, *args, **opts):
+        path: str = opts["path"]
+        dry_run: bool = opts["dry_run"]
+
+        try:
+            rows = self._leggi_csv(path)
+        except FileNotFoundError as exc:
+            raise CommandError(str(exc)) from exc
+
+        log = LogImportazione(tipo=TipoImport.COCA, file_nome=path)
+        ok = scartati = 0
+        riga_objs: list[RigaImportazione] = []
+
+        with transaction.atomic():
+            if not dry_run:
+                log.save()
+
+            for i, row in enumerate(rows, 1):
+                codice = _clean(row.get("CODICE SOCIO", ""))
+                if not codice or not codice.isdigit() or not (4 <= len(codice) <= 8):
+                    scartati += 1
+                    if not dry_run:
+                        riga_objs.append(RigaImportazione(
+                            log=log, numero=i, dati_grezzi=row,
+                            stato_match=StatoMatch.SCARTATA,
+                            note="Codice socio non valido",
+                        ))
+                    continue
+
+                zona_nome = _clean(row.get("ZONA", "")) or "Sconosciuta"
+                gruppo_nome = _clean(row.get("GRUPPO", "")) or "Sconosciuto"
+
+                if not dry_run:
+                    zona, gruppo = _get_or_create_zona_gruppo(zona_nome, gruppo_nome)
+                    Socio.objects.update_or_create(
+                        codice_socio=codice,
+                        defaults={
+                            "nome": _clean(row.get("NOME", "")),
+                            "cognome": _clean(row.get("COGNOME", "")),
+                            "email": _clean(row.get("EMAIL", "")),
+                            "cellulare": _clean(row.get("CELLULARE", "")),
+                            "branca": _clean(row.get("BRANCA", "")),
+                            "status": _clean(row.get("STATUS SOCIO", "")),
+                            "categoria": Categoria.CAPO,
+                            "zona": zona,
+                            "gruppo": gruppo,
+                        },
+                    )
+                    riga_objs.append(RigaImportazione(
+                        log=log, numero=i, dati_grezzi=row,
+                        stato_match=StatoMatch.OK,
+                    ))
+                ok += 1
+
+            if not dry_run:
+                RigaImportazione.objects.bulk_create(riga_objs)
+                log.totale = ok + scartati
+                log.ok = ok
+                log.scartati = scartati
+                log.save(update_fields=["totale", "ok", "scartati"])
+
+            if dry_run:
+                transaction.set_rollback(True)
+
+        self.stdout.write(self.style.SUCCESS(
+            f"{'[DRY-RUN] ' if dry_run else ''}Co.Ca.: {ok} ok, {scartati} scartati."
+        ))
+
+    def _leggi_csv(self, path: str) -> list[dict]:
+        with open(path, encoding="utf-8-sig", newline="") as f:
+            first = f.readline()
+            if not first.lower().startswith("sep="):
+                f.seek(0)
+            return list(csv.DictReader(f))

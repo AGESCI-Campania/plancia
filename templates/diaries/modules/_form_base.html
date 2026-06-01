@@ -1,0 +1,31 @@
+{% comment %}
+  Template base per i moduli del diario.
+  Variabili attese: form, diario, titolo_modulo, numero_modulo (opz.)
+{% endcomment %}
+{% extends "base.html" %}
+{% block title %}{{ titolo_modulo }} — {{ diario }} — Plancia{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'diaries:list' %}">Diari</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'diaries:detail' diario.pk %}">{{ diario.squadriglia.nome }}</a></li>
+    <li class="breadcrumb-item active">{{ titolo_modulo }}</li>
+  </ol>
+</nav>
+
+<h3 class="mb-4">{{ titolo_modulo }}
+  <small class="text-muted fs-6">— {{ diario }}</small>
+</h3>
+
+{% if messages %}
+  {% for m in messages %}
+    <div class="alert alert-{{ m.tags|default:'info' }} alert-dismissible fade show" role="alert">
+      {{ m }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endfor %}
+{% endif %}
+
+{% block form_content %}{% endblock %}
+
+{% endblock %}

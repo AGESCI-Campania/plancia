@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Registrazione chiusa — {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-sm-8 col-md-6 col-lg-5">
+    <div class="card shadow-sm text-center">
+      <div class="card-body p-5">
+        <div class="display-4 mb-3">🔒</div>
+        <h1 class="h4 mb-2">{% trans "Registrazione chiusa" %}</h1>
+        <p class="text-muted">
+          L'accesso a Plancia avviene esclusivamente tramite <strong>invito email</strong>.
+          Se sei un capo squadriglia, capo reparto o membro PGV, controlla la tua email
+          per il link di attivazione.
+        </p>
+        <p class="text-muted small">
+          Se non hai ricevuto l'invito, contatta la segreteria AGESCI Campania.
+        </p>
+        <a href="{% url 'account_login' %}" class="btn btn-primary">{% trans "Vai al login" %}</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

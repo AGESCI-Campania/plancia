@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}{{ numero }}ª Impresa — {{ diario }} — Plancia{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'diaries:list' %}">Diari</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'diaries:detail' diario.pk %}">{{ diario.squadriglia.nome }}</a></li>
+    <li class="breadcrumb-item active">{{ numero }}ª Impresa</li>
+  </ol>
+</nav>
+
+<h3 class="mb-4">Modulo {% if numero == 1 %}3{% else %}4{% endif %} — {{ numero }}ª Impresa
+  <small class="text-muted fs-6">— {{ diario }}</small>
+</h3>
+
+<form method="post" novalidate data-autosave-key="diario-impresa-{{ numero }}-{{ diario.pk }}">
+  {% csrf_token %}
+  <div class="row g-3 mb-4">
+    <div class="col-12">
+      <label class="form-label fw-semibold">{{ form.titolo.label }}</label>
+      {{ form.titolo }}
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">{{ form.data_inizio.label }}</label>
+      {{ form.data_inizio }}
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">{{ form.data_fine.label }}</label>
+      {{ form.data_fine }}
+    </div>
+    <div class="col-12">
+      <label class="form-label fw-semibold">{{ form.perche.label }}</label>
+      {{ form.perche }}
+    </div>
+    <div class="col-12">
+      <label class="form-label fw-semibold">{{ form.come.label }}</label>
+      {{ form.come }}
+    </div>
+    <div class="col-12">
+      <label class="form-label fw-semibold">{{ form.cosa.label }}</label>
+      {{ form.cosa }}
+    </div>
+    <div class="col-12">
+      <label class="form-label">{{ form.link_esterno.label }}</label>
+      {{ form.link_esterno }}
+      <div class="form-text">URL a video o materiale esterno (opzionale)</div>
+    </div>
+  </div>
+
+  <h5 class="border-bottom pb-1 mb-3">Posti d'azione</h5>
+  {{ posti_fs.management_form }}
+  {% for pf in posti_fs %}
+    <div class="row g-2 mb-2 align-items-center">
+      {{ pf.id }}
+      <div class="col">{{ pf.descrizione }}</div>
+      {% if pf.instance.pk %}
+        <div class="col-auto">
+          <div class="form-check">{{ pf.DELETE }}
+            <label class="form-check-label small text-danger">Elimina</label>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  {% endfor %}
+
+  <h5 class="border-bottom pb-1 mb-3 mt-4">Specialità individuali</h5>
+  {{ specialita_fs.management_form }}
+  {% for sf in specialita_fs %}
+    <div class="row g-2 mb-2 align-items-center">
+      {{ sf.id }}{{ sf.tipo }}
+      <div class="col-md-7">{{ sf.nome }}</div>
+      <div class="col-md-3">{{ sf.stato }}</div>
+      {% if sf.instance.pk %}
+        <div class="col-auto">
+          <div class="form-check">{{ sf.DELETE }}
+            <label class="form-check-label small text-danger">Elimina</label>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  {% endfor %}
+
+  <h5 class="border-bottom pb-1 mb-3 mt-4">Brevetti di competenza</h5>
+  {{ brevetti_fs.management_form }}
+  {% for bf in brevetti_fs %}
+    <div class="row g-2 mb-2 align-items-center">
+      {{ bf.id }}{{ bf.tipo }}
+      <div class="col-md-7">{{ bf.nome }}</div>
+      <div class="col-md-3">{{ bf.stato }}</div>
+      {% if bf.instance.pk %}
+        <div class="col-auto">
+          <div class="form-check">{{ bf.DELETE }}
+            <label class="form-check-label small text-danger">Elimina</label>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  {% endfor %}
+
+  <div class="mt-4 d-flex gap-2">
+    <button type="submit" class="btn btn-primary">Salva</button>
+    <a href="{% url 'diaries:detail' diario.pk %}" class="btn btn-outline-secondary">Annulla</a>
+  </div>
+</form>
+
+<div class="mt-4"
+     data-foto-base-url="{% url 'diaries:allegati_list' diario.pk %}"
+     data-foto-modulo="impresa_{{ numero }}"
+     data-foto-can-edit="1"></div>
+{% endblock %}

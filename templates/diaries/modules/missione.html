@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Missione — {{ diario }} — Plancia{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'diaries:list' %}">Diari</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'diaries:detail' diario.pk %}">{{ diario.squadriglia.nome }}</a></li>
+    <li class="breadcrumb-item active">Missione</li>
+  </ol>
+</nav>
+
+<h3 class="mb-4">Modulo 5 — Missione
+  <small class="text-muted fs-6">— {{ diario }}</small>
+</h3>
+
+<form method="post" novalidate data-autosave-key="diario-missione-{{ diario.pk }}">
+  {% csrf_token %}
+  <div class="row g-3 mb-4">
+    <div class="col-12">
+      <label class="form-label fw-semibold">{{ form.titolo.label }}</label>
+      {{ form.titolo }}
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">{{ form.data.label }}</label>
+      {{ form.data }}
+    </div>
+    <div class="col-12">
+      <label class="form-label fw-semibold">{{ form.descrizione_svolgimento.label }}</label>
+      {{ form.descrizione_svolgimento }}
+    </div>
+  </div>
+
+  <h5 class="border-bottom pb-1 mb-3">Posti d'azione</h5>
+  {{ posti_fs.management_form }}
+  {% for pf in posti_fs %}
+    <div class="row g-2 mb-2 align-items-center">
+      {{ pf.id }}
+      <div class="col">{{ pf.descrizione }}</div>
+      {% if pf.instance.pk %}
+        <div class="col-auto">
+          <div class="form-check">{{ pf.DELETE }}
+            <label class="form-check-label small text-danger">Elimina</label>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  {% endfor %}
+
+  <div class="mt-4 d-flex gap-2">
+    <button type="submit" class="btn btn-primary">Salva</button>
+    <a href="{% url 'diaries:detail' diario.pk %}" class="btn btn-outline-secondary">Annulla</a>
+  </div>
+</form>
+
+<div class="mt-4"
+     data-foto-base-url="{% url 'diaries:allegati_list' diario.pk %}"
+     data-foto-modulo="missione"
+     data-foto-can-edit="1"></div>
+{% endblock %}

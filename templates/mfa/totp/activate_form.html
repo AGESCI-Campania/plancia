@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Attiva Authenticator — {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-md-8 col-lg-6">
+
+    <div class="card shadow-sm">
+      <div class="card-header">
+        <h1 class="h5 mb-0">{% trans "Attiva app Authenticator (TOTP)" %}</h1>
+      </div>
+      <div class="card-body p-4">
+        {% load i18n %}
+        {% if messages %}
+          {% for msg in messages %}
+            <div class="alert alert-warning d-flex align-items-center gap-2 mb-3" role="alert">
+              <span>&#9888;</span> {{ msg }}
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        <p class="text-muted mb-4">
+          Scansiona il QR code con la tua app authenticator (Google Authenticator, Aegis, Authy…),
+          poi inserisci il codice a 6 cifre generato per confermare l'attivazione.
+        </p>
+
+        {% if totp_svg_data_uri %}
+          <div class="text-center mb-4">
+            <img src="{{ totp_svg_data_uri }}" alt="QR code MFA" class="border rounded p-2"
+                 style="max-width:220px; background:#fff;">
+          </div>
+        {% endif %}
+
+        {% if form.secret %}
+          <div class="mb-4">
+            <label class="form-label fw-semibold">{% trans "Codice segreto (alternativa al QR)" %}</label>
+            <div class="input-group">
+              <input type="text" class="form-control form-control-sm font-monospace"
+                     value="{{ form.secret.value }}" readonly id="totp-secret">
+              <button class="btn btn-outline-secondary btn-sm" type="button"
+                      onclick="navigator.clipboard.writeText(document.getElementById('totp-secret').value)">
+                Copia
+              </button>
+            </div>
+            <div class="form-text">
+              Conserva questo codice in un posto sicuro per reinstallare l'app in futuro.
+            </div>
+          </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'mfa_activate_totp' %}">
+          {% csrf_token %}
+          {% for field in form %}
+            {% if field.html_name != 'secret' %}
+              <div class="mb-3">
+                <label for="{{ field.id_for_label }}" class="form-label fw-semibold">{{ field.label }}</label>
+                <input type="text" name="{{ field.html_name }}" id="{{ field.id_for_label }}"
+                       class="form-control form-control-lg text-center {% if field.errors %}is-invalid{% endif %}"
+                       autocomplete="one-time-code" inputmode="numeric" maxlength="6"
+                       placeholder="000000" autofocus required>
+                {% for error in field.errors %}
+                  <div class="invalid-feedback">{{ error }}</div>
+                {% endfor %}
+              </div>
+            {% else %}
+              {{ field.as_hidden }}
+            {% endif %}
+          {% endfor %}
+
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger py-2">
+              {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+            </div>
+          {% endif %}
+
+          <div class="d-flex gap-2 justify-content-between mt-3">
+            <a href="{% url 'mfa_index' %}" class="btn btn-outline-secondary btn-sm">
+              {% trans "Annulla" %}
+            </a>
+            <button type="submit" class="btn btn-primary">{% trans "Attiva" %}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Impostazioni — {{ block.super }}{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2">
+  <div>
+    <h1 class="h4 mb-0">Impostazioni piattaforma</h1>
+    <small class="text-muted">Aggiornato il {{ object.aggiornato_at|date:"d/m/Y alle H:i" }}</small>
+  </div>
+  <button type="submit" form="form-impostazioni" class="btn btn-primary">
+    <i class="bi bi-check-lg me-1"></i> Salva impostazioni
+  </button>
+</div>
+
+{% if messages %}
+  {% for msg in messages %}
+    <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show">
+      {{ msg }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endfor %}
+{% endif %}
+
+<form id="form-impostazioni" method="post" novalidate>
+  {% csrf_token %}
+
+  {# ── 1. Identità ───────────────────────────────────────────────────── #}
+  <div class="card mb-4 shadow-sm">
+    <div class="card-header d-flex align-items-center gap-2">
+      <i class="bi bi-card-heading text-primary"></i>
+      <span class="fw-semibold">Identità</span>
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+        {% include "siteconfig/_campo.html" with field=form.titolo col="col-md-5" %}
+        {% include "siteconfig/_campo.html" with field=form.sottotitolo col="col-md-7" %}
+      </div>
+    </div>
+  </div>
+
+  {# ── 2. Footer ──────────────────────────────────────────────────────── #}
+  <div class="card mb-4 shadow-sm">
+    <div class="card-header d-flex align-items-center gap-2">
+      <i class="bi bi-layout-text-window-reverse text-secondary"></i>
+      <span class="fw-semibold">Footer</span>
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+        {% include "siteconfig/_campo.html" with field=form.footer_testo col="col-12" %}
+        {% include "siteconfig/_campo.html" with field=form.footer_link_label col="col-md-5" %}
+        {% include "siteconfig/_campo.html" with field=form.footer_link_url col="col-md-7" %}
+      </div>
+    </div>
+  </div>
+
+  {# ── 3. Posta elettronica ───────────────────────────────────────────── #}
+  <div class="card mb-4 shadow-sm">
+    <div class="card-header d-flex align-items-center gap-2">
+      <i class="bi bi-envelope text-info"></i>
+      <span class="fw-semibold">Posta elettronica</span>
+    </div>
+    <div class="card-body">
+      <div class="row g-3 mb-3">
+        {% include "siteconfig/_campo.html" with field=form.email_mode col="col-md-5" %}
+        {% include "siteconfig/_campo.html" with field=form.from_email col="col-md-7" %}
+      </div>
+
+      <p class="small fw-semibold text-muted mb-2 border-top pt-3">Configurazione SMTP</p>
+      <div class="row g-3">
+        {% include "siteconfig/_campo.html" with field=form.smtp_host col="col-md-7" %}
+        {% include "siteconfig/_campo.html" with field=form.smtp_port col="col-md-2" %}
+        <div class="col-md-3 d-flex align-items-end pb-1">
+          <div class="form-check form-switch ms-2">
+            {{ form.smtp_use_tls }}
+            <label class="form-check-label small fw-semibold" for="{{ form.smtp_use_tls.id_for_label }}">
+              {{ form.smtp_use_tls.label }}
+            </label>
+          </div>
+        </div>
+        {% include "siteconfig/_campo.html" with field=form.smtp_user col="col-md-6" %}
+        {% include "siteconfig/_campo.html" with field=form.smtp_password col="col-md-6" %}
+      </div>
+    </div>
+  </div>
+
+  {# ── 4. Stato e diagnostica ─────────────────────────────────────────── #}
+  <div class="card mb-4 shadow-sm">
+    <div class="card-header d-flex align-items-center gap-2">
+      <i class="bi bi-sliders text-warning"></i>
+      <span class="fw-semibold">Stato e diagnostica</span>
+    </div>
+    <div class="card-body">
+      <div class="row g-3 row-cols-1 row-cols-md-3">
+        {% include "siteconfig/_switch.html" with field=form.manutenzione badge="danger" desc="Mostra una pagina di cortesia a tutti gli utenti non-Admin." %}
+        {% include "siteconfig/_switch.html" with field=form.debug_toolbar badge="warning" desc="Mostra la debug-toolbar Django ai soli Admin (non ribalta DEBUG)." %}
+        {% include "siteconfig/_switch.html" with field=form.debug_diagnostico badge="warning" desc="Alza il livello di logging a DEBUG per facilitare la diagnosi." %}
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex justify-content-end mb-5">
+    <button type="submit" class="btn btn-primary px-4">
+      <i class="bi bi-check-lg me-1"></i> Salva impostazioni
+    </button>
+  </div>
+</form>
+
+{# ── 5. Import tracciati ───────────────────────────────────────────────── #}
+<div class="card mb-4 shadow-sm">
+  <div class="card-header d-flex align-items-center gap-2">
+    <i class="bi bi-cloud-upload text-success"></i>
+    <span class="fw-semibold">Import tracciati</span>
+    <a href="{% url 'imports:log_list' %}" class="btn btn-outline-secondary btn-sm ms-auto">
+      Storico import
+    </a>
+  </div>
+  <div class="card-body">
+    <p class="text-muted small mb-1">
+      Carica il file CSV e avvia l'import. L'ordine consigliato è:
+      <strong>1. Capi</strong> → <strong>2. Squadriglie iscritte</strong> → <strong>3. Ragazzi</strong> (opzionale).
+    </p>
+    <p class="text-muted small mb-3">
+      L'import squadriglie iscritte crea i CSQ (ragazzi) direttamente dal file;
+      l'import Ragazzi è opzionale e aggiorna i dati tramite codice socio.
+    </p>
+
+    <div class="row g-3">
+
+      {# --- Capi (Co.Ca.) --- #}
+      <div class="col-md-4">
+        <div class="card h-100 border-secondary">
+          <div class="card-header bg-light py-2 small fw-semibold">
+            <i class="bi bi-person-badge me-1"></i> 1. Capi (Co.Ca.)
+          </div>
+          <div class="card-body">
+            <p class="small text-muted mb-2">
+              Importa i capi dal tracciato Co.Ca. Deve essere eseguito prima dell'import
+              squadriglie per consentire l'abbinamento del CRP.
+            </p>
+            <form method="post" action="{% url 'siteconfig:lancia_import' 'coca' %}"
+                  enctype="multipart/form-data">
+              {% csrf_token %}
+              <div class="mb-2">
+                <input type="file" name="file" accept=".csv" class="form-control form-control-sm" required>
+              </div>
+              <button class="btn btn-outline-secondary btn-sm w-100">
+                <i class="bi bi-upload me-1"></i> Importa Capi
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      {# --- Squadriglie iscritte --- #}
+      <div class="col-md-4">
+        <div class="card h-100 border-primary">
+          <div class="card-header bg-light py-2 small fw-semibold">
+            <i class="bi bi-flag me-1"></i> 2. Squadriglie iscritte
+          </div>
+          <div class="card-body">
+            <p class="small text-muted mb-2">
+              Crea i diari e abbina il CRP per email. Le anomalie (CRP non trovato)
+              si recuperano con "Riprova anomalie" dopo aver completato l'import capi.
+            </p>
+            <form method="post" action="{% url 'siteconfig:lancia_import' 'squadriglie' %}"
+                  enctype="multipart/form-data">
+              {% csrf_token %}
+              <div class="mb-2">
+                <select name="edizione_pk" class="form-select form-select-sm" required>
+                  <option value="">— Seleziona edizione —</option>
+                  {% for ed in edizioni_import %}
+                    <option value="{{ ed.pk }}">{{ ed }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="mb-2">
+                <input type="file" name="file" accept=".csv" class="form-control form-control-sm" required>
+              </div>
+              <button class="btn btn-outline-primary btn-sm w-100">
+                <i class="bi bi-upload me-1"></i> Importa Squadriglie iscritte
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      {# --- Ragazzi (opzionale) --- #}
+      <div class="col-md-4">
+        <div class="card h-100 border-secondary border-opacity-50">
+          <div class="card-header bg-light py-2 small fw-semibold text-muted">
+            <i class="bi bi-people me-1"></i> 3. Ragazzi <span class="badge bg-secondary fw-normal ms-1">opzionale</span>
+          </div>
+          <div class="card-body">
+            <p class="small text-muted mb-2">
+              Arricchisce i dati dei CSQ tramite codice socio. Se non eseguito,
+              i CSQ potranno correggere i propri dati in autonomia dalla piattaforma.
+            </p>
+            <form method="post" action="{% url 'siteconfig:lancia_import' 'ragazzi' %}"
+                  enctype="multipart/form-data">
+              {% csrf_token %}
+              <div class="mb-2">
+                <input type="file" name="file" accept=".csv" class="form-control form-control-sm" required>
+              </div>
+              <button class="btn btn-outline-secondary btn-sm w-100">
+                <i class="bi bi-upload me-1"></i> Importa Ragazzi
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+    </div>{# /row #}
+  </div>
+</div>
+
+{# ── 6. Template email ─────────────────────────────────────────────────── #}
+<div class="card shadow-sm">
+  <div class="card-header d-flex align-items-center gap-2">
+    <i class="bi bi-file-earmark-text text-secondary"></i>
+    <span class="fw-semibold">Template email</span>
+    <span class="badge bg-secondary ms-1">{{ mail_template_righe|length }}</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-3" style="width:20%">Chiave</th>
+          <th style="width:25%">Oggetto</th>
+          <th>Tag disponibili</th>
+          <th class="text-center" style="width:8%">Attivo</th>
+          <th style="width:18%"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for riga in mail_template_righe %}
+          <tr>
+            <td class="ps-3">
+              <code>{{ riga.chiave }}</code>
+              {% if not riga.template %}
+                <span class="badge bg-light text-secondary border ms-1" title="Usa il file di default">default</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if riga.template %}
+                {{ riga.template.oggetto }}
+              {% else %}
+                <span class="text-muted fst-italic">da file</span>
+              {% endif %}
+            </td>
+            <td>
+              <small class="text-muted">{{ riga.tag|join:", " }}</small>
+            </td>
+            <td class="text-center">
+              {% if riga.template %}
+                {% if riga.template.attivo %}
+                  <i class="bi bi-check-circle-fill text-success"></i>
+                {% else %}
+                  <i class="bi bi-dash-circle text-muted"></i>
+                {% endif %}
+              {% else %}
+                <i class="bi bi-file-earmark text-muted" title="File di default"></i>
+              {% endif %}
+            </td>
+            <td class="text-end pe-3">
+              {% if riga.template %}
+                <a href="{% url 'siteconfig:mail_template_edit' riga.chiave %}"
+                   class="btn btn-outline-primary btn-sm">
+                  <i class="bi bi-pencil me-1"></i>Modifica
+                </a>
+              {% else %}
+                <div class="d-flex gap-1 justify-content-end">
+                  <form method="post" action="{% url 'siteconfig:mail_template_importa' riga.chiave %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-secondary btn-sm"
+                            title="Importa il file di default e apri l'editor">
+                      <i class="bi bi-download me-1"></i>Importa da file
+                    </button>
+                  </form>
+                  <a href="{% url 'siteconfig:mail_template_edit' riga.chiave %}"
+                     class="btn btn-outline-success btn-sm"
+                     title="Crea un template personalizzato da zero">
+                    <i class="bi bi-plus-lg me-1"></i>Crea nuovo
+                  </a>
+                </div>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

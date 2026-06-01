@@ -1,0 +1,11 @@
+{# Uso: {% include "siteconfig/_switch.html" with field=form.manutenzione desc="..." badge="danger" %} #}
+<div class="col">
+  <div class="p-3 border rounded h-100 {% if field.value %}border-{{ badge|default:'secondary' }}{% endif %}">
+    <div class="form-check form-switch mb-1">
+      {{ field }}
+      <label class="form-check-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+    </div>
+    {% if desc %}<p class="text-muted small mb-0">{{ desc }}</p>{% endif %}
+    {% for e in field.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+  </div>
+</div>

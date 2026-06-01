@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Presentazione — {{ diario }} — Plancia{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'diaries:list' %}">Diari</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'diaries:detail' diario.pk %}">{{ diario.squadriglia.nome }}</a></li>
+    <li class="breadcrumb-item active">Presentazione</li>
+  </ol>
+</nav>
+
+<h3 class="mb-4">Modulo 2 — Presentazione squadriglia
+  <small class="text-muted fs-6">— {{ diario }}</small>
+</h3>
+
+<form method="post" novalidate data-autosave-key="diario-presentazione-{{ diario.pk }}">
+  {% csrf_token %}
+
+  <div class="mb-4">
+    <label class="form-label fw-semibold">{{ form.cosa_sappiamo_fare.label }}</label>
+    {{ form.cosa_sappiamo_fare }}
+  </div>
+
+  <h5 class="border-bottom pb-1 mb-3">Membri della squadriglia</h5>
+  {{ formset.management_form }}
+  <div id="formset-container">
+    {% for mf in formset %}
+      <div class="formset-row card mb-2">
+        <div class="card-body row g-2 align-items-end">
+          {{ mf.id }}
+          <div class="col-md-3">
+            <label class="form-label small">Cognome</label>
+            {{ mf.cognome }}
+            {% for e in mf.cognome.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small">Nome</label>
+            {{ mf.nome }}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small">{{ mf.ruolo.label }}</label>
+            {{ mf.ruolo }}
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small">{{ mf.sentiero.label }}</label>
+            {{ mf.sentiero }}
+          </div>
+          <div class="col-md-1 d-flex align-items-end">
+            {% if mf.instance.pk %}
+              <div class="form-check">
+                {{ mf.DELETE }}
+                <label class="form-check-label small text-danger">Elimina</label>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="mt-4 d-flex gap-2">
+    <button type="submit" class="btn btn-primary">Salva</button>
+    <a href="{% url 'diaries:detail' diario.pk %}" class="btn btn-outline-secondary">Annulla</a>
+  </div>
+</form>
+{% endblock %}

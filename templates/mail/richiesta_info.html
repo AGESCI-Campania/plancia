@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="it">
+<body style="font-family:sans-serif; color:#222; max-width:600px; margin:auto; padding:24px">
+  <h2>{{ titolo_piattaforma }} — Richiesta informazioni</h2>
+  <p>Ciao <strong>{{ nome }} {{ cognome }}</strong>,</p>
+  <p>per la squadriglia <strong>{{ squadriglia }}</strong> sono state richieste ulteriori informazioni.</p>
+  {% if note %}<p>Note: {{ note }}</p>{% endif %}
+  <p>Accedi alla piattaforma per integrare il Diario di Bordo.</p>
+  <hr>
+  <p><small>{{ titolo_piattaforma }} — AGESCI Campania</small></p>
+</body>
+</html>

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Helpdesk{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">Helpdesk</h1>
+    <a href="{% url 'helpdesk:create' %}" class="btn btn-primary btn-sm">+ Nuovo ticket</a>
+  </div>
+
+  {% if messages %}
+    {% for msg in messages %}
+      <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    {% endfor %}
+  {% endif %}
+
+  <form class="mb-3 d-flex gap-2 align-items-center" method="get">
+    <select name="stato" class="form-select form-select-sm" style="max-width:180px;">
+      <option value="">Tutti gli stati</option>
+      {% for val, label in stati %}<option value="{{ val }}" {% if stato_corrente == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+    <button class="btn btn-outline-secondary btn-sm">Filtra</button>
+  </form>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>#</th><th>Oggetto</th><th>Categoria</th><th>Aperto da</th><th>Stato</th><th>Data</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in ticket_list %}
+          <tr>
+            <td><a href="{% url 'helpdesk:detail' t.pk %}">#{{ t.pk }}</a></td>
+            <td><a href="{% url 'helpdesk:detail' t.pk %}">{{ t.oggetto }}</a></td>
+            <td>{{ t.get_categoria_display }}</td>
+            <td>{{ t.aperto_da.get_full_name|default:t.aperto_da.email }}</td>
+            <td><span class="badge {% if t.stato == 'aperto' %}bg-danger{% elif t.stato == 'in_lavorazione' %}bg-warning text-dark{% else %}bg-success{% endif %}">{{ t.get_stato_display }}</span></td>
+            <td>{{ t.creato_at|date:"d/m/Y" }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6" class="text-center text-muted py-4">Nessun ticket.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "partials/pagination.html" with page_obj=page_obj %}
+</div>
+{% endblock %}

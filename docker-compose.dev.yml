@@ -1,0 +1,44 @@
+# Sviluppo: db + redis + mailpit dockerizzati.
+# Django gira sull'host con: uv run python manage.py runserver
+# Mailpit UI: http://localhost:8025  |  SMTP: localhost:1025
+services:
+  db:
+    image: postgres:17
+    container_name: plancia_dev_db
+    environment:
+      POSTGRES_DB: plancia
+      POSTGRES_USER: plancia
+      POSTGRES_PASSWORD: plancia
+    ports:
+      - "5432:5432"
+    volumes:
+      - plancia_dev_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U plancia -d plancia"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    container_name: plancia_dev_redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: plancia_dev_mail
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
+    environment:
+      MP_MAX_MESSAGES: 500
+      MP_UI_AUTH_FILE: ""   # nessuna auth in dev
+
+volumes:
+  plancia_dev_db:

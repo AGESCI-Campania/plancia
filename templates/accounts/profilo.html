@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Il mio profilo — {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+
+  {# --- Dati utente --------------------------------------------------------- #}
+  <div class="col-12 col-lg-5">
+    <div class="card h-100">
+      <div class="card-header fw-semibold">Dati account</div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-4">Nome</dt>
+          <dd class="col-sm-8">{{ user.nome_completo }}</dd>
+
+          <dt class="col-sm-4">Email</dt>
+          <dd class="col-sm-8">{{ user.email }}</dd>
+
+          <dt class="col-sm-4">Ruolo</dt>
+          <dd class="col-sm-8">{{ user.get_ruolo_display }}</dd>
+
+          {% if user.socio %}
+            <dt class="col-sm-4">Gruppo</dt>
+            <dd class="col-sm-8">{{ user.socio.gruppo }}</dd>
+            <dt class="col-sm-4">Zona</dt>
+            <dd class="col-sm-8">{{ user.socio.zona }}</dd>
+            <dt class="col-sm-4">Codice socio</dt>
+            <dd class="col-sm-8"><code>{{ user.socio.codice_socio }}</code></dd>
+          {% endif %}
+        </dl>
+      </div>
+      <div class="card-footer d-flex gap-2">
+        {% if puo_modificare_email %}
+          <button class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse"
+                  data-bs-target="#form-email">Modifica email</button>
+        {% endif %}
+        <a href="{% url 'account_change_password' %}" class="btn btn-sm btn-outline-secondary">
+          Cambia password
+        </a>
+      </div>
+    </div>
+
+    {% if puo_modificare_email %}
+      <div class="collapse mt-2" id="form-email">
+        <div class="card card-body">
+          <form method="post">
+            {% csrf_token %}
+            <div class="mb-2">
+              <label class="form-label fw-semibold" for="id_email">Nuovo indirizzo email</label>
+              <input type="email" id="id_email" name="email"
+                     class="form-control" value="{{ user.email }}" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm">Salva</button>
+          </form>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+  {# --- Storico nomine ------------------------------------------------------ #}
+  <div class="col-12 col-lg-7">
+    <div class="card">
+      <div class="card-header fw-semibold">Storico nomine</div>
+      <div class="card-body p-0">
+        {% if nomine %}
+          <table class="table table-sm table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Ruolo</th>
+                <th>Nominato da</th>
+                <th>Edizione</th>
+                <th>Data</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for n in nomine %}
+                <tr>
+                  <td>{{ n.get_ruolo_display }}</td>
+                  <td>{{ n.nominato_da.nome_completo|default:"—" }}</td>
+                  <td>{{ n.edizione|default:"—" }}</td>
+                  <td>{{ n.creato_at|date:"d/m/Y" }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p class="text-muted p-3 mb-0">Nessuna nomina registrata.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    {# --- Ultimi accessi ------------------------------------------------------ #}
+    <div class="card mt-3">
+      <div class="card-header fw-semibold">Ultimi accessi</div>
+      <div class="card-body p-0">
+        {% if login_events %}
+          <table class="table table-sm mb-0">
+            <thead class="table-light">
+              <tr><th>Data</th><th>Esito</th><th>IP</th></tr>
+            </thead>
+            <tbody>
+              {% for ev in login_events %}
+                <tr>
+                  <td>{{ ev.creato_at|date:"d/m/Y H:i" }}</td>
+                  <td>
+                    {% if ev.esito == "login" %}
+                      <span class="badge bg-success">Accesso</span>
+                    {% elif ev.esito == "logout" %}
+                      <span class="badge bg-secondary">Uscita</span>
+                    {% else %}
+                      <span class="badge bg-danger">Fallito</span>
+                    {% endif %}
+                  </td>
+                  <td><code>{{ ev.ip|default:"—" }}</code></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p class="text-muted p-3 mb-0">Nessun evento registrato.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

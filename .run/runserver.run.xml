@@ -1,0 +1,17 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="runserver" type="Python.DjangoServer" factoryName="Django server">
+    <module name="plancia" />
+    <option name="host" value="0.0.0.0" />
+    <option name="port" value="8000" />
+    <option name="additionalOptions" value="" />
+    <option name="browserUrl" value="" />
+    <option name="runTypeCheckEnabled" value="false" />
+    <option name="runNoReloadEnabled" value="false" />
+    <envs>
+      <env name="DJANGO_SETTINGS_MODULE" value="config.settings.dev" />
+    </envs>
+    <option name="SDK_HOME" value="" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <method v="2" />
+  </configuration>
+</component>

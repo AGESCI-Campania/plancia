@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="it">
+<body style="font-family:sans-serif; color:#222; max-width:600px; margin:auto; padding:24px">
+  <h2>{{ titolo_piattaforma }} — Esito pubblicato</h2>
+  <p>Ciao <strong>{{ nome }} {{ cognome }}</strong>,</p>
+  <p>l'esito della valutazione per la squadriglia <strong>{{ squadriglia }}</strong> è stato pubblicato.</p>
+  <p>Esito: <strong>{{ esito }}</strong></p>
+  {% if note %}<p>Note: {{ note }}</p>{% endif %}
+  <hr>
+  <p><small>{{ titolo_piattaforma }} — AGESCI Campania</small></p>
+</body>
+</html>

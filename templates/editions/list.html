@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Edizioni — Plancia{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2>Edizioni</h2>
+  {% if user.is_staff_plancia or user.is_superuser %}
+    <a href="{% url 'editions:create' %}" class="btn btn-primary">
+      <i class="bi bi-plus-lg"></i> Nuova edizione
+    </a>
+  {% endif %}
+</div>
+
+{% if edizioni %}
+  <div class="row g-3">
+    {% for ediz in edizioni %}
+      <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+          <div class="card-body">
+            <h5 class="card-title">{{ ediz }}</h5>
+            <span class="badge
+              {% if ediz.stato == 'bozza' %}bg-secondary
+              {% elif ediz.stato == 'aperta' %}bg-success
+              {% elif ediz.stato == 'in_valutazione' %}bg-warning text-dark
+              {% else %}bg-dark{% endif %}
+            ">{{ ediz.get_stato_display }}</span>
+
+            <ul class="list-unstyled mt-3 small text-muted">
+              {% if ediz.scadenza_evento %}
+                <li>📅 1ª scad: {{ ediz.scadenza_evento|date:"d/m/Y" }}</li>
+              {% endif %}
+              {% if ediz.scadenza_assemblea %}
+                <li>📅 2ª scad: {{ ediz.scadenza_assemblea|date:"d/m/Y" }}</li>
+              {% endif %}
+              {% if ediz.data_evento_inizio %}
+                <li>🏕️ Evento: {{ ediz.data_evento_inizio|date:"d/m/Y" }}{% if ediz.data_evento_fine %} – {{ ediz.data_evento_fine|date:"d/m/Y" }}{% endif %}</li>
+              {% endif %}
+              {% if ediz.evento_comune %}
+                <li>📍 {{ ediz.evento_comune }}{% if ediz.evento_localita %}, {{ ediz.evento_localita }}{% endif %}</li>
+              {% endif %}
+            </ul>
+          </div>
+          <div class="card-footer">
+            <a href="{% url 'editions:detail' ediz.pk %}" class="btn btn-sm btn-outline-primary">
+              Apri
+            </a>
+            {% if user.is_staff_plancia or user.is_superuser %}
+              <a href="{% url 'editions:update' ediz.pk %}" class="btn btn-sm btn-outline-secondary ms-1">
+                Modifica
+              </a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="alert alert-info">Nessuna edizione presente.</div>
+{% endif %}
+{% endblock %}

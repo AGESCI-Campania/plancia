@@ -1,0 +1,46 @@
+# mise (opzionale) - https://mise.jdx.dev
+# Uso non obbligatorio: in alternativa Python 3.14 di sistema + uv.
+[tools]
+python = "3.14"
+uv = "latest"
+# node = "lts"   # decommenta se servira' una toolchain JS per gli asset
+
+[env]
+# Decommenta dopo aver creato .env.dev (cp .env.dev.example .env.dev)
+# _.file = ".env.dev"
+
+[tasks.install]
+description = "Installa le dipendenze con uv"
+run = "uv sync"
+
+[tasks.up]
+description = "Avvia db + redis dockerizzati (sviluppo)"
+run = "docker compose -f docker-compose.dev.yml up -d db redis"
+
+[tasks.down]
+description = "Ferma i servizi di sviluppo"
+run = "docker compose -f docker-compose.dev.yml down"
+
+[tasks.migrate]
+description = "Applica le migrazioni"
+run = "uv run python manage.py migrate"
+
+[tasks.makemigrations]
+run = "uv run python manage.py makemigrations"
+
+[tasks.dev]
+description = "Avvia il server di sviluppo (porta 8000)"
+run = "uv run python manage.py runserver 0.0.0.0:8000"
+
+[tasks.worker]
+description = "Avvia un worker Celery"
+run = "uv run celery -A config worker -l info"
+
+[tasks.lint]
+run = "uv run ruff check ."
+
+[tasks.format]
+run = "uv run ruff format ."
+
+[tasks.test]
+run = "uv run pytest"

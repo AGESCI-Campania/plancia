@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="it">
+<body style="font-family:sans-serif; color:#222; max-width:600px; margin:auto; padding:24px">
+  <h2>{{ titolo_piattaforma }} — Dilazione concessa</h2>
+  <p>Ciao <strong>{{ nome }} {{ cognome }}</strong>,</p>
+  <p>è stata concessa una dilazione per la squadriglia <strong>{{ squadriglia }}</strong>.</p>
+  <p>Nuova scadenza: <strong>{{ nuova_scadenza }}</strong></p>
+  {% if motivazione %}<p>Motivazione: {{ motivazione }}</p>{% endif %}
+  <hr>
+  <p><small>{{ titolo_piattaforma }} — AGESCI Campania</small></p>
+</body>
+</html>

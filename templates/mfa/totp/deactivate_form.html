@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Disattiva Authenticator — {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-sm-8 col-md-6 col-lg-5">
+    <div class="card shadow-sm border-danger">
+      <div class="card-header bg-danger text-white">
+        <h1 class="h5 mb-0">{% trans "Disattiva app Authenticator" %}</h1>
+      </div>
+      <div class="card-body p-4">
+        <div class="alert alert-warning">
+          Stai per disabilitare l'autenticazione a due fattori. Il tuo account sarà
+          protetto solo dalla password. Sei sicuro?
+        </div>
+
+        <form method="post" action="{% url 'mfa_deactivate_totp' %}">
+          {% csrf_token %}
+          {% for field in form %}
+            {{ field.as_hidden }}
+          {% endfor %}
+
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger py-2">
+              {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+            </div>
+          {% endif %}
+
+          <div class="d-flex gap-2 justify-content-between mt-3">
+            <a href="{% url 'mfa_index' %}" class="btn btn-outline-secondary btn-sm">
+              {% trans "Annulla" %}
+            </a>
+            <button type="submit" class="btn btn-danger">{% trans "Disattiva" %}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

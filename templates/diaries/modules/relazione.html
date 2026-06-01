@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Relazione finale — {{ diario }} — Plancia{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'diaries:list' %}">Diari</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'diaries:detail' diario.pk %}">{{ diario.squadriglia.nome }}</a></li>
+    <li class="breadcrumb-item active">Relazione finale</li>
+  </ol>
+</nav>
+
+<h3 class="mb-1">Modulo 6 — Relazione finale CRP
+  <small class="text-muted fs-6">— {{ diario }}</small>
+</h3>
+<div class="alert alert-warning d-flex align-items-center small mb-4" role="alert">
+  <i class="bi bi-lock-fill me-2"></i>
+  Questo modulo è riservato al Capo Reparto. Non è visibile al Capo Squadriglia.
+</div>
+
+<form method="post" novalidate data-autosave-key="diario-relazione-{{ diario.pk }}">
+  {% csrf_token %}
+  <div class="row g-3">
+    <div class="col-12">
+      <label class="form-label fw-semibold">{{ form.sintesi_impresa_1.label }}</label>
+      {{ form.sintesi_impresa_1 }}
+    </div>
+    <div class="col-12">
+      <label class="form-label fw-semibold">{{ form.sintesi_impresa_2.label }}</label>
+      {{ form.sintesi_impresa_2 }}
+    </div>
+    <div class="col-12">
+      <label class="form-label fw-semibold">{{ form.sintesi_missione.label }}</label>
+      {{ form.sintesi_missione }}
+    </div>
+    <div class="col-12">
+      <label class="form-label fw-semibold">{{ form.considerazioni.label }}</label>
+      {{ form.considerazioni }}
+    </div>
+    <div class="col-md-4">
+      <label class="form-label fw-semibold">{{ form.specialita_conquistata.label }}</label>
+      {{ form.specialita_conquistata }}
+    </div>
+  </div>
+
+  <div class="mt-4 d-flex gap-2">
+    <button type="submit" class="btn btn-primary">Salva</button>
+    <a href="{% url 'diaries:detail' diario.pk %}" class="btn btn-outline-secondary">Annulla</a>
+  </div>
+</form>
+{% endblock %}

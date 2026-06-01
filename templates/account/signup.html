@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Registrazione — {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-sm-8 col-md-6 col-lg-4">
+
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h1 class="h4 card-title mb-1 text-center">{% trans "Registrazione" %}</h1>
+        <p class="text-center text-muted small mb-4">
+          Hai già un account? <a href="{{ login_url }}">{% trans "Accedi" %}</a>
+        </p>
+
+        <div class="alert alert-info py-2 small">
+          L'accesso a Plancia avviene tramite <strong>invito email</strong>. Se hai ricevuto
+          un link di attivazione, usalo direttamente. Questa pagina è riservata a casi particolari.
+        </div>
+
+        <form method="post" action="{% url 'account_signup' %}">
+          {% csrf_token %}
+          {{ redirect_field }}
+
+          {% for field in form %}
+            {% if field.field.widget.input_type == "checkbox" %}
+              <div class="mb-3 form-check">
+                {{ field }}
+                <label for="{{ field.id_for_label }}" class="form-check-label">{{ field.label }}</label>
+                {% for error in field.errors %}
+                  <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="mb-3">
+                <label for="{{ field.id_for_label }}" class="form-label fw-semibold">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}
+                  <div class="form-text">{{ field.help_text }}</div>
+                {% endif %}
+                {% for error in field.errors %}
+                  <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+              </div>
+            {% endif %}
+          {% endfor %}
+
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger py-2">
+              {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+            </div>
+          {% endif %}
+
+          <div class="d-grid mt-4">
+            <button type="submit" class="btn btn-primary btn-lg">{% trans "Registrati" %}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

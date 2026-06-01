@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Statistiche{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">Statistiche</h1>
+    <form method="get" class="d-flex gap-2 align-items-center">
+      <select name="edizione" class="form-select form-select-sm" style="max-width:160px;" onchange="this.form.submit()">
+        {% for ed in edizioni %}
+          <option value="{{ ed.pk }}" {% if edizione and edizione.pk == ed.pk %}selected{% endif %}>{{ ed }}</option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
+
+  {% if not edizione %}
+    <div class="alert alert-info">Nessuna edizione disponibile.</div>
+  {% else %}
+    <!-- Globali -->
+    <div class="row g-3 mb-4">
+      {% with s=stats_globali %}
+        <div class="col-6 col-md-2">
+          <div class="card text-center">
+            <div class="card-body py-2">
+              <div class="h3 mb-0">{{ s.totale }}</div>
+              <small class="text-muted">Totale diari</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-2">
+          <div class="card text-center">
+            <div class="card-body py-2">
+              <div class="h3 mb-0 text-success">{{ s.approvati }}</div>
+              <small class="text-muted">Approvati</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-2">
+          <div class="card text-center">
+            <div class="card-body py-2">
+              <div class="h3 mb-0 text-danger">{{ s.non_approvati }}</div>
+              <small class="text-muted">Non approvati</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-2">
+          <div class="card text-center">
+            <div class="card-body py-2">
+              <div class="h3 mb-0">{{ s.pubblicati }}</div>
+              <small class="text-muted">Pubblicati</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-2">
+          <div class="card text-center">
+            <div class="card-body py-2">
+              <div class="h3 mb-0">{{ s.inviati }}</div>
+              <small class="text-muted">Inviati</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-2">
+          <div class="card text-center">
+            <div class="card-body py-2">
+              <div class="h3 mb-0 text-secondary">{{ s.in_compilazione }}</div>
+              <small class="text-muted">In compilazione</small>
+            </div>
+          </div>
+        </div>
+      {% endwith %}
+    </div>
+
+    <!-- Per zona -->
+    <h2 class="h5 mb-2">Per zona</h2>
+    <div class="table-responsive mb-4">
+      <table class="table table-sm table-hover">
+        <thead class="table-light">
+          <tr><th>Zona</th><th>Totale</th><th>Approvati</th><th>Non approvati</th><th>Maggiori info</th><th>Pubblicati</th><th>% Approvati</th></tr>
+        </thead>
+        <tbody>
+          {% for r in stats_zona %}
+            <tr>
+              <td>{{ r.zona }}</td>
+              <td>{{ r.totale }}</td>
+              <td class="text-success">{{ r.approvati }}</td>
+              <td class="text-danger">{{ r.non_approvati }}</td>
+              <td>{{ r.maggiori_info }}</td>
+              <td>{{ r.pubblicati }}</td>
+              <td>
+                <div class="progress" style="height:16px; min-width:80px;">
+                  <div class="progress-bar bg-success" style="width:{{ r.percentuale_approvati }}%">{{ r.percentuale_approvati }}%</div>
+                </div>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="7" class="text-muted">Nessun dato.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Ticket -->
+    {% with t=stats_ticket %}
+      <h2 class="h5 mb-2">Ticket helpdesk</h2>
+      <p>Totale: <strong>{{ t.totale }}</strong> — Aperti: <strong>{{ t.aperti }}</strong> — Chiusi: <strong>{{ t.chiusi }}</strong></p>
+      <ul class="list-unstyled d-flex gap-3 flex-wrap">
+        {% for cat in t.per_categoria %}
+          <li class="badge bg-secondary fs-6">{{ cat.categoria }}: {{ cat.count }}</li>
+        {% endfor %}
+      </ul>
+    {% endwith %}
+
+    <!-- Pubblica tutti -->
+    <hr class="my-4">
+    <form method="post" action="{% url 'evaluations:pubblica_tutti' edizione.pk %}" onsubmit="return confirm('Pubblicare tutti gli esiti confermati?')">
+      {% csrf_token %}
+      <button class="btn btn-success btn-sm">Pubblica tutti gli esiti confermati</button>
+    </form>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}{{ edizione }} — Plancia{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h2>{{ edizione }}</h2>
+    <span class="badge
+      {% if edizione.stato == 'bozza' %}bg-secondary
+      {% elif edizione.stato == 'aperta' %}bg-success
+      {% elif edizione.stato == 'in_valutazione' %}bg-warning text-dark
+      {% else %}bg-dark{% endif %}
+      fs-6">{{ edizione.get_stato_display }}
+    </span>
+  </div>
+  {% if puo_gestire %}
+    <div class="d-flex gap-2">
+      <a href="{% url 'editions:update' edizione.pk %}" class="btn btn-outline-secondary btn-sm">
+        Modifica
+      </a>
+      {% if edizione.stato == 'bozza' %}
+        <form method="post" action="{% url 'editions:stato' edizione.pk 'apri' %}">
+          {% csrf_token %}<button class="btn btn-success btn-sm">Apri edizione</button>
+        </form>
+      {% elif edizione.stato == 'aperta' %}
+        <form method="post" action="{% url 'editions:stato' edizione.pk 'avvia_valutazione' %}">
+          {% csrf_token %}<button class="btn btn-warning btn-sm">Avvia valutazione</button>
+        </form>
+      {% elif edizione.stato == 'in_valutazione' %}
+        <form method="post" action="{% url 'editions:stato' edizione.pk 'chiudi' %}">
+          {% csrf_token %}<button class="btn btn-dark btn-sm">Chiudi edizione</button>
+        </form>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-sm-4">
+    <div class="card text-center">
+      <div class="card-body">
+        <div class="display-6">{{ diari|length }}</div>
+        <small class="text-muted">diari totali</small>
+      </div>
+    </div>
+  </div>
+  {% if edizione.scadenza_evento %}
+    <div class="col-sm-4">
+      <div class="card text-center">
+        <div class="card-body">
+          <div class="h5">{{ edizione.scadenza_evento|date:"d/m/Y" }}</div>
+          <small class="text-muted">1ª scadenza</small>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+  {% if edizione.scadenza_assemblea %}
+    <div class="col-sm-4">
+      <div class="card text-center">
+        <div class="card-body">
+          <div class="h5">{{ edizione.scadenza_assemblea|date:"d/m/Y" }}</div>
+          <small class="text-muted">2ª scadenza</small>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Lista diari -->
+<h4 class="mb-3">Diari di bordo</h4>
+{% if diari %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Squadriglia</th>
+          <th>Reparto</th>
+          <th>Tipo</th>
+          <th>Stato</th>
+          <th>CSQ</th>
+          <th>CRP</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in diari %}
+          <tr>
+            <td>{{ d.squadriglia.nome }}</td>
+            <td>{{ d.squadriglia.reparto }}</td>
+            <td><span class="badge bg-light text-dark">{{ d.get_tipo_display }}</span></td>
+            <td>
+              <span class="badge
+                {% if d.stato == 'in_compilazione' %}bg-info text-dark
+                {% elif d.stato == 'inviato' %}bg-primary
+                {% elif d.stato == 'in_valutazione' %}bg-warning text-dark
+                {% elif d.stato == 'in_revisione' %}bg-warning text-dark
+                {% elif d.stato == 'approvato' %}bg-success
+                {% elif d.stato == 'non_approvato' %}bg-danger
+                {% else %}bg-secondary{% endif %}
+              ">{{ d.get_stato_display }}</span>
+            </td>
+            <td>{% if d.csq %}{{ d.csq.cognome }} {{ d.csq.nome }}{% else %}—{% endif %}</td>
+            <td>{% if d.crp %}{{ d.crp.cognome }} {{ d.crp.nome }}{% else %}—{% endif %}</td>
+            <td>
+              <a href="{% url 'diaries:detail' d.pk %}" class="btn btn-sm btn-outline-primary">Apri</a>
+              {% if puo_gestire %}
+                <button type="button" class="btn btn-sm btn-outline-secondary ms-1"
+                        data-bs-toggle="modal" data-bs-target="#modal-dilazione-{{ d.pk }}">
+                  Dilazione
+                </button>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Modali dilazione -->
+  {% if puo_gestire %}
+    {% for d in diari %}
+      <div class="modal fade" id="modal-dilazione-{{ d.pk }}" tabindex="-1">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Dilazione — {{ d.squadriglia }}</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'editions:dilazione' d.pk %}">
+              {% csrf_token %}
+              <div class="modal-body">
+                {{ dilazione_form.as_div }}
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                <button type="submit" class="btn btn-primary">Concedi dilazione</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  {% endif %}
+{% else %}
+  <div class="alert alert-info">Nessun diario visibile per questa edizione.</div>
+{% endif %}
+{% endblock %}

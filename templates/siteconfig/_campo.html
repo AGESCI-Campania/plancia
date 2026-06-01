@@ -1,0 +1,7 @@
+{# Uso: {% include "siteconfig/_campo.html" with field=form.titolo col="col-md-6" %} #}
+<div class="{{ col|default:'col-12' }}">
+  <label class="form-label small fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+  {{ field }}
+  {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+  {% for e in field.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+</div>

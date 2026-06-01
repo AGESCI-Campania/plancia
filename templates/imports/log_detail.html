@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}Import {{ log.get_tipo_display }} — {{ log.creato_at|date:"d/m/Y" }}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2/dist/css/tom-select.bootstrap5.min.css">
+<style>
+  .ts-wrapper.single .ts-control { cursor: text; }
+  .ts-dropdown .option { font-size: .875rem; }
+  .codice-chip {
+    display: inline-block;
+    font-family: monospace;
+    font-size: .75rem;
+    background: #f0f0f0;
+    border-radius: .2rem;
+    padding: 0 .35em;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <div class="d-flex align-items-center gap-2 mb-3">
+    <a href="{% url 'imports:log_list' %}" class="btn btn-outline-secondary btn-sm">← Storico</a>
+    <h1 class="h4 mb-0">Import {{ log.get_tipo_display }} del {{ log.creato_at|date:"d/m/Y H:i" }}</h1>
+  </div>
+
+  {% if messages %}
+    {% for msg in messages %}
+      <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show">
+        {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <dl class="row">
+    <dt class="col-sm-3">File</dt>
+    <dd class="col-sm-9"><small class="font-monospace">{{ log.file_nome }}</small></dd>
+    <dt class="col-sm-3">Totale righe</dt><dd class="col-sm-9">{{ log.totale }}</dd>
+    <dt class="col-sm-3">OK</dt>
+    <dd class="col-sm-9"><span class="text-success fw-semibold">{{ log.ok }}</span></dd>
+    <dt class="col-sm-3">Scartate</dt>
+    <dd class="col-sm-9"><span class="text-danger fw-semibold">{{ log.scartati }}</span></dd>
+    <dt class="col-sm-3">Da riconciliare</dt>
+    <dd class="col-sm-9">
+      {% if log.da_riconciliare %}
+        <span class="badge bg-warning text-dark">{{ log.da_riconciliare }}</span>
+      {% else %}
+        <span class="text-success">Nessuna</span>
+      {% endif %}
+    </dd>
+  </dl>
+
+  {% if righe_da_riconciliare %}
+    <div class="d-flex align-items-center gap-3 mt-4 mb-1">
+      <h2 class="h5 mb-0">Anomalie da riconciliare <span class="text-muted">(CRP)</span></h2>
+      {% if e_squadriglie %}
+        <form method="post" action="{% url 'imports:riprova_anomalie' log.pk %}">
+          {% csrf_token %}
+          <button class="btn btn-warning btn-sm">
+            <i class="bi bi-arrow-repeat me-1"></i> Riprova anomalie
+          </button>
+        </form>
+      {% endif %}
+    </div>
+    <p class="text-muted small mb-3">
+      {% if e_squadriglie %}
+        Clicca <strong>Riprova anomalie</strong> per abbinare automaticamente i CRP
+        ora presenti nel DB (dopo un nuovo import capi o inserimento manuale).
+        Per le anomalie residue usa il form di riconciliazione manuale qui sotto.
+      {% else %}
+        Per ogni riga, cerca il Socio capo corrispondente e clicca <strong>Associa</strong>.
+      {% endif %}
+      Puoi cercare per nome, cognome, gruppo, zona o codice socio.
+    </p>
+
+    {% for riga in righe_da_riconciliare %}
+      <div class="card mb-3 border-warning border-opacity-50">
+        <div class="card-body py-3">
+          <div class="row g-3 align-items-start">
+
+            {# Dati grezzi della riga import #}
+            <div class="col-md-5">
+              <div class="text-muted small mb-1">Riga {{ riga.numero }}
+                {% if riga.note %}&mdash; <span class="text-warning">{{ riga.note }}</span>{% endif %}
+              </div>
+              <table class="table table-sm table-borderless mb-0" style="font-size:.82rem;">
+                {% for k, v in riga.dati_grezzi.items %}
+                  {% if v %}
+                    <tr>
+                      <th class="text-muted fw-normal pe-2 text-nowrap" style="width:1%;">{{ k }}</th>
+                      <td>{{ v }}</td>
+                    </tr>
+                  {% endif %}
+                {% endfor %}
+              </table>
+            </div>
+
+            {# Form riconciliazione con Tom Select #}
+            <div class="col-md-7">
+              <form method="post" action="{% url 'imports:riconcilia' riga.pk %}">
+                {% csrf_token %}
+                <label class="form-label fw-semibold small" for="socio-ts-{{ riga.pk }}">
+                  Seleziona il Socio capo (CRP)
+                </label>
+                <select id="socio-ts-{{ riga.pk }}" name="socio_pk"
+                        class="form-select form-select-sm" required>
+                  <option value=""></option>
+                </select>
+                <div class="form-text mb-2">
+                  Digita almeno 2 caratteri per cercare.
+                </div>
+                <button type="submit" class="btn btn-success btn-sm">
+                  Associa
+                </button>
+              </form>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+
+  {% else %}
+    <div class="alert alert-success mt-3">
+      Tutte le righe sono state riconciliate.
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2/dist/js/tom-select.complete.min.js"></script>
+<script>
+(function () {
+  const AUTOCOMPLETE_URL = "{% url 'soci_cerca' %}";
+
+  // Inizializza un'istanza Tom Select per ogni riga da riconciliare.
+  document.querySelectorAll("select[id^='socio-ts-']").forEach(function (el) {
+    new TomSelect(el, {
+      valueField: "id",
+      labelField: "label",
+      searchField: [],        // la ricerca è lato server, non filtrare lato client
+      preload: false,
+      persist: false,
+      maxItems: 1,
+      placeholder: "Cerca per nome, cognome, codice o gruppo…",
+      load: function (query, callback) {
+        if (query.length < 2) { callback(); return; }
+        fetch(AUTOCOMPLETE_URL + "?q=" + encodeURIComponent(query) + "&categoria=capo")
+          .then(function (r) { return r.json(); })
+          .then(function (data) { callback(data.results); })
+          .catch(function () { callback(); });
+      },
+      render: {
+        option: function (item, escape) {
+          return (
+            '<div class="py-1">' +
+            escape(item.label) +
+            '</div>'
+          );
+        },
+        item: function (item, escape) {
+          return (
+            '<div>' +
+            escape(item.label) +
+            '</div>'
+          );
+        },
+        no_results: function () {
+          return '<div class="no-results p-2 text-muted small">Nessun socio trovato.</div>';
+        },
+        loading: function () {
+          return '<div class="p-2 text-muted small">Ricerca in corso…</div>';
+        },
+      },
+    });
+  });
+})();
+</script>
+{% endblock %}

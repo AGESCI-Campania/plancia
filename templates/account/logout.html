@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Esci — {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-sm-6 col-md-4">
+    <div class="card shadow-sm">
+      <div class="card-body p-4 text-center">
+        <h1 class="h4 card-title mb-3">{% trans "Esci" %}</h1>
+        <p class="text-muted">{% trans "Sei sicuro di voler uscire?" %}</p>
+        <form method="post" action="{% url 'account_logout' %}">
+          {% csrf_token %}
+          <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-primary">{% trans "Esci" %}</button>
+            <a href="/" class="btn btn-outline-secondary">{% trans "Annulla" %}</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="it">
+<body style="font-family:sans-serif; color:#222; max-width:600px; margin:auto; padding:24px">
+  <h2>{{ titolo_piattaforma }} — Guidoncini Verdi</h2>
+  <p>Ciao <strong>{{ nome }} {{ cognome }}</strong>,</p>
+  <p>sei stato/a invitato/a come <strong>Capo Reparto Partner</strong> per l'edizione
+     <strong>{{ edizione }}</strong>, reparto <strong>{{ reparto }}</strong>.</p>
+  {% if scadenza %}<p>La scadenza per la revisione dei Diari è: <strong>{{ scadenza }}</strong>.</p>{% endif %}
+  <p>Clicca il link qui sotto per accedere alla piattaforma:</p>
+  <p style="text-align:center; margin:32px 0">
+    <a href="{{ link_attivazione }}"
+       style="background:#5AA02C; color:#fff; padding:12px 28px; border-radius:6px; text-decoration:none; font-weight:bold">
+      Accedi a Plancia
+    </a>
+  </p>
+  <p><small>Se non riesci a cliccare il pulsante: <a href="{{ link_attivazione }}">{{ link_attivazione }}</a></small></p>
+  <hr>
+  <p><small>{{ titolo_piattaforma }} — AGESCI Campania</small></p>
+</body>
+</html>

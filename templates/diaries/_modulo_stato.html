@@ -1,0 +1,12 @@
+{% comment %}Frammento: icona stato modulo + link. Parametri: ok, label, url_name, pk, extra_arg (opz.), disabled{% endcomment %}
+<div class="col">
+  {% if extra_arg %}
+    <a href="{% url url_name pk extra_arg %}" class="text-decoration-none">
+  {% else %}
+    <a href="{% url url_name pk %}" class="text-decoration-none">
+  {% endif %}
+    <div class="p-2 rounded {% if ok %}bg-success text-white{% elif disabled %}bg-light text-muted{% else %}bg-warning text-dark{% endif %}">
+      {% if ok %}✓{% else %}○{% endif %} <span class="small">{{ label }}</span>
+    </div>
+  </a>
+</div>

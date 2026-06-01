@@ -1,0 +1,67 @@
+[project]
+name = "plancia"
+version = "0.1.0"
+description = "Plancia - Gestione Guidoncini Verdi, AGESCI Campania (Branca E/G)"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "django>=6.0,<6.1",
+    "django-allauth[mfa,socialaccount]>=65.0",
+    "django-pwa>=2.0",
+    "django-guardian>=2.4",
+    "django-axes>=8.0",
+    "django-environ>=0.12",
+    "psycopg[binary]>=3.2",
+    "celery[redis]>=5.4",
+    "redis>=5.2",
+    "whitenoise>=6.8",
+    "gunicorn>=23.0",
+    "uvicorn>=0.34",
+    "weasyprint>=64",
+    "openpyxl>=3.1",
+    "pillow>=11.0",
+    "google-api-python-client>=2.150",
+    "google-auth>=2.36",
+    "google-auth-oauthlib>=1.2",
+    "requests>=2.32",
+    "django-tinymce>=4.1",
+    "django-hijack>=3.6",
+    "django-agesci-campania-theme>=1.0.0",
+    "selenium>=4.44.0",
+    "webdriver-manager>=4.1.1",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.8",
+    "pytest>=8.3",
+    "pytest-django>=4.9",
+    "factory-boy>=3.3",
+    "django-debug-toolbar>=4.4",
+    "pre-commit>=4.0",
+    "mypy>=1.13",
+    "django-stubs>=5.1",
+    "playwright>=1.60.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+extend-exclude = ["*/migrations/*"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "DJ", "C4", "SIM"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.dev"
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
+
+[tool.mypy]
+plugins = ["mypy_django_plugin.main"]
+
+[tool.django-stubs]
+django_settings_module = "config.settings.dev"

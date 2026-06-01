@@ -1,0 +1,279 @@
+{% extends "agesci_theme/base.html" %}
+{% load i18n static pwa %}
+
+{# ── Stili aggiuntivi ────────────────────────────────────────────────────── #}
+{% block extra_head %}
+{% progressive_web_app_meta %}
+<script defer src="{% static 'js/plancia-autosave.js' %}"></script>
+<script defer src="{% static 'js/plancia-foto.js' %}"></script>
+<style>
+  .nav-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.22);
+    border: 2px solid rgba(255,255,255,.55);
+    font-size: .78rem;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .navbar-agesci .dropdown-menu { border-radius: .5rem; }
+  .hijack-banner {
+    position: sticky;
+    top: 0;
+    z-index: 1060;
+    background: #fd7e14;
+    color: #000;
+    font-size: .82rem;
+    padding: .35rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    flex-wrap: wrap;
+  }
+  .role-chip {
+    font-size: .68rem;
+    padding: .15em .5em;
+    vertical-align: middle;
+    border-radius: .3rem;
+  }
+</style>
+{% endblock %}
+
+{# ── Navbar completa (sovrascrive il block che wrappa l'include del tema) ── #}
+{% block navbar %}
+
+  {# Banner impersonazione ─────────────────────────────────────────────── #}
+  {% if user.is_authenticated and user.is_hijacked %}
+    <div class="hijack-banner">
+      <span>⚠️ Stai operando come
+        <strong>{{ user.email }}</strong>
+        <span class="badge bg-dark role-chip">{{ user.get_ruolo_display }}</span>
+      </span>
+      <form method="post" action="{% url 'hijack:release' %}" class="d-inline">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.path }}">
+        <button type="submit" class="btn btn-sm btn-dark py-0 px-2">
+          Esci dall'impersonazione
+        </button>
+      </form>
+    </div>
+  {% endif %}
+
+  {# Navbar principale ──────────────────────────────────────────────────── #}
+  <nav class="navbar navbar-expand-lg navbar-agesci{% if agesci_theme_navbar_testo_scuro %} text-dark{% endif %}">
+    <div class="container">
+
+      {# Brand #}
+      <a class="navbar-brand d-flex align-items-center gap-2" href="/">
+        <img src="{% static agesci_theme_logo_navbar %}" alt="AGESCI Campania">
+        <span class="d-none d-sm-flex flex-column lh-1">
+          <span class="fw-bold">{{ impostazioni.titolo|default:"Plancia" }}</span>
+          {% if impostazioni.sottotitolo %}
+            <span style="font-size:.65rem; font-weight:400; opacity:.85;">{{ impostazioni.sottotitolo }}</span>
+          {% endif %}
+        </span>
+      </a>
+
+      {# Toggler mobile #}
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+              data-bs-target="#planciaNav" aria-controls="planciaNav"
+              aria-expanded="false" aria-label="Apri menu">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      {# Voci di navigazione #}
+      <div class="collapse navbar-collapse" id="planciaNav">
+        <ul class="navbar-nav ms-auto align-items-lg-center">
+
+          {% if user.is_authenticated %}
+
+            {# ── Home ──────────────────────────────────────────────────── #}
+            <li class="nav-item">
+              <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}"
+                 href="{% url 'home' %}">Home</a>
+            </li>
+
+            {# ── Diari: CSQ, CRP e staff ───────────────────────────────── #}
+            {% if user.ruolo == 'csq' or user.ruolo == 'crp' or user.is_staff_plancia or user.is_superuser %}
+              <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.app_name == 'diaries' %}active{% endif %}"
+                   href="{% url 'diaries:list' %}">Diari</a>
+              </li>
+            {% endif %}
+
+            {# ── Diari assegnati: PGV ──────────────────────────────────── #}
+            {% if user.ruolo == 'pgv' %}
+              <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.app_name == 'diaries' %}active{% endif %}"
+                   href="{% url 'diaries:list' %}">Diari assegnati</a>
+              </li>
+            {% endif %}
+
+            {# ── Helpdesk ──────────────────────────────────────────────── #}
+            <li class="nav-item">
+              <a class="nav-link {% if request.resolver_match.app_name == 'helpdesk' %}active{% endif %}"
+                 href="{% url 'helpdesk:list' %}">Helpdesk</a>
+            </li>
+
+            {# ── Gestione (dropdown staff) ─────────────────────────────── #}
+            {% if user.is_staff_plancia or user.is_superuser %}
+              <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle {% if request.resolver_match.app_name in 'editions,stats,imports,siteconfig,accounts' %}active{% endif %}"
+                   href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                  Gestione
+                </a>
+                <ul class="dropdown-menu">
+                  <li><h6 class="dropdown-header small">Edizioni</h6></li>
+                  <li>
+                    <a class="dropdown-item {% if request.resolver_match.app_name == 'editions' %}active{% endif %}"
+                       href="{% url 'editions:list' %}">Elenco edizioni</a>
+                  </li>
+                  {% if user.ruolo == 'admin' or user.is_superuser %}
+                    <li><a class="dropdown-item" href="{% url 'editions:create' %}">Nuova edizione</a></li>
+                  {% endif %}
+
+                  <li><hr class="dropdown-divider"></li>
+                  <li><h6 class="dropdown-header small">Persone</h6></li>
+                  <li>
+                    <a class="dropdown-item {% if request.resolver_match.app_name == 'accounts' %}active{% endif %}"
+                       href="{% url 'accounts:utente_list' %}">Utenti</a>
+                  </li>
+
+                  <li><hr class="dropdown-divider"></li>
+                  <li><h6 class="dropdown-header small">Dati</h6></li>
+                  <li>
+                    <a class="dropdown-item {% if request.resolver_match.app_name == 'imports' %}active{% endif %}"
+                       href="{% url 'imports:log_list' %}">Import anagrafiche</a>
+                  </li>
+                  {% if user.ruolo == 'incaricato_eg' or user.ruolo == 'admin' or user.is_superuser %}
+                    <li>
+                      <a class="dropdown-item {% if request.resolver_match.app_name == 'stats' %}active{% endif %}"
+                         href="{% url 'stats:dashboard' %}">Statistiche</a>
+                    </li>
+                  {% endif %}
+
+                  {% if user.ruolo == 'admin' or user.is_superuser %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li><h6 class="dropdown-header small">Sistema</h6></li>
+                    <li>
+                      <a class="dropdown-item {% if request.resolver_match.app_name == 'siteconfig' %}active{% endif %}"
+                         href="{% url 'siteconfig:impostazioni' %}">Impostazioni</a>
+                    </li>
+                    <li><a class="dropdown-item" href="{% url 'admin:index' %}">Pannello admin</a></li>
+                  {% endif %}
+                </ul>
+              </li>
+            {% endif %}
+
+            {# ── Badge utente (dropdown) ───────────────────────────────── #}
+            <li class="nav-item dropdown ms-lg-1">
+              <a class="nav-link dropdown-toggle d-flex align-items-center gap-2 py-1"
+                 href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <span class="nav-avatar" title="{{ user.nome_completo }}">
+                  {{ user.nome_completo|slice:":1"|upper }}
+                </span>
+                <span class="d-none d-lg-inline">{{ user.nome_completo }}</span>
+              </a>
+              <ul class="dropdown-menu dropdown-menu-end" style="min-width:220px;">
+                {# Intestazione con ruolo #}
+                <li class="px-3 py-2 border-bottom">
+                  <div class="fw-semibold small text-truncate">{{ user.nome_completo }}</div>
+                  <div class="mt-1">
+                    <span class="badge bg-secondary role-chip">{{ user.get_ruolo_display }}</span>
+                    {% if user.mfa_obbligatoria %}
+                      <span class="badge bg-success role-chip ms-1">MFA</span>
+                    {% endif %}
+                  </div>
+                </li>
+                <li>
+                  <a class="dropdown-item" href="{% url 'accounts:profilo' %}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
+                         class="me-2 opacity-75" viewBox="0 0 16 16">
+                      <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6m2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0m4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4"/>
+                    </svg>
+                    Profilo
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item" href="{% url 'account_email' %}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
+                         class="me-2 opacity-75" viewBox="0 0 16 16">
+                      <path d="M.05 3.555A2 2 0 0 1 2 2h12a2 2 0 0 1 1.95 1.555L8 8.414zM0 4.697v7.104l5.803-3.558zM6.761 8.83l-6.57 4.027A2 2 0 0 0 2 14h12a2 2 0 0 0 1.808-1.144l-6.57-4.027L8 9.586zm3.436-.586L16 11.801V4.697z"/>
+                    </svg>
+                    Email account
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item" href="{% url 'account_change_password' %}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
+                         class="me-2 opacity-75" viewBox="0 0 16 16">
+                      <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2m3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2"/>
+                    </svg>
+                    Cambia password
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item" href="{% url 'mfa_index' %}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
+                         class="me-2 opacity-75" viewBox="0 0 16 16">
+                      <path d="M8 0c-.69 0-1.843.265-2.928.56-1.11.3-2.229.655-2.887.87a1.54 1.54 0 0 0-1.044 1.262c-.596 4.477.787 7.795 2.465 9.99a11.8 11.8 0 0 0 2.517 2.453c.386.273.744.482 1.048.625.28.132.581.24.829.24s.548-.108.829-.24a7 7 0 0 0 1.048-.625 11.8 11.8 0 0 0 2.517-2.453c1.678-2.195 3.061-5.513 2.465-9.99a1.54 1.54 0 0 0-1.044-1.263 63 63 0 0 0-2.887-.87C9.843.266 8.69 0 8 0"/>
+                    </svg>
+                    Sicurezza (MFA)
+                  </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                  <a class="dropdown-item text-danger" href="{% url 'account_logout' %}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
+                         class="me-2 opacity-75" viewBox="0 0 16 16">
+                      <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0z"/>
+                      <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708z"/>
+                    </svg>
+                    Esci
+                  </a>
+                </li>
+              </ul>
+            </li>
+
+          {% else %}
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'account_login' %}">Accedi</a>
+            </li>
+          {% endif %}
+
+        </ul>
+      </div>
+    </div>
+  </nav>
+{% endblock navbar %}
+
+{# ── Footer con valori da Impostazioni ───────────────────────────────── #}
+{% block footer %}
+<footer class="footer-agesci mt-5">
+  <div class="container">
+    <div class="row align-items-center gy-3">
+      <div class="col-md-3 text-center text-md-start">
+        <img src="{% static agesci_theme_logo_navbar %}" alt="{{ agesci_theme_nome }}" class="footer-emblema">
+      </div>
+      <div class="col-md-6 text-center small">
+        <strong>{{ impostazioni.titolo }}</strong><br>
+        {% if impostazioni.footer_testo %}
+          {{ impostazioni.footer_testo }}
+        {% else %}
+          Guidoncini Verdi &mdash; AGESCI Campania
+        {% endif %}
+      </div>
+      <div class="col-md-3 text-center text-md-end small">
+        <a href="{{ impostazioni.footer_link_url }}" target="_blank" rel="noopener">
+          {{ impostazioni.footer_link_label }}
+        </a>
+      </div>
+    </div>
+  </div>
+</footer>
+{% endblock %}

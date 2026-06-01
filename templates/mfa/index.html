@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Autenticazione a due fattori — {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-md-8 col-lg-6">
+
+    <h1 class="h4 mb-4">{% trans "Autenticazione a due fattori" %}</h1>
+
+    {% if messages %}
+      {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show">
+          {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    {% if "totp" in MFA_SUPPORTED_TYPES %}
+      <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <strong>{% trans "App Authenticator (TOTP)" %}</strong>
+          {% if authenticators.totp %}
+            <span class="badge bg-success">{% trans "Attiva" %}</span>
+          {% else %}
+            <span class="badge bg-secondary">{% trans "Non attiva" %}</span>
+          {% endif %}
+        </div>
+        <div class="card-body">
+          {% if authenticators.totp %}
+            <p class="mb-3">
+              L'autenticazione tramite app authenticator è attiva. Per accedere ti verrà
+              chiesto il codice generato dall'app.
+            </p>
+            <a href="{% url 'mfa_deactivate_totp' %}" class="btn btn-outline-danger btn-sm">
+              {% trans "Disattiva" %}
+            </a>
+          {% else %}
+            <p class="mb-3">
+              Proteggi il tuo account con un'app authenticator (es. Google Authenticator,
+              Aegis, Authy). Scansiona il QR code e inserisci il codice per attivare.
+            </p>
+            <a href="{% url 'mfa_activate_totp' %}" class="btn btn-primary btn-sm">
+              {% trans "Attiva" %}
+            </a>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+
+    {% if "recovery_codes" in MFA_SUPPORTED_TYPES %}
+      <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <strong>{% trans "Codici di recupero" %}</strong>
+          {% if authenticators.recovery_codes %}
+            {% with unused=authenticators.recovery_codes.get_unused_codes %}
+              <span class="badge {% if unused|length > 2 %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                {{ unused|length }} disponibili
+              </span>
+            {% endwith %}
+          {% else %}
+            <span class="badge bg-secondary">{% trans "Non configurati" %}</span>
+          {% endif %}
+        </div>
+        <div class="card-body">
+          {% if authenticators.recovery_codes %}
+            {% with unused=authenticators.recovery_codes.get_unused_codes total=authenticators.recovery_codes.generate_codes %}
+              <p class="mb-3">
+                Hai {{ unused|length }} codici di recupero disponibili su {{ total|length }} totali.
+                Conservali in un posto sicuro — permettono l'accesso se perdi il dispositivo.
+              </p>
+            {% endwith %}
+            {% if is_mfa_enabled %}
+              <div class="d-flex gap-2 flex-wrap">
+                <a href="{% url 'mfa_view_recovery_codes' %}" class="btn btn-outline-primary btn-sm">
+                  {% trans "Visualizza" %}
+                </a>
+                <a href="{% url 'mfa_download_recovery_codes' %}" class="btn btn-outline-secondary btn-sm">
+                  {% trans "Scarica" %}
+                </a>
+                <a href="{% url 'mfa_generate_recovery_codes' %}" class="btn btn-outline-warning btn-sm">
+                  {% trans "Rigenera" %}
+                </a>
+              </div>
+            {% endif %}
+          {% else %}
+            <p class="mb-3">
+              I codici di recupero permettono di accedere se perdi il dispositivo MFA.
+            </p>
+            {% if is_mfa_enabled %}
+              <a href="{% url 'mfa_generate_recovery_codes' %}" class="btn btn-primary btn-sm">
+                {% trans "Genera codici" %}
+              </a>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}
