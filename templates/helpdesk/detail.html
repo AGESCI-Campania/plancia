@@ -9,10 +9,6 @@
     <span class="badge {% if ticket.stato == 'aperto' %}bg-danger{% elif ticket.stato == 'in_lavorazione' %}bg-warning text-dark{% else %}bg-success{% endif %}">{{ ticket.get_stato_display }}</span>
   </div>
 
-  {% if messages %}
-    {% for msg in messages %}
-      <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-    {% endfor %}
   {% endif %}
 
   <div class="card mb-3">

@@ -8,10 +8,6 @@
     <a href="{% url 'helpdesk:create' %}" class="btn btn-primary btn-sm">+ Nuovo ticket</a>
   </div>
 
-  {% if messages %}
-    {% for msg in messages %}
-      <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-    {% endfor %}
   {% endif %}
 
   <form class="mb-3 d-flex gap-2 align-items-center" method="get">

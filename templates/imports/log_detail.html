@@ -26,12 +26,6 @@
     <h1 class="h4 mb-0">Import {{ log.get_tipo_display }} del {{ log.creato_at|date:"d/m/Y H:i" }}</h1>
   </div>
 
-  {% if messages %}
-    {% for msg in messages %}
-      <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show">
-        {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-      </div>
-    {% endfor %}
   {% endif %}
 
   <dl class="row">

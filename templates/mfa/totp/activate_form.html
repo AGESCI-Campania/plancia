@@ -13,12 +13,6 @@
       </div>
       <div class="card-body p-4">
         {% load i18n %}
-        {% if messages %}
-          {% for msg in messages %}
-            <div class="alert alert-warning d-flex align-items-center gap-2 mb-3" role="alert">
-              <span>&#9888;</span> {{ msg }}
-            </div>
-          {% endfor %}
         {% endif %}
 
         <p class="text-muted mb-4">

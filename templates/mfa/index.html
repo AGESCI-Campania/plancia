@@ -9,12 +9,6 @@
 
     <h1 class="h4 mb-4">{% trans "Autenticazione a due fattori" %}</h1>
 
-    {% if messages %}
-      {% for msg in messages %}
-        <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show">
-          {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-      {% endfor %}
     {% endif %}
 
     {% if "totp" in MFA_SUPPORTED_TYPES %}

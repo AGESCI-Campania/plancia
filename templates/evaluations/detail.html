@@ -17,10 +17,6 @@
     <h1 class="h4 mb-0">Valutazione: {{ diario }}</h1>
   </div>
 
-  {% if messages %}
-    {% for msg in messages %}
-      <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-    {% endfor %}
   {% endif %}
 
   <div class="row g-4">
