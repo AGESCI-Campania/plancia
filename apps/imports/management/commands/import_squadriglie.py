@@ -143,7 +143,7 @@ class Command(BaseCommand):
                         scartati += 1
                         if not dry_run:
                             riga_objs.append(RigaImportazione(
-                                log=log, numero=i, dati_grezzi=dict(row),
+                                log=log, numero=i, dati_grezzi={k: v for k, v in row.items() if k is not None},
                                 stato_match=StatoMatch.SCARTATA,
                                 note="Codice CSQ non valido",
                             ))
@@ -224,7 +224,7 @@ class Command(BaseCommand):
                                 da_riconciliare += 1
 
                             riga_objs.append(RigaImportazione(
-                                log=log, numero=i, dati_grezzi=dict(row),
+                                log=log, numero=i, dati_grezzi={k: v for k, v in row.items() if k is not None},
                                 stato_match=stato_riga,
                                 socio_match=crp_socio,
                                 note=note_riga,
@@ -237,7 +237,7 @@ class Command(BaseCommand):
                                 "Squadriglie riga %d (codice CSQ %s): %s", i, codice_csq, exc
                             )
                             riga_objs.append(RigaImportazione(
-                                log=log, numero=i, dati_grezzi=dict(row),
+                                log=log, numero=i, dati_grezzi={k: v for k, v in row.items() if k is not None},
                                 stato_match=StatoMatch.SCARTATA,
                                 note=str(exc)[:255],
                             ))

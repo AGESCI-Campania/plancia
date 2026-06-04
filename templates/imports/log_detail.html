@@ -121,7 +121,14 @@
   {% endif %}
 
   {# --- Righe scartate --- #}
-  {% if righe_scartate %}
+  {% if log.scartati and not righe_scartate %}
+    <div class="alert alert-warning mt-4">
+      {% bs_icon "exclamation-triangle" size="16" extra_classes="me-1" %}
+      <strong>{{ log.scartati }} rig{{ log.scartati|pluralize:"a,he" }} scartata{{ log.scartati|pluralize:",e" }}</strong>
+      ma i dettagli non sono stati salvati (errore interno durante il salvataggio del log).
+      Ricarica il file CSV per ottenere il dettaglio degli errori.
+    </div>
+  {% elif righe_scartate %}
     <div class="mt-4">
       <h2 class="h5 mb-1">
         {% bs_icon "x-circle" size="16" extra_classes="text-danger me-1" %}
