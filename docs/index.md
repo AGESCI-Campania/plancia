@@ -51,9 +51,3 @@ Per chi installa e configura Plancia:
 Per installazione e deployment consulta il [README](https://github.com/AGESCI-Campania/plancia#readme)
 del repository.
 
----
-
-## Specifica di progetto
-
-La specifica completa (ruoli, modello dati, FSM, sicurezza, deployment) è in
-[Plancia\_Progettazione.md](Plancia_Progettazione.md).
