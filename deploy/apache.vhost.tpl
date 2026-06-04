@@ -15,12 +15,18 @@
 
     LimitRequestBody 26214400
 
+    # Static files serviti direttamente da Apache (collectstatic scrive qui via volume Docker)
+    Alias /static/ ${INSTALL_DIR}/staticfiles/
+    <Directory ${INSTALL_DIR}/staticfiles/>
+        Options -Indexes
+        AllowOverride None
+        Require all granted
+        Header set Cache-Control "max-age=2592000, public"
+    </Directory>
+
     ProxyPreserveHost On
     RequestHeader set X-Forwarded-Proto "https"
+    ProxyPass        /static/ !
     ProxyPass        / http://127.0.0.1:${APP_PORT}/
     ProxyPassReverse / http://127.0.0.1:${APP_PORT}/
-
-    # Opzionale: static serviti da Apache se il volume e' condiviso
-    # Alias /static/ /srv/plancia/static/
-    # <Directory /srv/plancia/static/> Require all granted </Directory>
 </VirtualHost>

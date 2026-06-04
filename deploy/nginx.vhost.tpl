@@ -16,6 +16,14 @@ server {
 
     client_max_body_size 25m;   # upload foto
 
+    # Static files serviti direttamente da nginx (collectstatic scrive qui via volume Docker)
+    location /static/ {
+        alias ${INSTALL_DIR}/staticfiles/;
+        access_log off;
+        expires 30d;
+        add_header Cache-Control "public";
+    }
+
     location / {
         proxy_pass http://127.0.0.1:${APP_PORT};
         proxy_set_header Host              $host;
@@ -24,7 +32,4 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_redirect off;
     }
-
-    # Opzionale: static serviti dal proxy se il volume e' condiviso
-    # location /static/ { alias /srv/plancia/static/; access_log off; expires 30d; }
 }

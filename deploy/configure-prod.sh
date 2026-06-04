@@ -99,7 +99,13 @@ fi
 # ----------------------------------------------------------------------------
 # Rende il vhost per le modalita' host
 # ----------------------------------------------------------------------------
-render_tpl() { sed -e "s|\${SERVER_NAME}|${SERVER_NAME}|g" -e "s|\${APP_PORT}|${APP_PORT}|g" "$1"; }
+render_tpl() {
+  sed \
+    -e "s|\${SERVER_NAME}|${SERVER_NAME}|g" \
+    -e "s|\${APP_PORT}|${APP_PORT}|g" \
+    -e "s|\${INSTALL_DIR}|${INSTALL_DIR}|g" \
+    "$1"
+}
 case "$PROXY_MODE" in
   nginx-host)
     OUT="deploy/plancia.nginx.conf"; render_tpl deploy/nginx.vhost.tpl > "$OUT"
@@ -116,8 +122,8 @@ esac
 # ----------------------------------------------------------------------------
 # Crea la directory logs/ sull'host (il volume Docker la creerebbe come root)
 # ----------------------------------------------------------------------------
-mkdir -p logs/email
-echo "OK: directory logs/ pronta."
+mkdir -p logs/email staticfiles
+echo "OK: directory logs/ e staticfiles/ pronte."
 
 # ----------------------------------------------------------------------------
 # Genera il file systemd unit

@@ -10,7 +10,8 @@ services:
     ports:
       - "127.0.0.1:${APP_PORT:-8000}:8000"
     volumes:
-      - ./logs:/app/logs        # log Django persistenti sull'host (plancia.log + email/)
+      - ./logs:/app/logs              # log Django persistenti sull'host
+      - ./staticfiles:/app/staticfiles  # collectstatic → servito da proxy host
       - plancia_media:/app/media
     depends_on: [db, redis]
     restart: unless-stopped

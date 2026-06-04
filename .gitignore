@@ -17,8 +17,9 @@ fixtures/real_*.csv
 fixtures/prod_*.csv
 # Email simulate (possono contenere dati utente)
 logs/
-# PDF generati (artefatti, non versionati)
+# Artefatti generati (non versionati)
 docs/manuale/*.pdf
+/staticfiles/
 # File generati da configure-prod.sh (specifici dell'installazione)
 deploy/plancia.service
 deploy/plancia.nginx.conf
