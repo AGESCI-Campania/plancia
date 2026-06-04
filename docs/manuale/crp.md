@@ -51,7 +51,6 @@ La home mostra l'edizione attiva e il riepilogo dei diari del tuo reparto.
 Dalla voce **Diari** nella barra di navigazione vedi tutti i diari delle squadriglie
 del tuo reparto, con lo stato attuale di ciascuno.
 
-![Lista diari Capo Reparto](screenshots/21_lista_diari_crp.png)
 
 ---
 
@@ -60,7 +59,6 @@ del tuo reparto, con lo stato attuale di ciascuno.
 Cliccando su un diario accedi al dettaglio, dove trovi lo stato di compilazione
 di ogni modulo e le azioni disponibili in base allo stato corrente.
 
-![Dettaglio diario Capo Reparto](screenshots/22_dettaglio_diario_crp.png)
 
 ---
 
@@ -76,7 +74,6 @@ finché il diario non è ancora stato inviato al Capo Reparto (stato *In compila
 3. Cerca il nuovo Capo Squadriglia per nome, cognome o codice socio nel campo di ricerca.
 4. Selezionalo e clicca **"Salva"**.
 
-![Form Cambia Capo Squadriglia](screenshots/23_cambia_csq.png)
 
 Il diario viene aggiornato immediatamente. Il precedente Capo Squadriglia perde l'accesso
 al diario; il nuovo lo vede dalla propria home page.

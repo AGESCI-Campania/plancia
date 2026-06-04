@@ -37,7 +37,6 @@ Al primo accesso la piattaforma richiede di configurare un'app authenticator TOT
 La pagina **Sicurezza (MFA)** nel menu utente (in alto a destra) permette di
 gestire i dispositivi TOTP e rigenerare i codici di recupero.
 
-![Impostazione MFA](screenshots/30_mfa_impostazione.png)
 
 ---
 

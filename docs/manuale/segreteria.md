@@ -57,7 +57,6 @@ Le sezioni disponibili:
 Da **Gestione → Inviti** puoi inviare e monitorare gli inviti per l'edizione attiva.
 La pagina mostra contatori e stato (non inviato / inviato / attivato) per ogni squadriglia.
 
-![Gestione Inviti](screenshots/28_gestione_inviti.png)
 
 ### Sequenza consigliata
 
@@ -152,7 +151,6 @@ Utile quando un CRP viene sostituito e ha più diari associati (più squadriglie
 3. Cerca il nuovo Capo Reparto e clicca **"Salva"**.
    Tutti i diari elencati vengono aggiornati in un'unica operazione.
 
-![Cambia Capo Reparto per reparto](screenshots/29_cambia_crp_reparto.png)
 
 > I diari già in stato *Inviato* o successivi **non vengono modificati** dal cambio bulk.
 > Per quei diari è necessaria un'operazione manuale tramite il pannello Django Admin.

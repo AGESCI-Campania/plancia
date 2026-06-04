@@ -17,8 +17,6 @@ fixtures/real_*.csv
 fixtures/prod_*.csv
 # Email simulate (possono contenere dati utente)
 logs/
-# Screenshot del manuale (generati dallo script, non versionati)
-docs/manuale/screenshots/
 # PDF generati (artefatti, non versionati)
 docs/manuale/*.pdf
 # Cache SVG icone (django-bootstrap-icons)
