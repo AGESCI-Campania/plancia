@@ -1,16 +1,26 @@
 # apps/accounts/signals.py
 """Registra LoginEvent dai signal di django-allauth (docs sez. 12)."""
+import ipaddress
+
 from allauth.account.signals import user_logged_in, user_logged_out
 from django.contrib.auth.signals import user_login_failed as auth_login_failed
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 
-def _get_ip(request):
-    xff = request.META.get("HTTP_X_FORWARDED_FOR")
-    if xff:
-        return xff.split(",")[0].strip()
-    return request.META.get("REMOTE_ADDR")
+def _get_ip(request) -> str | None:
+    """Estrae e valida l'IP del client; restituisce None se non ricavabile."""
+    candidates: list[str] = []
+    for header in ("HTTP_X_FORWARDED_FOR", "HTTP_X_REAL_IP", "REMOTE_ADDR"):
+        value = request.META.get(header, "") or ""
+        candidates.extend(part.strip() for part in value.split(",") if part.strip())
+    for addr in candidates:
+        try:
+            ipaddress.ip_address(addr)
+            return addr
+        except ValueError:
+            continue
+    return None
 
 
 @receiver(post_save, sender="accounts.User")

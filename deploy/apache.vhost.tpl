@@ -26,6 +26,10 @@
 
     ProxyPreserveHost On
     RequestHeader set X-Forwarded-Proto "https"
+    # Usa REMOTE_ADDR (IP che Apache vede) — non passare X-Forwarded-For dal client
+    # per evitare IP spoofing e valori malformati.
+    RequestHeader set X-Real-IP "%{REMOTE_ADDR}s"
+    RequestHeader unset X-Forwarded-For
     ProxyPass        /static/ !
     ProxyPass        / http://127.0.0.1:${APP_PORT}/
     ProxyPassReverse / http://127.0.0.1:${APP_PORT}/
