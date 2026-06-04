@@ -54,14 +54,11 @@ services:
     image: axllent/mailpit:latest
     # SMTP interno + web UI. Nessuna porta esposta pubblicamente.
     # Profilo "mailpit": avviare solo quando si usa la modalità debug Mailpit in Impostazioni.
-    # Avvio: COMPOSE_PROFILES=proxy-nginx,mailpit docker compose up -d
-    # Per nginx-host / apache-host: aggiungere 127.0.0.1:8025:8025 + impostare MAILPIT_INTERNAL_URL.
+    # Avvio: COMPOSE_PROFILES=mailpit docker compose --env-file .env.prod up -d
     profiles: ["mailpit"]
-    command:
-      - mailpit
-      - --smtp-bind-addr=0.0.0.0:1025
-      - --ui-web-path=/mailadmin
-      - --ui-bind-addr=0.0.0.0:8025
+    environment:
+      MP_MAX_MESSAGES: 500
+      MP_UI_WEB_PATH: /mailadmin
     restart: unless-stopped
 
   nginx:
