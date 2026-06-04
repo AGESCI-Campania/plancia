@@ -81,18 +81,53 @@ Scegli:
 - **porta** dell'app (default **8000**);
 - **TLS** e i parametri d'ambiente.
 
-Lo script genera `.env.prod`, imposta `COMPOSE_PROFILES`, e per le modalità *host* rende il vhost
-(`deploy/plancia.nginx.conf` o `deploy/plancia.apache.conf`) da installare nel server esistente.
-Template di partenza: `deploy/nginx.vhost.tpl`, `deploy/apache.vhost.tpl`,
+Lo script genera `.env.prod`, le directory `logs/` e `staticfiles/` sull'host,
+il vhost per la modalità scelta (`deploy/plancia.nginx.conf` o `deploy/plancia.apache.conf`)
+e il file systemd `deploy/plancia.service` per l'avvio automatico.
+
+**Prima installazione — sequenza completa:**
+```bash
+./deploy/configure-prod.sh          # genera .env.prod, vhost, service
+
+# 1. Avvia i container
+docker compose --env-file .env.prod up -d
+
+# 2. Migrazioni e static files
+docker compose --env-file .env.prod exec web uv run python manage.py migrate --noinput
+docker compose --env-file .env.prod exec web uv run python manage.py collectstatic --noinput
+# -> staticfiles/ viene popolata sull'host e servita direttamente da nginx/Apache
+
+# 3. Crea il primo amministratore
+docker compose --env-file .env.prod exec web uv run python manage.py createsuperuser
+# poi accedi a /admin/ e imposta il ruolo Admin da Impostazioni → Utenti
+
+# 4. Installa il service systemd per l'avvio automatico (opzionale)
+sudo cp deploy/plancia.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now plancia
+```
+
+**Deploy aggiornamenti:**
+```bash
+git pull
+docker compose --env-file .env.prod build
+docker compose --env-file .env.prod up -d
+docker compose --env-file .env.prod exec web uv run python manage.py migrate --noinput
+docker compose --env-file .env.prod exec web uv run python manage.py collectstatic --noinput
+```
+
+**Diagnostica:**
+```bash
+tail -f logs/plancia.log                        # log Django (errori 500, warning)
+docker compose --env-file .env.prod logs -f web # stdout gunicorn
+```
+
+Template vhost: `deploy/nginx.vhost.tpl`, `deploy/apache.vhost.tpl`,
 `deploy/nginx/default.conf` (nginx dockerizzato).
 
-Avvio manuale equivalente:
-```bash
-COMPOSE_PROFILES=proxy-nginx docker compose --env-file .env.prod up -d   # modalità nginx-docker
-# oppure, con proxy host:
-docker compose --env-file .env.prod up -d
-docker compose --env-file .env.prod exec web uv run python manage.py migrate
-```
+I **static files** (`/static/`) sono serviti direttamente da nginx/Apache dalla directory
+`staticfiles/` sull'host (montata in `/app/staticfiles` nel container via volume bind).
+I **media** (upload foto) usano il volume named `plancia_media`.
 
 ## Struttura
 ```
