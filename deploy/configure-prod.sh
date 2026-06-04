@@ -114,6 +114,12 @@ case "$PROXY_MODE" in
 esac
 
 # ----------------------------------------------------------------------------
+# Crea la directory logs/ sull'host (il volume Docker la creerebbe come root)
+# ----------------------------------------------------------------------------
+mkdir -p logs/email
+echo "OK: directory logs/ pronta."
+
+# ----------------------------------------------------------------------------
 # Genera il file systemd unit
 # ----------------------------------------------------------------------------
 SERVICE_OUT="deploy/plancia.service"
@@ -132,6 +138,11 @@ echo "  Comandi utili:"
 echo "    sudo systemctl status plancia"
 echo "    sudo systemctl restart plancia"
 echo "    sudo journalctl -u plancia -f"
+echo ""
+echo "  Log applicativi (persistono sull'host in logs/):"
+echo "    tail -f ${INSTALL_DIR}/logs/plancia.log     # log Django (errori 500, warning, info)"
+echo "    docker compose logs -f web                  # stdout container web (gunicorn)"
+echo "    docker compose logs -f worker               # stdout worker Celery"
 
 # ----------------------------------------------------------------------------
 # Avvio (opzionale)

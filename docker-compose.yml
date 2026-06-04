@@ -9,6 +9,9 @@ services:
     # Esposta solo su loopback: la raggiunge il proxy (host o nginx-docker via rete interna)
     ports:
       - "127.0.0.1:${APP_PORT:-8000}:8000"
+    volumes:
+      - ./logs:/app/logs        # log Django persistenti sull'host (plancia.log + email/)
+      - plancia_media:/app/media
     depends_on: [db, redis]
     restart: unless-stopped
 
@@ -16,6 +19,9 @@ services:
     build: .
     command: uv run celery -A config worker -l info
     env_file: [.env.prod]
+    volumes:
+      - ./logs:/app/logs
+      - plancia_media:/app/media
     depends_on: [db, redis]
     restart: unless-stopped
 
@@ -23,6 +29,8 @@ services:
     build: .
     command: uv run celery -A config beat -l info
     env_file: [.env.prod]
+    volumes:
+      - ./logs:/app/logs
     depends_on: [db, redis]
     restart: unless-stopped
 
@@ -69,3 +77,4 @@ services:
 
 volumes:
   plancia_db:
+  plancia_media:
