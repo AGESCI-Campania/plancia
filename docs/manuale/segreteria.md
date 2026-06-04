@@ -151,6 +151,7 @@ Utile quando un CRP viene sostituito e ha più diari associati (più squadriglie
 3. Cerca il nuovo Capo Reparto e clicca **"Salva"**.
    Tutti i diari elencati vengono aggiornati in un'unica operazione.
 
+![Cambia Capo Reparto per reparto](screenshots/29_cambia_crp_reparto.png)
 
 > I diari già in stato *Inviato* o successivi **non vengono modificati** dal cambio bulk.
 > Per quei diari è necessaria un'operazione manuale tramite il pannello Django Admin.

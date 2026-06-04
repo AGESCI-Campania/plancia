@@ -20,6 +20,8 @@ Diario inviato → Assegnazione PGV → Proposta PGV → Revisione Incaricato �
 La home mostra l'edizione in corso, il numero di diari inviati in attesa di valutazione
 e lo stato complessivo delle assegnazioni.
 
+![Home Incaricato EG](screenshots/25_home_incaricato.png)
+
 
 ---
 
@@ -27,6 +29,8 @@ e lo stato complessivo delle assegnazioni.
 
 Dalla voce **Diari** accedi all'elenco completo dei diari di tutte le squadriglie,
 con il loro stato attuale (Inviato, In valutazione, Approvato, ecc.).
+
+![Lista diari — Incaricato EG](screenshots/26_diari_incaricato.png)
 
 
 ---
@@ -37,6 +41,8 @@ Quando un diario è in stato *Inviato*, entra nel dettaglio di valutazione
 (`Gestione → Valutazione`) e usa il campo **Assegna PGV** per scegliere
 il membro della pattuglia che lo valuterà.
 
+
+![Assegna PGV al diario](screenshots/27_assegna_pgv.png)
 
 Il diario passa in stato *In valutazione* e diventa visibile al membro PGV assegnato.
 
