@@ -124,6 +124,14 @@
               </li>
             {% endif %}
 
+            {# ── Inviti: Capo Reparto ──────────────────────────────────── #}
+            {% if user.ruolo == 'crp' %}
+              <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.url_name == 'inviti_crp' %}active{% endif %}"
+                   href="{% url 'notifications:inviti_crp' %}">{% bs_icon "envelope" size="15" extra_classes="me-1" %}Inviti</a>
+              </li>
+            {% endif %}
+
             {# ── Helpdesk ──────────────────────────────────────────────── #}
             <li class="nav-item">
               <a class="nav-link {% if request.resolver_match.app_name == 'helpdesk' %}active{% endif %}"
@@ -152,6 +160,10 @@
                   <li>
                     <a class="dropdown-item {% if request.resolver_match.app_name == 'accounts' %}active{% endif %}"
                        href="{% url 'accounts:utente_list' %}">{% bs_icon "people" size="14" extra_classes="me-2 opacity-75" %}Utenti</a>
+                  </li>
+                  <li>
+                    <a class="dropdown-item {% if request.resolver_match.app_name == 'notifications' %}active{% endif %}"
+                       href="{% url 'notifications:gestione_inviti' %}">{% bs_icon "envelope" size="14" extra_classes="me-2 opacity-75" %}Inviti</a>
                   </li>
 
                   <li><hr class="dropdown-divider"></li>

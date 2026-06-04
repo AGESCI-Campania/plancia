@@ -144,17 +144,65 @@ class AttivazoneInvitoView(View):
 
 
 class ReinvioInvitoView(RuoloRequiredMixin, View):
-    """Reinvia un invito (crea un nuovo token, invalida il vecchio)."""
+    """Reinvia un invito (crea un nuovo token, invalida il vecchio).
 
-    ruoli_ammessi = _STAFF
+    Accessibile a staff oppure al Capo Reparto per gli inviti al proprio Capo Squadriglia.
+    """
+
+    ruoli_ammessi = _STAFF + (Ruolo.CRP,)
 
     def post(self, request, pk):
         invito = get_object_or_404(Invito, pk=pk)
+
+        # CRP può reinviare solo gli inviti CSQ dei propri diari
+        if request.user.ruolo == Ruolo.CRP:
+            if (
+                not invito.diario
+                or invito.ruolo_target != Ruolo.CSQ
+                or invito.diario.crp != request.user.socio
+            ):
+                messages.error(request, "Non sei autorizzato a reinviare questo invito.")
+                return redirect(request.POST.get("next") or "diaries:list")
+
         from apps.notifications.service import reinvia_invito
 
         reinvia_invito(invito)
         messages.success(request, f"Invito reinviato a {invito.utente.email}.")
         return redirect(request.POST.get("next") or "notifications:gestione_inviti")
+
+
+class InvitiCrpView(RuoloRequiredMixin, View):
+    """Pagina del Capo Reparto per monitorare e reinviare gli inviti ai propri Capi Squadriglia."""
+
+    ruoli_ammessi = (Ruolo.CRP,)
+    template_name = "notifications/inviti_crp.html"
+
+    def get(self, request):
+        from apps.diaries.models import Diario
+        from apps.editions.models import Edizione, StatoEdizione
+
+        edizione = (
+            Edizione.objects.filter(stato__in=[StatoEdizione.APERTA, StatoEdizione.IN_VALUTAZIONE])
+            .order_by("-anno")
+            .first()
+        )
+        ctx = {"edizione": edizione}
+
+        if edizione and request.user.socio:
+            diari = list(
+                Diario.objects.filter(edizione=edizione, crp=request.user.socio)
+                .select_related("csq__utente", "squadriglia__reparto")
+                .prefetch_related("inviti")
+                .order_by("squadriglia__nome")
+            )
+            for d in diari:
+                inviti = sorted(d.inviti.all(), key=lambda x: x.inviato_at, reverse=True)
+                d.ultimo_invito_csq = next(
+                    (inv for inv in inviti if inv.ruolo_target == Ruolo.CSQ), None
+                )
+            ctx["diari"] = diari
+
+        return render(request, self.template_name, ctx)
 
 
 class InvioInvitiBulkView(RuoloRequiredMixin, View):

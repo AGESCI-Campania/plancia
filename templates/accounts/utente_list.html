@@ -1,12 +1,53 @@
 {% extends "base.html" %}
-{% load accounts_tags %}
+{% load accounts_tags bootstrap_icons %}
 
 {% block title %}Utenti — {{ block.super }}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2/dist/css/tom-select.bootstrap5.min.css">
+{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h1 class="h4 mb-0">Utenti</h1>
 </div>
+
+{% if ruoli_nominabili %}
+<div class="card mb-4 border-secondary">
+  <div class="card-header d-flex align-items-center gap-2">
+    {% bs_icon "person-plus" size="16" extra_classes="text-secondary" %}
+    <span class="fw-semibold">Crea account da Socio importato</span>
+  </div>
+  <div class="card-body">
+    <p class="text-muted small mb-3">
+      Seleziona un capo importato (senza account), scegli il ruolo e crea l'account.
+      Il capo potrà ricevere l'invito dalla pagina <a href="{% url 'notifications:gestione_inviti' %}">Inviti</a>.
+    </p>
+    <form method="post" action="{% url 'accounts:crea_da_socio' %}" class="row g-2 align-items-end">
+      {% csrf_token %}
+      <div class="col-12 col-md-5">
+        <label class="form-label small fw-semibold">Socio (capo)</label>
+        <select id="socio-ts-crea" name="socio_pk" class="form-select form-select-sm" required>
+          <option value=""></option>
+        </select>
+      </div>
+      <div class="col-12 col-md-3">
+        <label class="form-label small fw-semibold">Ruolo</label>
+        <select name="ruolo" class="form-select form-select-sm" required>
+          {% for val, label in ruoli_nominabili %}
+            <option value="{{ val }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <button class="btn btn-secondary btn-sm">
+          {% bs_icon "person-plus" size="14" extra_classes="me-1" %} Crea account
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
 
 {# Filtri #}
 <form method="get" class="row g-2 mb-3">
@@ -70,5 +111,27 @@
 
 {% if is_paginated %}
   {% include "partials/pagination.html" %}
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if ruoli_nominabili %}
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2/dist/js/tom-select.complete.min.js"></script>
+<script>
+new TomSelect('#socio-ts-crea', {
+  valueField: 'id',
+  labelField: 'label',
+  searchField: [],
+  load(query, callback) {
+    if (!query.length) return callback();
+    fetch(`/api/soci/?q=${encodeURIComponent(query)}&categoria=capo`)
+      .then(r => r.json())
+      .then(data => callback(data.results || data))
+      .catch(() => callback());
+  },
+  placeholder: 'Cerca per nome, cognome o codice…',
+  minChars: 2,
+});
+</script>
 {% endif %}
 {% endblock %}

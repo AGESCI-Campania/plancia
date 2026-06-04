@@ -73,6 +73,12 @@ class UtenteListView(StaffPlanciaRequiredMixin, ListView):
         ctx["ruoli"] = Ruolo.choices
         ctx["ruolo_sel"] = self.request.GET.get("ruolo", "")
         ctx["q"] = self.request.GET.get("q", "")
+        attore = self.request.user
+        ctx["ruoli_nominabili"] = [
+            (r, label)
+            for r, label in Ruolo.choices
+            if attore.ruolo in ROLE_CREATABLE_BY.get(r, set()) or attore.is_superuser
+        ]
         return ctx
 
 
@@ -130,6 +136,48 @@ class NominaView(StaffPlanciaRequiredMixin, View):
             messages.error(request, str(e))
 
         return redirect("accounts:utente_detail", pk=pk)
+
+
+class CreaUtenteDaSocioView(StaffPlanciaRequiredMixin, View):
+    """Crea un account utente per un Socio(capo) importato e lo nomina al ruolo scelto.
+
+    Accessibile ad Admin, Segreteria e Incaricato EG dalla pagina utenti.
+    """
+
+    def post(self, request):
+        from apps.org.models import Categoria, Socio
+
+        socio_pk = request.POST.get("socio_pk")
+        ruolo_target = request.POST.get("ruolo")
+
+        if not socio_pk or not ruolo_target or ruolo_target not in Ruolo.values:
+            messages.error(request, "Dati non validi.")
+            return redirect("accounts:utente_list")
+
+        socio = get_object_or_404(Socio, pk=socio_pk, categoria=Categoria.CAPO)
+
+        # Verifica che l'attore possa creare quel ruolo
+        if ruolo_target not in {
+            r for r, creators in ROLE_CREATABLE_BY.items()
+            if request.user.ruolo in creators or request.user.is_superuser
+        }:
+            messages.error(request, f"Non sei autorizzato ad assegnare il ruolo {Ruolo(ruolo_target).label}.")
+            return redirect("accounts:utente_list")
+
+        from apps.notifications.service import crea_o_ottieni_utente_per_socio
+
+        utente = crea_o_ottieni_utente_per_socio(socio, ruolo_target)
+
+        try:
+            service_nomina(request.user, utente, ruolo_target)
+            messages.success(
+                request,
+                f"Account creato e ruolo {Ruolo(ruolo_target).label} assegnato a {socio}.",
+            )
+        except (PermissionError, ValueError) as e:
+            messages.error(request, str(e))
+
+        return redirect("accounts:utente_detail", pk=utente.pk)
 
 
 class CambiaRuoloView(LoginRequiredMixin, View):
