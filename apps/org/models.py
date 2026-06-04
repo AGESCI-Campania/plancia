@@ -75,12 +75,12 @@ class Socio(models.Model):
     zona = models.ForeignKey(Zona, on_delete=models.PROTECT, related_name="soci")
 
     # accessori opzionali da import
-    cellulare = models.CharField(max_length=30, blank=True)
-    branca = models.CharField(max_length=40, blank=True)
+    cellulare = models.CharField(max_length=50, blank=True)
+    branca = models.CharField(max_length=60, blank=True)
     sesso = models.CharField(max_length=1, blank=True)
     data_nascita = models.DateField(null=True, blank=True)
-    livello_foca = models.CharField(max_length=10, blank=True)
-    status = models.CharField(max_length=60, blank=True)
+    livello_foca = models.CharField(max_length=20, blank=True)
+    status = models.CharField(max_length=100, blank=True)
 
     class Meta:
         indexes = [models.Index(fields=["cognome", "nome"])]

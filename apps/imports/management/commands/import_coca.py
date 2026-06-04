@@ -10,12 +10,15 @@ Uso: uv run python manage.py import_coca path/al/file.csv [--dry-run]
 from __future__ import annotations
 
 import csv
+import logging
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from apps.imports.models import LogImportazione, RigaImportazione, StatoMatch, TipoImport
 from apps.org.models import Categoria, Gruppo, Socio, Zona
+
+logger = logging.getLogger(__name__)
 
 
 def _clean(v: str) -> str:
@@ -51,56 +54,80 @@ class Command(BaseCommand):
         ok = scartati = 0
         riga_objs: list[RigaImportazione] = []
 
-        with transaction.atomic():
-            if not dry_run:
-                log.save()
+        # Salva il log PRIMA della transazione: sopravvive a un eventuale rollback
+        # e compare sempre nello storico anche in caso di errore.
+        if not dry_run:
+            log.save()
 
-            for i, row in enumerate(rows, 1):
-                codice = _clean(row.get("CODICE SOCIO", ""))
-                if not codice or not codice.isdigit() or not (4 <= len(codice) <= 8):
-                    scartati += 1
+        try:
+            with transaction.atomic():
+                for i, row in enumerate(rows, 1):
+                    codice = _clean(row.get("CODICE SOCIO", ""))
+                    if not codice or not codice.isdigit() or not (4 <= len(codice) <= 8):
+                        scartati += 1
+                        if not dry_run:
+                            riga_objs.append(RigaImportazione(
+                                log=log, numero=i, dati_grezzi=row,
+                                stato_match=StatoMatch.SCARTATA,
+                                note="Codice socio non valido",
+                            ))
+                        continue
+
+                    zona_nome = _clean(row.get("ZONA", "")) or "Sconosciuta"
+                    gruppo_nome = _clean(row.get("GRUPPO", "")) or "Sconosciuto"
+
                     if not dry_run:
-                        riga_objs.append(RigaImportazione(
-                            log=log, numero=i, dati_grezzi=row,
-                            stato_match=StatoMatch.SCARTATA,
-                            note="Codice socio non valido",
-                        ))
-                    continue
-
-                zona_nome = _clean(row.get("ZONA", "")) or "Sconosciuta"
-                gruppo_nome = _clean(row.get("GRUPPO", "")) or "Sconosciuto"
+                        sp = transaction.savepoint()
+                        try:
+                            zona, gruppo = _get_or_create_zona_gruppo(zona_nome, gruppo_nome)
+                            Socio.objects.update_or_create(
+                                codice_socio=codice,
+                                defaults={
+                                    "nome": _clean(row.get("NOME", "")),
+                                    "cognome": _clean(row.get("COGNOME", "")),
+                                    "email": _clean(row.get("EMAIL", "")),
+                                    "cellulare": _clean(row.get("CELLULARE", ""))[:50],
+                                    "branca": _clean(row.get("BRANCA", ""))[:60],
+                                    "status": _clean(row.get("STATUS SOCIO", ""))[:100],
+                                    "categoria": Categoria.CAPO,
+                                    "zona": zona,
+                                    "gruppo": gruppo,
+                                },
+                            )
+                            transaction.savepoint_commit(sp)
+                            riga_objs.append(RigaImportazione(
+                                log=log, numero=i, dati_grezzi=row,
+                                stato_match=StatoMatch.OK,
+                            ))
+                            ok += 1
+                        except Exception as exc:
+                            transaction.savepoint_rollback(sp)
+                            scartati += 1
+                            logger.warning("Co.Ca. riga %d (codice %s): %s", i, codice, exc)
+                            riga_objs.append(RigaImportazione(
+                                log=log, numero=i, dati_grezzi=row,
+                                stato_match=StatoMatch.SCARTATA,
+                                note=str(exc)[:255],
+                            ))
+                    else:
+                        ok += 1
 
                 if not dry_run:
-                    zona, gruppo = _get_or_create_zona_gruppo(zona_nome, gruppo_nome)
-                    Socio.objects.update_or_create(
-                        codice_socio=codice,
-                        defaults={
-                            "nome": _clean(row.get("NOME", "")),
-                            "cognome": _clean(row.get("COGNOME", "")),
-                            "email": _clean(row.get("EMAIL", "")),
-                            "cellulare": _clean(row.get("CELLULARE", "")),
-                            "branca": _clean(row.get("BRANCA", "")),
-                            "status": _clean(row.get("STATUS SOCIO", "")),
-                            "categoria": Categoria.CAPO,
-                            "zona": zona,
-                            "gruppo": gruppo,
-                        },
-                    )
-                    riga_objs.append(RigaImportazione(
-                        log=log, numero=i, dati_grezzi=row,
-                        stato_match=StatoMatch.OK,
-                    ))
-                ok += 1
+                    RigaImportazione.objects.bulk_create(riga_objs)
+                    log.totale = ok + scartati
+                    log.ok = ok
+                    log.scartati = scartati
+                    log.save(update_fields=["totale", "ok", "scartati"])
 
+                if dry_run:
+                    transaction.set_rollback(True)
+
+        except Exception as exc:
             if not dry_run:
-                RigaImportazione.objects.bulk_create(riga_objs)
-                log.totale = ok + scartati
-                log.ok = ok
                 log.scartati = scartati
+                log.totale = ok + scartati
                 log.save(update_fields=["totale", "ok", "scartati"])
-
-            if dry_run:
-                transaction.set_rollback(True)
+            raise CommandError(f"Errore durante l'import: {exc}") from exc
 
         self.stdout.write(self.style.SUCCESS(
             f"{'[DRY-RUN] ' if dry_run else ''}Co.Ca.: {ok} ok, {scartati} scartati."

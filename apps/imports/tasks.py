@@ -2,7 +2,13 @@
 """Task Celery per avviare i management command di import. Vedi docs sez. 14."""
 from __future__ import annotations
 
+import io
+import logging
+import os
+
 from celery import shared_task
+
+logger = logging.getLogger(__name__)
 
 
 @shared_task
@@ -13,7 +19,13 @@ def task_lancia_import(tracciato: str, path: str = "", edizione_pk: int | None =
     La UI salva il file caricato in MEDIA_ROOT/imports/tmp/ prima di accodare il task.
     """
     from django.core.management import call_command
-    import io
+
+    logger.info("Import %s avviato (path=%s, edizione_pk=%s)", tracciato, path, edizione_pk)
+
+    if not os.path.exists(path):
+        msg = f"File non trovato: {path}"
+        logger.error(msg)
+        return {"ok": False, "error": msg}
 
     out = io.StringIO()
     err = io.StringIO()
@@ -30,6 +42,8 @@ def task_lancia_import(tracciato: str, path: str = "", edizione_pk: int | None =
         else:
             return {"ok": False, "error": f"Tracciato '{tracciato}' non riconosciuto"}
     except Exception as exc:
+        logger.exception("Errore durante import %s: %s", tracciato, exc)
         return {"ok": False, "error": str(exc)}
 
+    logger.info("Import %s completato. Output: %s", tracciato, out.getvalue()[:500])
     return {"ok": True, "output": out.getvalue()}
