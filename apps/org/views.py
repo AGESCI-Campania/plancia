@@ -19,11 +19,11 @@ def soci_autocomplete(request):
     q = (request.GET.get("q") or "").strip()
     categoria = request.GET.get("categoria")  # "capo" | "ragazzo" | None
     ruolo = request.GET.get("ruolo")           # filtra per ruolo utente collegato
-    qs = Socio.objects.select_related("gruppo", "zona", "user")
+    qs = Socio.objects.select_related("gruppo", "zona", "utente")
     if categoria:
         qs = qs.filter(categoria=categoria)
     if ruolo:
-        qs = qs.filter(user__ruolo=ruolo)
+        qs = qs.filter(utente__ruolo=ruolo)
     if q:
         qs = qs.filter(
             Q(nome__icontains=q)
@@ -35,7 +35,7 @@ def soci_autocomplete(request):
     results = []
     for s in qs[:20]:
         try:
-            user_pk = s.user.pk
+            user_pk = s.utente.pk
         except Exception:
             user_pk = None
         results.append({

@@ -177,6 +177,19 @@ Il backup include dump PostgreSQL + archivio media/log con retention 30 giorni.
 
 ---
 
+## Cambio referenti dei diari
+
+L'Admin ha accesso alle stesse funzionalità di cambio referenti descritte nella
+**[Guida Segreteria](segreteria.md#cambio-referenti-di-un-diario)**:
+
+- **Cambia Capo Reparto** sul singolo diario (dalla pagina di dettaglio)
+- **Cambia Capo Reparto** in bulk per un intero reparto (dalla lista diari)
+
+In aggiunta, l'Admin può sempre accedere al pannello Django Admin
+per modifiche di emergenza su qualsiasi diario indipendentemente dallo stato.
+
+---
+
 ## Gestione Inviti e primo accesso utenti
 
 L'Admin ha accesso alla pagina **Gestione Inviti** (stessa della Segreteria).

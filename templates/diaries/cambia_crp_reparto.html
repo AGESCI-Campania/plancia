@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% load bootstrap_icons %}
+{% block title %}Cambia Capo Reparto — {{ reparto }}{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2/dist/css/tom-select.bootstrap5.min.css">
+<style>
+  .ts-wrapper.single .ts-control { cursor: text; }
+  .ts-dropdown .option { font-size: .875rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width:700px">
+
+  <div class="d-flex align-items-center gap-2 mb-4">
+    <a href="{% url 'diaries:list' %}" class="btn btn-outline-secondary btn-sm">
+      {% bs_icon "arrow-left" size="14" %} Diari
+    </a>
+    <h1 class="h4 mb-0">Cambia Capo Reparto — {{ reparto }}</h1>
+  </div>
+
+  {% if diari %}
+    <p class="text-muted">
+      Il nuovo Capo Reparto verrà assegnato a <strong>{{ diari|length }} diario/diari</strong>
+      non ancora inviati di questo reparto.
+    </p>
+
+    <div class="card mb-4">
+      <div class="card-header fw-semibold">Diari coinvolti</div>
+      <ul class="list-group list-group-flush">
+        {% for d in diari %}
+          <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+            <span>
+              <a href="{% url 'diaries:detail' d.pk %}">{{ d.squadriglia.nome }}</a>
+              <small class="text-muted ms-2">{{ d.edizione }}</small>
+            </span>
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge bg-secondary small">{{ d.get_stato_display }}</span>
+              <small class="text-muted">
+                Capo Reparto attuale:
+                {% if d.crp %}{{ d.crp.cognome }} {{ d.crp.nome }}{% else %}—{% endif %}
+              </small>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label class="form-label fw-semibold" for="socio-ts">Nuovo Capo Reparto</label>
+        <select id="socio-ts" name="socio_pk" class="form-select" required>
+          <option value=""></option>
+        </select>
+        <div class="form-text">Digita almeno 2 caratteri per cercare tra i capi.</div>
+      </div>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+          Conferma cambio per tutti i diari
+        </button>
+        <a href="{% url 'diaries:list' %}" class="btn btn-outline-secondary">Annulla</a>
+      </div>
+    </form>
+
+  {% else %}
+    <div class="alert alert-info">
+      Nessun diario non ancora inviato per questo reparto. Nessuna modifica necessaria.
+    </div>
+    <a href="{% url 'diaries:list' %}" class="btn btn-outline-secondary btn-sm">Torna ai diari</a>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if diari %}
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2/dist/js/tom-select.complete.min.js"></script>
+<script>
+(function () {
+  const AUTOCOMPLETE_URL = "{% url 'soci_cerca' %}";
+  new TomSelect(document.getElementById("socio-ts"), {
+    valueField: "id",
+    labelField: "label",
+    searchField: [],
+    preload: false,
+    persist: false,
+    maxItems: 1,
+    placeholder: "Cerca per nome, cognome, codice o gruppo…",
+    load: function (query, callback) {
+      if (query.length < 2) { callback(); return; }
+      fetch(AUTOCOMPLETE_URL + "?q=" + encodeURIComponent(query) + "&categoria=capo")
+        .then(r => r.json())
+        .then(data => callback(data.results))
+        .catch(() => callback());
+    },
+    render: {
+      option: function (item, escape) {
+        return '<div class="py-1">' + escape(item.label) + '</div>';
+      },
+      item: function (item, escape) {
+        return '<div>' + escape(item.label) + '</div>';
+      },
+      no_results: function () {
+        return '<div class="no-results py-2 px-3 text-muted">Nessun risultato.</div>';
+      },
+    },
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

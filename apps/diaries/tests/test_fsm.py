@@ -21,9 +21,9 @@ def edizione(db):
 def squadriglia(db):
     from apps.org.models import Gruppo, Reparto, Squadriglia, Zona
 
-    zona = Zona.objects.create(nome="Zona Test")
-    gruppo = Gruppo.objects.create(nome="Gruppo Test", zona=zona)
-    reparto = Reparto.objects.create(nome="Reparto Test", gruppo=gruppo)
+    zona = Zona.objects.create(nome="Zona FSM")
+    gruppo = Gruppo.objects.create(nome="Gruppo FSM", zona=zona)
+    reparto = Reparto.objects.create(nome="Reparto FSM", gruppo=gruppo)
     return Squadriglia.objects.create(nome="Tigri", reparto=reparto)
 
 
@@ -39,13 +39,28 @@ def diario(db, edizione, squadriglia):
 
 
 class TestTransizioni:
-    def test_invia_da_in_compilazione(self, diario):
+    def test_csq_invia_da_in_compilazione(self, diario):
+        """IN_COMPILAZIONE → RELAZIONE_FINALE via csq_invia()."""
+        diario.csq_invia()
+        diario.refresh_from_db()
+        assert diario.stato == StatoDiario.RELAZIONE_FINALE
+
+    def test_crp_invia_da_relazione_finale(self, diario):
+        """RELAZIONE_FINALE → INVIATO via invia()."""
+        diario.stato = StatoDiario.RELAZIONE_FINALE
+        diario.save()
         diario.invia()
         diario.refresh_from_db()
         assert diario.stato == StatoDiario.INVIATO
         assert diario.inviato_at is not None
 
-    def test_invia_solo_da_in_compilazione(self, diario):
+    def test_invia_non_ammesso_da_in_compilazione(self, diario):
+        """invia() non è ammessa direttamente da IN_COMPILAZIONE."""
+        with pytest.raises(ValueError):
+            diario.invia()
+
+    def test_invia_solo_da_relazione_finale(self, diario):
+        """invia() lancia ValueError da stati diversi da RELAZIONE_FINALE."""
         diario.stato = StatoDiario.INVIATO
         diario.save()
         with pytest.raises(ValueError):
@@ -100,7 +115,6 @@ class TestTransizioni:
         assert diario.stato == StatoDiario.IN_VALUTAZIONE
 
     def test_transizione_non_ammessa_solleva_errore(self, diario):
-        # APPROVATO → INVIATO non è ammesso
         diario.stato = StatoDiario.APPROVATO
         diario.save()
         with pytest.raises(ValueError):

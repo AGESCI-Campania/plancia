@@ -55,10 +55,17 @@
                 {% if scad %}{{ scad|date:"d/m/Y" }}{% else %}—{% endif %}
               {% endwith %}
             </td>
-            <td>
+            <td class="d-flex gap-1">
               <a href="{% url 'diaries:detail' d.pk %}" class="btn btn-sm btn-outline-primary">
                 Apri
               </a>
+              {% if request.user.is_staff_plancia or request.user.is_superuser %}
+                <a href="{% url 'diaries:cambia_crp_reparto' d.squadriglia.reparto_id %}"
+                   class="btn btn-sm btn-outline-secondary"
+                   title="Cambia Capo Reparto per tutto il reparto {{ d.squadriglia.reparto }}">
+                  Cambia Capo Reparto reparto
+                </a>
+              {% endif %}
             </td>
           </tr>
         {% endfor %}

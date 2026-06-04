@@ -4,8 +4,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse, reverse_lazy
-from django.views.generic import DetailView, ListView, UpdateView, View
+from django.views.generic import DetailView, ListView, View
 
 from apps.accounts.models import Ruolo
 from apps.diaries.forms import (
@@ -21,24 +20,27 @@ from apps.diaries.forms import (
     SpecialitaFormSet,
 )
 from apps.diaries.models import (
+    MODULI_FOTO,
     Allegato,
     Anagrafica,
     Diario,
     Impresa,
-    MODULI_FOTO,
     Missione,
     Presentazione,
     RelazioneFinale,
     StatoDiario,
     StatoSync,
-    TipoDiario,
     TipoEsito,
 )
+
+# Stati in cui il diario non è ancora stato inviato allo staff
+_STATI_PRIMA_INVIO = (StatoDiario.IN_COMPILAZIONE, StatoDiario.RELAZIONE_FINALE)
 
 
 # ---------------------------------------------------------------------------
 # Mixin: accesso scoped al Diario
 # ---------------------------------------------------------------------------
+
 
 class DiarioAccessMixin(LoginRequiredMixin):
     """Carica il Diario e verifica che l'utente possa accedervi."""
@@ -79,6 +81,7 @@ class DiarioAccessMixin(LoginRequiredMixin):
 # Lista e dettaglio
 # ---------------------------------------------------------------------------
 
+
 class DiarioListView(LoginRequiredMixin, ListView):
     template_name = "diaries/list.html"
     context_object_name = "diari"
@@ -95,13 +98,17 @@ class DiarioListView(LoginRequiredMixin, ListView):
         if user.ruolo == Ruolo.PGV:
             # PGV vede solo i diari a lui assegnati tramite AssegnazionePGV
             from apps.evaluations.models import AssegnazionePGV
-            assegnati = AssegnazionePGV.objects.filter(pgv=user).values_list("valutazione__diario_id", flat=True)
+
+            assegnati = AssegnazionePGV.objects.filter(pgv=user).values_list(
+                "valutazione__diario_id", flat=True
+            )
             return qs.filter(pk__in=assegnati)
         return qs.none()
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         from apps.editions.models import Edizione
+
         ctx["edizioni"] = Edizione.objects.all()
         edizione_pk = self.request.GET.get("edizione")
         if edizione_pk:
@@ -143,17 +150,28 @@ class DiarioDetailView(DiarioAccessMixin, DetailView):
             and (user.ruolo == Ruolo.CSQ or user.is_superuser or user.is_staff_plancia)
         )
         # Capo Reparto può inviare il diario allo staff (→ Inviato)
-        ctx["puo_inviare"] = (
-            diario.stato == StatoDiario.RELAZIONE_FINALE
-            and (user.ruolo == Ruolo.CRP or user.is_superuser or user.is_staff_plancia)
+        ctx["puo_inviare"] = diario.stato == StatoDiario.RELAZIONE_FINALE and (
+            user.ruolo == Ruolo.CRP or user.is_superuser or user.is_staff_plancia
         )
         ctx["puo_riapire"] = diario.puo_essere_riaperto() and user.is_staff_plancia
+        # Cambio CSQ: CRP quando IN_COMPILAZIONE; admin/seg/iabr prima dell'invio
+        ctx["puo_cambiare_csq"] = (
+            diario.stato == StatoDiario.IN_COMPILAZIONE
+            and user.ruolo == Ruolo.CRP
+            and user.socio is not None
+            and diario.crp == user.socio
+        ) or ((user.is_superuser or user.is_staff_plancia) and diario.stato in _STATI_PRIMA_INVIO)
+        # Cambio CRP: solo admin/seg/iabr prima dell'invio
+        ctx["puo_cambiare_crp"] = (
+            user.is_superuser or user.is_staff_plancia
+        ) and diario.stato in _STATI_PRIMA_INVIO
         return ctx
 
 
 # ---------------------------------------------------------------------------
 # Modulo 1 — Anagrafica
 # ---------------------------------------------------------------------------
+
 
 class AnagraficaUpdateView(DiarioAccessMixin, View):
     template_name = "diaries/modules/anagrafica.html"
@@ -167,12 +185,14 @@ class AnagraficaUpdateView(DiarioAccessMixin, View):
 
     def get(self, request, pk):
         from django.shortcuts import render
+
         diario, anagrafica = self._setup(pk)
         form = AnagraficaForm(instance=anagrafica, utente=request.user)
         return render(request, self.template_name, {"form": form, "diario": diario})
 
     def post(self, request, pk):
         from django.shortcuts import render
+
         diario, anagrafica = self._setup(pk)
         form = AnagraficaForm(request.POST, instance=anagrafica, utente=request.user)
         if form.is_valid():
@@ -186,6 +206,7 @@ class AnagraficaUpdateView(DiarioAccessMixin, View):
 # Modulo 2 — Presentazione
 # ---------------------------------------------------------------------------
 
+
 class PresentazioneUpdateView(DiarioAccessMixin, View):
     template_name = "diaries/modules/presentazione.html"
 
@@ -198,15 +219,17 @@ class PresentazioneUpdateView(DiarioAccessMixin, View):
 
     def get(self, request, pk):
         from django.shortcuts import render
+
         diario, presentazione = self._setup(pk)
         form = PresentazioneForm(instance=presentazione)
         formset = MembroSqFormSet(instance=presentazione)
-        return render(request, self.template_name, {
-            "form": form, "formset": formset, "diario": diario
-        })
+        return render(
+            request, self.template_name, {"form": form, "formset": formset, "diario": diario}
+        )
 
     def post(self, request, pk):
         from django.shortcuts import render
+
         diario, presentazione = self._setup(pk)
         form = PresentazioneForm(request.POST, instance=presentazione)
         formset = MembroSqFormSet(request.POST, instance=presentazione)
@@ -215,14 +238,15 @@ class PresentazioneUpdateView(DiarioAccessMixin, View):
             formset.save()
             messages.success(request, "Presentazione salvata.")
             return redirect("diaries:detail", pk=pk)
-        return render(request, self.template_name, {
-            "form": form, "formset": formset, "diario": diario
-        })
+        return render(
+            request, self.template_name, {"form": form, "formset": formset, "diario": diario}
+        )
 
 
 # ---------------------------------------------------------------------------
 # Moduli 3/4 — Imprese
 # ---------------------------------------------------------------------------
+
 
 class ImpresaUpdateView(DiarioAccessMixin, View):
     template_name = "diaries/modules/impresa.html"
@@ -237,6 +261,7 @@ class ImpresaUpdateView(DiarioAccessMixin, View):
 
     def get(self, request, pk, numero):
         from django.shortcuts import render
+
         diario, impresa = self._setup(pk, numero)
         form = ImpresaForm(instance=impresa)
         posti_fs = PostoAzioneFormSet(instance=impresa, prefix="posti")
@@ -250,44 +275,67 @@ class ImpresaUpdateView(DiarioAccessMixin, View):
             queryset=impresa.esiti_specialita.filter(tipo=TipoEsito.BREVETTO),
             prefix="brevetti",
         )
-        return render(request, self.template_name, {
-            "form": form, "posti_fs": posti_fs,
-            "specialita_fs": specialita_fs, "brevetti_fs": brevetti_fs,
-            "diario": diario, "numero": numero,
-        })
+        return render(
+            request,
+            self.template_name,
+            {
+                "form": form,
+                "posti_fs": posti_fs,
+                "specialita_fs": specialita_fs,
+                "brevetti_fs": brevetti_fs,
+                "diario": diario,
+                "numero": numero,
+            },
+        )
 
     def post(self, request, pk, numero):
         from django.shortcuts import render
+
         diario, impresa = self._setup(pk, numero)
         form = ImpresaForm(request.POST, instance=impresa)
         posti_fs = PostoAzioneFormSet(request.POST, instance=impresa, prefix="posti")
         specialita_fs = SpecialitaFormSet(
-            request.POST, instance=impresa,
+            request.POST,
+            instance=impresa,
             queryset=impresa.esiti_specialita.filter(tipo=TipoEsito.SPECIALITA),
             prefix="specialita",
         )
         brevetti_fs = BrevettoFormSet(
-            request.POST, instance=impresa,
+            request.POST,
+            instance=impresa,
             queryset=impresa.esiti_specialita.filter(tipo=TipoEsito.BREVETTO),
             prefix="brevetti",
         )
-        if form.is_valid() and posti_fs.is_valid() and specialita_fs.is_valid() and brevetti_fs.is_valid():
+        if (
+            form.is_valid()
+            and posti_fs.is_valid()
+            and specialita_fs.is_valid()
+            and brevetti_fs.is_valid()
+        ):
             form.save()
             posti_fs.save()
             specialita_fs.save()
             brevetti_fs.save()
             messages.success(request, f"{numero}ª impresa salvata.")
             return redirect("diaries:detail", pk=pk)
-        return render(request, self.template_name, {
-            "form": form, "posti_fs": posti_fs,
-            "specialita_fs": specialita_fs, "brevetti_fs": brevetti_fs,
-            "diario": diario, "numero": numero,
-        })
+        return render(
+            request,
+            self.template_name,
+            {
+                "form": form,
+                "posti_fs": posti_fs,
+                "specialita_fs": specialita_fs,
+                "brevetti_fs": brevetti_fs,
+                "diario": diario,
+                "numero": numero,
+            },
+        )
 
 
 # ---------------------------------------------------------------------------
 # Modulo 5 — Missione
 # ---------------------------------------------------------------------------
+
 
 class MissioneUpdateView(DiarioAccessMixin, View):
     template_name = "diaries/modules/missione.html"
@@ -301,15 +349,17 @@ class MissioneUpdateView(DiarioAccessMixin, View):
 
     def get(self, request, pk):
         from django.shortcuts import render
+
         diario, missione = self._setup(pk)
         form = MissioneForm(instance=missione)
         posti_fs = PostoAzioneMissioneFormSet(instance=missione)
-        return render(request, self.template_name, {
-            "form": form, "posti_fs": posti_fs, "diario": diario
-        })
+        return render(
+            request, self.template_name, {"form": form, "posti_fs": posti_fs, "diario": diario}
+        )
 
     def post(self, request, pk):
         from django.shortcuts import render
+
         diario, missione = self._setup(pk)
         form = MissioneForm(request.POST, instance=missione)
         posti_fs = PostoAzioneMissioneFormSet(request.POST, instance=missione)
@@ -318,14 +368,15 @@ class MissioneUpdateView(DiarioAccessMixin, View):
             posti_fs.save()
             messages.success(request, "Missione salvata.")
             return redirect("diaries:detail", pk=pk)
-        return render(request, self.template_name, {
-            "form": form, "posti_fs": posti_fs, "diario": diario
-        })
+        return render(
+            request, self.template_name, {"form": form, "posti_fs": posti_fs, "diario": diario}
+        )
 
 
 # ---------------------------------------------------------------------------
 # Modulo 6 — Relazione finale CRP
 # ---------------------------------------------------------------------------
+
 
 class RelazioneFinaleUpdateView(DiarioAccessMixin, View):
     template_name = "diaries/modules/relazione.html"
@@ -344,6 +395,7 @@ class RelazioneFinaleUpdateView(DiarioAccessMixin, View):
 
     def get(self, request, pk):
         from django.shortcuts import render
+
         diario = self._get_diario(pk)
         esito = self._check_permessi(diario, request.user)
         if esito is not None:
@@ -354,6 +406,7 @@ class RelazioneFinaleUpdateView(DiarioAccessMixin, View):
 
     def post(self, request, pk):
         from django.shortcuts import render
+
         diario = self._get_diario(pk)
         esito = self._check_permessi(diario, request.user)
         if esito is not None:
@@ -371,6 +424,7 @@ class RelazioneFinaleUpdateView(DiarioAccessMixin, View):
 # Transizioni FSM
 # ---------------------------------------------------------------------------
 
+
 class DiarioInviaView(DiarioAccessMixin, View):
     """Gestisce le due fasi di invio:
     - Capo Squadriglia: IN_COMPILAZIONE → RELAZIONE_FINALE
@@ -385,7 +439,10 @@ class DiarioInviaView(DiarioAccessMixin, View):
                 if user.ruolo != Ruolo.CSQ and not user.is_superuser and not user.is_staff_plancia:
                     raise PermissionDenied
                 diario.csq_invia()
-                messages.success(request, "Parte del Capo Squadriglia inviata. Il Capo Reparto può ora compilare la relazione finale.")
+                messages.success(
+                    request,
+                    "Parte del Capo Squadriglia inviata. Il Capo Reparto può ora compilare la relazione finale.",
+                )
             elif diario.stato == StatoDiario.RELAZIONE_FINALE:
                 if user.ruolo != Ruolo.CRP and not user.is_superuser and not user.is_staff_plancia:
                     raise PermissionDenied
@@ -490,3 +547,172 @@ class AllegatoDeleteView(DiarioAccessMixin, View):
             allegato.file.delete(save=False)
         allegato.delete()
         return JsonResponse({"ok": True})
+
+
+# ---------------------------------------------------------------------------
+# Cambio Capo Squadriglia
+# ---------------------------------------------------------------------------
+
+
+class CambiaCsqView(DiarioAccessMixin, View):
+    """Cambia il Capo Squadriglia di un diario.
+
+    - Capo Reparto: solo quando IN_COMPILAZIONE e per i diari di cui è referente.
+    - Admin/Segreteria/IABR: quando IN_COMPILAZIONE o RELAZIONE_FINALE.
+    """
+
+    template_name = "diaries/cambia_csq.html"
+
+    def _verifica_permessi(self, diario, user) -> None:
+        if user.is_superuser or user.is_staff_plancia:
+            if diario.stato not in _STATI_PRIMA_INVIO:
+                raise PermissionDenied
+            return
+        if (
+            user.ruolo == Ruolo.CRP
+            and user.socio is not None
+            and diario.crp == user.socio
+            and diario.stato == StatoDiario.IN_COMPILAZIONE
+        ):
+            return
+        raise PermissionDenied
+
+    def get(self, request, pk):
+        from django.shortcuts import render
+
+        diario = self._get_diario(pk)
+        self._verifica_permessi(diario, request.user)
+        return render(request, self.template_name, {"diario": diario})
+
+    def post(self, request, pk):
+        from django.shortcuts import render
+
+        diario = self._get_diario(pk)
+        self._verifica_permessi(diario, request.user)
+        socio_pk = request.POST.get("socio_pk", "").strip()
+        if not socio_pk:
+            messages.error(request, "Seleziona un Capo Squadriglia.")
+            return render(request, self.template_name, {"diario": diario})
+        from apps.org.models import Socio
+
+        try:
+            nuovo_csq = Socio.objects.get(pk=socio_pk, categoria="ragazzo", provvisorio=False)
+        except Socio.DoesNotExist, ValueError:
+            messages.error(request, "Capo Squadriglia non valido.")
+            return render(request, self.template_name, {"diario": diario})
+        vecchio = diario.csq
+        diario.csq = nuovo_csq
+        diario.save(update_fields=["csq"])
+        nota = f" (sostituisce {vecchio.cognome} {vecchio.nome})" if vecchio else ""
+        messages.success(
+            request, f"Capo Squadriglia aggiornato: {nuovo_csq.cognome} {nuovo_csq.nome}{nota}."
+        )
+        return redirect("diaries:detail", pk=pk)
+
+
+# ---------------------------------------------------------------------------
+# Cambio Capo Reparto (singolo diario)
+# ---------------------------------------------------------------------------
+
+
+class CambiaCrpView(DiarioAccessMixin, View):
+    """Admin/Segreteria/IABR: cambia il Capo Reparto referente di un diario (prima dell'invio)."""
+
+    template_name = "diaries/cambia_crp.html"
+
+    def _verifica_permessi(self, diario, user) -> None:
+        if not (user.is_superuser or user.is_staff_plancia):
+            raise PermissionDenied
+        if diario.stato not in _STATI_PRIMA_INVIO:
+            raise PermissionDenied
+
+    def get(self, request, pk):
+        from django.shortcuts import render
+
+        diario = self._get_diario(pk)
+        self._verifica_permessi(diario, request.user)
+        return render(request, self.template_name, {"diario": diario})
+
+    def post(self, request, pk):
+        from django.shortcuts import render
+
+        diario = self._get_diario(pk)
+        self._verifica_permessi(diario, request.user)
+        socio_pk = request.POST.get("socio_pk", "").strip()
+        if not socio_pk:
+            messages.error(request, "Seleziona un Capo Reparto.")
+            return render(request, self.template_name, {"diario": diario})
+        from apps.org.models import Socio
+
+        try:
+            nuovo_crp = Socio.objects.get(pk=socio_pk, categoria="capo", provvisorio=False)
+        except Socio.DoesNotExist, ValueError:
+            messages.error(request, "Capo Reparto non valido.")
+            return render(request, self.template_name, {"diario": diario})
+        vecchio = diario.crp
+        diario.crp = nuovo_crp
+        diario.save(update_fields=["crp"])
+        nota = f" (sostituisce {vecchio.cognome} {vecchio.nome})" if vecchio else ""
+        messages.success(
+            request, f"Capo Reparto aggiornato: {nuovo_crp.cognome} {nuovo_crp.nome}{nota}."
+        )
+        return redirect("diaries:detail", pk=pk)
+
+
+# ---------------------------------------------------------------------------
+# Cambio Capo Reparto (bulk per reparto)
+# ---------------------------------------------------------------------------
+
+
+class CambiaCrpRepartoView(LoginRequiredMixin, View):
+    """Admin/Segreteria/IABR: sostituisce il Capo Reparto per tutti i diari non ancora
+    inviati di un reparto (stato IN_COMPILAZIONE o RELAZIONE_FINALE).
+    """
+
+    template_name = "diaries/cambia_crp_reparto.html"
+
+    def _verifica_permessi(self, user) -> None:
+        if not (user.is_superuser or user.is_staff_plancia):
+            raise PermissionDenied
+
+    def _get_reparto_e_diari(self, reparto_pk):
+        from apps.org.models import Reparto
+
+        reparto = get_object_or_404(Reparto, pk=reparto_pk)
+        diari = (
+            Diario.objects.filter(squadriglia__reparto=reparto, stato__in=_STATI_PRIMA_INVIO)
+            .select_related("squadriglia", "csq", "crp", "edizione")
+            .order_by("edizione__anno", "squadriglia__nome")
+        )
+        return reparto, diari
+
+    def get(self, request, reparto_pk):
+        from django.shortcuts import render
+
+        self._verifica_permessi(request.user)
+        reparto, diari = self._get_reparto_e_diari(reparto_pk)
+        return render(request, self.template_name, {"reparto": reparto, "diari": diari})
+
+    def post(self, request, reparto_pk):
+        from django.shortcuts import render
+
+        self._verifica_permessi(request.user)
+        reparto, diari = self._get_reparto_e_diari(reparto_pk)
+        socio_pk = request.POST.get("socio_pk", "").strip()
+        if not socio_pk:
+            messages.error(request, "Seleziona un Capo Reparto.")
+            return render(request, self.template_name, {"reparto": reparto, "diari": diari})
+        from apps.org.models import Socio
+
+        try:
+            nuovo_crp = Socio.objects.get(pk=socio_pk, categoria="capo", provvisorio=False)
+        except Socio.DoesNotExist, ValueError:
+            messages.error(request, "Capo Reparto non valido.")
+            return render(request, self.template_name, {"reparto": reparto, "diari": diari})
+        n = diari.update(crp=nuovo_crp)
+        messages.success(
+            request,
+            f"Capo Reparto aggiornato a {nuovo_crp.cognome} {nuovo_crp.nome} per {n} "
+            + ("diario." if n == 1 else "diari."),
+        )
+        return redirect("diaries:list")

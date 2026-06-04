@@ -110,6 +110,27 @@ docs/        specifica di progetto
 ## Qualità
 `uv run ruff check .` · `uv run ruff format .` · `uv run pytest` · `pre-commit install`.
 
+## Test
+
+| Suite | Test | Esito | Note |
+|---|---|---|---|
+| **accounts** — login form | 12 | ✅ pass | Form Bootstrap, validazioni, allauth |
+| **accounts** — MFA enforcement | 18 | ✅ pass | Middleware, bypass dev, ruoli con MFA |
+| **accounts** — ruoli e nomina | 19 | ✅ pass | Permessi, ranghi, puo_nominare |
+| **diaries** — FSM | 16 | ✅ pass | Transizioni stato, riapertura |
+| **diaries** — visibilità | 6 | ✅ pass | Accesso a moduli per ruolo |
+| **diaries** — cambio referenti | 29 | ✅ pass | CambiaCsqView, CambiaCrpView, bulk |
+| **diaries** — Selenium E2E | 12 | ✅ pass | Chrome headless, Tom Select, sessione |
+| **Totale** | **112** | **✅ 112/112** | `uv run pytest` — 2026-06-04 |
+
+I test Selenium (12) usano **Django LiveServer** + **Selenium 4** con ChromeDriver scaricato
+automaticamente da Selenium Manager. Coprono:
+- Visibilità pulsanti "Cambia Capo Squadriglia / Cambia Capo Reparto" per ruolo e stato diario
+- Compilazione form cambio CSQ e CRP (autenticazione via cookie di sessione, submit, redirect, verifica DB)
+- Bulk cambio Capo Reparto per reparto
+
+Eseguire con Chrome installato: `uv run pytest apps/diaries/tests/test_selenium.py`.
+
 ## Import dei tracciati
 Con dati sintetici (vedi `fixtures/`):
 ```bash

@@ -12,6 +12,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Estrai versione da pyproject.toml
+        id: version
+        run: |
+          VERSION=$(grep '^version' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
       - name: Installa pandoc e xelatex
         run: |
           sudo apt-get update -qq
@@ -23,6 +29,8 @@ jobs:
             fonts-liberation
 
       - name: Genera PDF manuali
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           cd docs/manuale
           DATE=$(date +'%B %Y')
@@ -33,7 +41,7 @@ jobs:
             -V subtitle="Guidoncini Verdi · AGESCI Campania" \
             -V date="$DATE" \
             index.md csq.md crp.md pgv.md incaricato.md segreteria.md admin.md \
-            -o plancia_manuale.pdf
+            -o plancia_manuale_${VERSION}.pdf
 
           # Manuale Capo Squadriglia
           pandoc --defaults pandoc-defaults.yaml \
@@ -41,7 +49,7 @@ jobs:
             -V subtitle="Guidoncini Verdi · AGESCI Campania" \
             -V date="$DATE" \
             csq.md \
-            -o manuale_csq.pdf
+            -o manuale_csq_${VERSION}.pdf
 
           # Manuale Capo Reparto
           pandoc --defaults pandoc-defaults.yaml \
@@ -49,7 +57,7 @@ jobs:
             -V subtitle="Guidoncini Verdi · AGESCI Campania" \
             -V date="$DATE" \
             crp.md \
-            -o manuale_crp.pdf
+            -o manuale_crp_${VERSION}.pdf
 
           # Manuale Valutazione diari (Pattuglia GV + Incaricato EG)
           pandoc --defaults pandoc-defaults.yaml \
@@ -57,7 +65,7 @@ jobs:
             -V subtitle="Pattuglia GV e Incaricato EG · AGESCI Campania" \
             -V date="$DATE" \
             pgv.md incaricato.md \
-            -o manuale_valutazione.pdf
+            -o manuale_valutazione_${VERSION}.pdf
 
           # Manuale Amministrazione (Admin, Segreteria, Incaricato EG / IABR)
           pandoc --defaults pandoc-defaults.yaml \
@@ -65,14 +73,14 @@ jobs:
             -V subtitle="Admin, Segreteria e Incaricato EG · AGESCI Campania" \
             -V date="$DATE" \
             segreteria.md incaricato.md admin.md \
-            -o manuale_amministrazione.pdf
+            -o manuale_amministrazione_${VERSION}.pdf
 
       - name: Allega PDF alla release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            docs/manuale/plancia_manuale.pdf
-            docs/manuale/manuale_csq.pdf
-            docs/manuale/manuale_crp.pdf
-            docs/manuale/manuale_valutazione.pdf
-            docs/manuale/manuale_amministrazione.pdf
+            docs/manuale/plancia_manuale_${{ steps.version.outputs.version }}.pdf
+            docs/manuale/manuale_csq_${{ steps.version.outputs.version }}.pdf
+            docs/manuale/manuale_crp_${{ steps.version.outputs.version }}.pdf
+            docs/manuale/manuale_valutazione_${{ steps.version.outputs.version }}.pdf
+            docs/manuale/manuale_amministrazione_${{ steps.version.outputs.version }}.pdf

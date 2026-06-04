@@ -126,6 +126,35 @@ viene trasferito automaticamente al Socio reale senza perdita di dati.
 
 ---
 
+## Cambio referenti di un diario
+
+### Cambia il Capo Reparto di un singolo diario
+
+Se un Capo Reparto deve essere sostituito sul singolo diario (es. errore di import
+o cambio improvviso), puoi aggiornarlo finché il diario non è stato inviato
+(stati *In compilazione* e *Relazione finale*).
+
+1. Apri il **dettaglio del diario**.
+2. Clicca il pulsante **"Cambia Capo Reparto"**.
+3. Cerca il nuovo Capo Reparto per nome, cognome o codice socio.
+4. Selezionalo e clicca **"Salva"**.
+
+### Cambia il Capo Reparto di un intero reparto (bulk)
+
+Utile quando un CRP viene sostituito e ha più diari associati (più squadriglie).
+
+1. Dalla lista diari, individua il reparto interessato e clicca
+   **"Cambia Capo Reparto — reparto"** accanto a uno dei diari.
+2. La pagina mostra tutti i diari del reparto che possono ancora essere modificati
+   (stati *In compilazione* e *Relazione finale*).
+3. Cerca il nuovo Capo Reparto e clicca **"Salva"**.
+   Tutti i diari elencati vengono aggiornati in un'unica operazione.
+
+> I diari già in stato *Inviato* o successivi **non vengono modificati** dal cambio bulk.
+> Per quei diari è necessaria un'operazione manuale tramite il pannello Django Admin.
+
+---
+
 ## Gestione edizioni
 
 Da **Gestione → Elenco edizioni** puoi vedere e modificare le edizioni.

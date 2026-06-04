@@ -37,6 +37,12 @@
         <button class="btn btn-warning btn-sm">Riapri per integrazioni</button>
       </form>
     {% endif %}
+    {% if puo_cambiare_csq %}
+      <a href="{% url 'diaries:cambia_csq' diario.pk %}" class="btn btn-outline-secondary btn-sm">Cambia Capo Squadriglia</a>
+    {% endif %}
+    {% if puo_cambiare_crp %}
+      <a href="{% url 'diaries:cambia_crp' diario.pk %}" class="btn btn-outline-secondary btn-sm">Cambia Capo Reparto</a>
+    {% endif %}
   </div>
 </div>
 
