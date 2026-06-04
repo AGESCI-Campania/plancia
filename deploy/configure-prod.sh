@@ -78,6 +78,7 @@ fi
 sed -i "s|^APP_PORT=.*|APP_PORT=${APP_PORT}|" .env.prod
 sed -i "s|^ALLOWED_HOSTS=.*|ALLOWED_HOSTS=${SERVER_NAME}|" .env.prod
 sed -i "s|^CSRF_TRUSTED_ORIGINS=.*|CSRF_TRUSTED_ORIGINS=https://${SERVER_NAME}|" .env.prod
+sed -i "s|^BASE_URL=.*|BASE_URL=https://${SERVER_NAME}|" .env.prod
 echo "OK: .env.prod aggiornato (completa SMTP e OAuth a mano)."
 
 # ----------------------------------------------------------------------------
