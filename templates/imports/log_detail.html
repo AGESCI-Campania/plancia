@@ -120,6 +120,51 @@
     </div>
   {% endif %}
 
+  {# --- Righe scartate --- #}
+  {% if righe_scartate %}
+    <div class="mt-4">
+      <h2 class="h5 mb-1">
+        {% bs_icon "x-circle" size="16" extra_classes="text-danger me-1" %}
+        Righe scartate
+        <span class="badge bg-danger ms-1">{{ righe_scartate.count }}</span>
+      </h2>
+      <p class="text-muted small mb-3">
+        Queste righe sono state escluse durante l'import a causa di un errore.
+        Il motivo è riportato nella colonna <em>Errore</em>.
+      </p>
+
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle" style="font-size:.85rem;">
+          <thead class="table-light">
+            <tr>
+              <th class="text-nowrap">#</th>
+              <th>Dati principali</th>
+              <th>Errore</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for riga in righe_scartate %}
+              <tr>
+                <td class="text-muted font-monospace">{{ riga.numero }}</td>
+                <td>
+                  {% for k, v in riga.dati_grezzi.items %}
+                    {% if v %}
+                      <span class="text-muted" style="font-size:.75rem;">{{ k }}:</span>
+                      <span class="me-2">{{ v }}</span>
+                    {% endif %}
+                  {% endfor %}
+                </td>
+                <td>
+                  <span class="text-danger">{{ riga.note|default:"—" }}</span>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% endif %}
+
 </div>
 {% endblock %}
 

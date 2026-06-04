@@ -35,6 +35,9 @@ class ImportLogDetailView(RuoloRequiredMixin, DetailView):
         ctx["righe_da_riconciliare"] = self.object.righe.filter(
             stato_match=StatoMatch.DA_RICONCILIARE
         ).order_by("numero")
+        ctx["righe_scartate"] = self.object.righe.filter(
+            stato_match=StatoMatch.SCARTATA
+        ).order_by("numero")
         ctx["e_squadriglie"] = self.object.tipo == TipoImport.SQUADRIGLIE
         return ctx
 
