@@ -130,11 +130,16 @@
     </div>
   {% elif righe_scartate %}
     <div class="mt-4">
-      <h2 class="h5 mb-1">
-        {% bs_icon "x-circle" size="16" extra_classes="text-danger me-1" %}
-        Righe scartate
-        <span class="badge bg-danger ms-1">{{ righe_scartate.count }}</span>
-      </h2>
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <h2 class="h5 mb-0">
+          {% bs_icon "x-circle" size="16" extra_classes="text-danger me-1" %}
+          Righe scartate
+          <span class="badge bg-danger ms-1">{{ righe_scartate.count }}</span>
+        </h2>
+        <a href="{% url 'imports:scarti_csv' log.pk %}" class="btn btn-outline-secondary btn-sm ms-auto">
+          {% bs_icon "download" size="14" extra_classes="me-1" %} Scarica CSV
+        </a>
+      </div>
       <p class="text-muted small mb-3">
         Queste righe sono state escluse durante l'import a causa di un errore.
         Il motivo è riportato nella colonna <em>Errore</em>.

@@ -3,7 +3,11 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 from django.contrib import messages
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.views import View
 from django.views.generic import DetailView, ListView
@@ -46,6 +50,30 @@ class ImportLogDetailView(RuoloRequiredMixin, DetailView):
         ).order_by("numero")
         ctx["e_squadriglie"] = self.object.tipo == TipoImport.SQUADRIGLIE
         return ctx
+
+
+class ScartiCsvView(RuoloRequiredMixin, View):
+    """Scarica le righe scartate di un LogImportazione come CSV (UTF-8 con BOM per Excel)."""
+
+    ruoli_ammessi = _STAFF
+
+    def get(self, request, pk):
+        log = get_object_or_404(LogImportazione, pk=pk)
+        righe = list(log.righe.filter(stato_match=StatoMatch.SCARTATA).order_by("numero"))
+
+        buf = io.StringIO()
+        buf.write("﻿")  # BOM UTF-8 per Excel
+
+        if righe:
+            fieldnames = ["#", "Errore", *righe[0].dati_grezzi.keys()]
+            writer = csv.DictWriter(buf, fieldnames=fieldnames, extrasaction="ignore")
+            writer.writeheader()
+            for riga in righe:
+                writer.writerow({"#": riga.numero, "Errore": riga.note, **riga.dati_grezzi})
+
+        response = HttpResponse(buf.getvalue(), content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = f'attachment; filename="scarti_import_{pk}.csv"'
+        return response
 
 
 class RiconciliaRigaView(RuoloRequiredMixin, View):

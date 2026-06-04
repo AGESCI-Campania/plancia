@@ -136,7 +136,7 @@ class Command(BaseCommand):
             raise CommandError(f"Edizione {edizione_pk} non trovata.") from exc
 
         try:
-            rows = leggi_csv(path, delimiter=";")
+            rows = leggi_csv(path)
         except FileNotFoundError as exc:
             raise CommandError(str(exc)) from exc
 

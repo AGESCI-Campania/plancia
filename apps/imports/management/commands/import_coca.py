@@ -21,36 +21,50 @@ from apps.org.models import Categoria, Gruppo, Socio, Zona
 logger = logging.getLogger(__name__)
 
 
-def leggi_csv(path: str, delimiter: str = ",") -> list[dict]:
+def leggi_csv(path: str, delimiter: str | None = None) -> list[dict]:
     """Legge un CSV gestendo le righe iniziali non-dati.
 
     Salta (in qualunque ordine e combinazione):
     - righe ``sep=X`` (direttiva Excel per il separatore)
     - righe con ID evento (es. ``Evento24139``)
-    Se la riga ``sep=`` è presente, il delimitatore viene auto-rilevato
-    ignorando il parametro ``delimiter``.
+    Il delimitatore viene rilevato nell'ordine:
+    1. riga ``sep=X`` nel file
+    2. parametro ``delimiter`` se passato
+    3. auto-rilevamento tramite ``csv.Sniffer`` sulla riga header
+    4. virgola come fallback
     Le colonne senza intestazione (chiave vuota o None) vengono scartate.
     """
+    import io
+
     with open(path, encoding="utf-8-sig", newline="") as f:
         raw = f.read()
 
     lines = raw.splitlines(keepends=True)
-    detected_delimiter = delimiter
+    detected_delimiter: str | None = None
     skip = 0
     for line in lines:
         stripped = line.strip()
-        low = stripped.lower()
-        if low.startswith("sep="):
+        if stripped.lower().startswith("sep="):
             sep_char = stripped[4:].strip()
             if sep_char:
                 detected_delimiter = sep_char
             skip += 1
-        elif stripped.startswith("Evento") or stripped.startswith("evento"):
+        elif stripped.lower().startswith("evento"):
             skip += 1
         else:
             break
 
-    import io
+    # Priorità: sep= nel file > parametro > sniffer > virgola
+    if detected_delimiter is None:
+        if delimiter is not None:
+            detected_delimiter = delimiter
+        else:
+            header_line = lines[skip].strip() if skip < len(lines) else ""
+            try:
+                detected_delimiter = csv.Sniffer().sniff(header_line, delimiters=",;\t|").delimiter
+            except csv.Error:
+                detected_delimiter = ","
+
     reader = csv.reader(io.StringIO(raw), delimiter=detected_delimiter)
     all_rows = list(reader)[skip:]
 
