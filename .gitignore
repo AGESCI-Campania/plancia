@@ -19,6 +19,10 @@ fixtures/prod_*.csv
 logs/
 # PDF generati (artefatti, non versionati)
 docs/manuale/*.pdf
+# File generati da configure-prod.sh (specifici dell'installazione)
+deploy/plancia.service
+deploy/plancia.nginx.conf
+deploy/plancia.apache.conf
 # Cache SVG icone (django-bootstrap-icons)
 .icon_cache/
 # IDE
