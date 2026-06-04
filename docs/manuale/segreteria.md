@@ -57,6 +57,8 @@ Le sezioni disponibili:
 Da **Gestione → Inviti** puoi inviare e monitorare gli inviti per l'edizione attiva.
 La pagina mostra contatori e stato (non inviato / inviato / attivato) per ogni squadriglia.
 
+![Gestione Inviti](screenshots/28_gestione_inviti.png)
+
 
 ### Sequenza consigliata
 

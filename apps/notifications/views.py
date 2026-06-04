@@ -192,7 +192,7 @@ class GestioneInvitiView(RuoloRequiredMixin, View):
         ctx = {"edizione": edizione}
 
         if edizione:
-            diari = (
+            diari = list(
                 Diario.objects.filter(edizione=edizione)
                 .select_related(
                     "csq__utente",
@@ -202,6 +202,19 @@ class GestioneInvitiView(RuoloRequiredMixin, View):
                 .prefetch_related("inviti")
                 .order_by("squadriglia__reparto__nome", "squadriglia__nome")
             )
+            # Precalcola l'ultimo invito per ruolo su ogni diario (usa la prefetch).
+            for d in diari:
+                inviti = sorted(
+                    d.inviti.all(),
+                    key=lambda x: x.inviato_at,
+                    reverse=True,
+                )
+                d.ultimo_invito_csq = next(
+                    (inv for inv in inviti if inv.ruolo_target == Ruolo.CSQ), None
+                )
+                d.ultimo_invito_crp = next(
+                    (inv for inv in inviti if inv.ruolo_target == Ruolo.CRP), None
+                )
             ctx["diari"] = diari
             ctx["stato_inviti"] = _calcola_stato_inviti(diari)
 

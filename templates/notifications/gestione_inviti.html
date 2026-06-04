@@ -125,7 +125,6 @@
         </thead>
         <tbody>
           {% for diario in diari %}
-            {% with inviti=diario.inviti.all %}
             <tr>
               <td>
                 <span class="fw-semibold">{{ diario.squadriglia.nome }}</span>
@@ -158,42 +157,36 @@
                 {% endif %}
               </td>
               <td class="text-center">
-                {% with inv_csq=inviti|dictsortreversed:"inviato_at" %}
-                  {% for inv in inv_csq %}
-                    {% if inv.ruolo_target == "csq" %}
-                      {% if inv.stato == "attivato" %}
-                        <span class="badge bg-success">{% bs_icon "check-circle" size="12" %} Attivato</span>
-                      {% elif inv.stato == "inviato" %}
-                        <span class="badge bg-primary">{% bs_icon "envelope" size="12" %} Inviato</span>
-                        {% include "notifications/_delivery_badge.html" with inv=inv %}
-                      {% endif %}
-                      {% break %}
+                {% if diario.ultimo_invito_csq %}
+                  {% with inv=diario.ultimo_invito_csq %}
+                    {% if inv.stato == "attivato" %}
+                      <span class="badge bg-success">{% bs_icon "check-circle" size="12" %} Attivato</span>
+                    {% elif inv.stato == "inviato" %}
+                      <span class="badge bg-primary">{% bs_icon "envelope" size="12" %} Inviato</span>
+                      {% include "notifications/_delivery_badge.html" with inv=inv %}
                     {% endif %}
-                  {% empty %}
-                    <span class="text-muted small">Non inviato</span>
-                  {% endfor %}
-                {% endwith %}
+                  {% endwith %}
+                {% else %}
+                  <span class="text-muted small">Non inviato</span>
+                {% endif %}
               </td>
               <td class="text-center">
-                {% with inv_crp=inviti|dictsortreversed:"inviato_at" %}
-                  {% for inv in inv_crp %}
-                    {% if inv.ruolo_target == "crp" %}
-                      {% if inv.stato == "attivato" %}
-                        <span class="badge bg-success">{% bs_icon "check-circle" size="12" %} Attivato</span>
-                      {% elif inv.stato == "inviato" %}
-                        <span class="badge bg-primary">{% bs_icon "envelope" size="12" %} Inviato</span>
-                        {% include "notifications/_delivery_badge.html" with inv=inv %}
-                      {% endif %}
-                      {% break %}
+                {% if diario.ultimo_invito_crp %}
+                  {% with inv=diario.ultimo_invito_crp %}
+                    {% if inv.stato == "attivato" %}
+                      <span class="badge bg-success">{% bs_icon "check-circle" size="12" %} Attivato</span>
+                    {% elif inv.stato == "inviato" %}
+                      <span class="badge bg-primary">{% bs_icon "envelope" size="12" %} Inviato</span>
+                      {% include "notifications/_delivery_badge.html" with inv=inv %}
                     {% endif %}
-                  {% empty %}
-                    <span class="text-muted small">Non inviato</span>
-                  {% endfor %}
-                {% endwith %}
+                  {% endwith %}
+                {% else %}
+                  <span class="text-muted small">Non inviato</span>
+                {% endif %}
               </td>
               <td class="text-end">
-                {# Reinvio individuale #}
-                {% for inv in inviti %}
+                {# Reinvio individuale — mostra il pulsante per ogni invito in stato "inviato" #}
+                {% for inv in diario.inviti.all %}
                   {% if inv.stato == "inviato" %}
                     <form method="post" action="{% url 'notifications:reinvia_invito' inv.pk %}" class="d-inline">
                       {% csrf_token %}
@@ -206,7 +199,6 @@
                 {% endfor %}
               </td>
             </tr>
-            {% endwith %}
           {% empty %}
             <tr>
               <td colspan="6" class="text-center text-muted py-4">
