@@ -74,10 +74,12 @@ class UtenteListView(StaffPlanciaRequiredMixin, ListView):
         ctx["ruolo_sel"] = self.request.GET.get("ruolo", "")
         ctx["q"] = self.request.GET.get("q", "")
         attore = self.request.user
+        from apps.accounts.roles import ROLE_REQUIRES_CATEGORY
         ctx["ruoli_nominabili"] = [
             (r, label)
             for r, label in Ruolo.choices
-            if attore.ruolo in ROLE_CREATABLE_BY.get(r, set()) or attore.is_superuser
+            if (attore.ruolo in ROLE_CREATABLE_BY.get(r, set()) or attore.is_superuser)
+            and ROLE_REQUIRES_CATEGORY.get(r) != "ragazzo"
         ]
         return ctx
 
