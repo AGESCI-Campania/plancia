@@ -186,8 +186,16 @@ Questo garantisce che ogni diario abbia sempre un Capo Reparto, anche prima dell
 
 **Gestione errori per record**: se un singolo record causa un errore DB (valore troppo lungo,
 violazione di unicità, ecc.) viene marcato `SCARTATA` nello storico con il messaggio di errore come
-nota — l'import **non si interrompe** e prosegue sui record successivi. I record scartati possono
-essere corretti nel CSV e re-importati; il log dell'import è sempre visibile in Impostazioni → Import.
+nota — l'import **non si interrompe** e prosegue sui record successivi. I record scartati con il
+relativo messaggio di errore sono visibili nel dettaglio del log (`/import/<pk>/`) e scaricabili come
+CSV (`/import/<pk>/scarti.csv`).
+
+**Creazione account durante import**: `import_squadriglie` crea automaticamente gli account (con
+password inutilizzabile) per Capo Squadriglia e Capo Reparto già presenti nel tracciato. Gli account
+vengono attivati tramite il flusso inviti (`/notifiche/inviti/`).
+
+**Box di avvio import**: le schede per lanciare i tre import (Co.Ca., Ragazzi, Squadriglie iscritte)
+si trovano nella pagina **`/import/`**, non più in `/impostazioni/`.
 
 ## Impostazioni di piattaforma (solo Admin)
 Pagina `/impostazioni/` riservata ad Admin, IABR e Segreteria, organizzata in sezioni:
@@ -256,7 +264,10 @@ La navbar in `templates/base.html` è **role-aware**: mostra le voci rilevanti p
 | **Admin / Incaricato EG** | Home · Diari · Helpdesk · Gestione ▾ · badge utente |
 | **Segreteria** | Home · Diari · Helpdesk · Gestione ▾ (no Impostazioni/Admin) · badge utente |
 | **Pattuglia GV** | Home · Diari assegnati · Helpdesk · badge utente |
-| **Capo Squadriglia / Capo Reparto** | Home · Diari · Helpdesk · badge utente |
+| **Capo Reparto** | Home · Diari · Inviti · Helpdesk · badge utente |
+| **Capo Squadriglia** | Home · Diari · Helpdesk · badge utente |
+
+Il dropdown **Gestione** (staff) include, nella sezione "Persone", i link **Utenti** e **Inviti** (dashboard invii massivi CRP/CSQ per edizione).
 
 Il **badge utente** (cerchio con iniziale) apre un dropdown con: Profilo, Email account,
 Cambia password, Sicurezza (MFA), Esci. L'intestazione mostra nome e chip con il ruolo.
