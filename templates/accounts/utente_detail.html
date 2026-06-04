@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load accounts_tags %}
 
 {% block title %}{{ utente.nome_completo }} — {{ block.super }}{% endblock %}
 
@@ -16,7 +17,7 @@
     <div class="card">
       <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
         <span>{{ utente.nome_completo }}</span>
-        <span class="badge bg-secondary">{{ utente.get_ruolo_display }}</span>
+        <span class="badge {{ utente.ruolo|ruolo_badge_class }}">{{ utente.get_ruolo_display }}</span>
       </div>
       <div class="card-body">
         <dl class="row mb-0">

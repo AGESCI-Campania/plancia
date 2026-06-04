@@ -1,5 +1,5 @@
 {% extends "agesci_theme/base.html" %}
-{% load i18n static pwa bootstrap_icons %}
+{% load i18n static pwa bootstrap_icons accounts_tags %}
 
 {# ── Stili aggiuntivi ────────────────────────────────────────────────────── #}
 {% block extra_head %}
@@ -41,6 +41,16 @@
     vertical-align: middle;
     border-radius: .3rem;
   }
+  .badge-iabr {
+    background-color: #6f42c1 !important;
+    color: #fff !important;
+  }
+  .avatar-admin    { border-color: #dc3545 !important; background: rgba(220,53,69,.30) !important; }
+  .avatar-segreteria { border-color: #0d6efd !important; background: rgba(13,110,253,.30) !important; }
+  .avatar-iabr     { border-color: #6f42c1 !important; background: rgba(111,66,193,.30) !important; }
+  .avatar-csq      { border-color: #198754 !important; background: rgba(25,135,84,.30) !important; }
+  .avatar-crp      { border-color: #ffc107 !important; background: rgba(255,193,7,.30) !important; }
+  .avatar-pgv      { border-color: #0dcaf0 !important; background: rgba(13,202,240,.30) !important; }
 </style>
 {% endblock %}
 
@@ -52,7 +62,7 @@
     <div class="hijack-banner">
       <span>⚠️ Stai operando come
         <strong>{{ user.email }}</strong>
-        <span class="badge bg-dark role-chip">{{ user.get_ruolo_display }}</span>
+        <span class="badge {{ user.ruolo|ruolo_badge_class }} role-chip">{{ user.get_ruolo_display }}</span>
       </span>
       <form method="post" action="{% url 'hijack:release' %}" class="d-inline">
         {% csrf_token %}
@@ -174,7 +184,7 @@
             <li class="nav-item dropdown ms-lg-1">
               <a class="nav-link dropdown-toggle d-flex align-items-center gap-2 py-1"
                  href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                <span class="nav-avatar" title="{{ user.nome_completo }}">
+                <span class="nav-avatar {{ user.ruolo|ruolo_avatar_class }}" title="{{ user.nome_completo }}">
                   {{ user.nome_completo|slice:":1"|upper }}
                 </span>
                 <span class="d-none d-lg-inline">{{ user.nome_completo }}</span>
@@ -204,7 +214,7 @@
                     </div>
                   {% else %}
                     <div class="mt-1">
-                      <span class="badge bg-secondary role-chip">{{ user.get_ruolo_display }}</span>
+                      <span class="badge {{ user.ruolo|ruolo_badge_class }} role-chip">{{ user.get_ruolo_display }}</span>
                       {% if user.mfa_obbligatoria %}
                         <span class="badge bg-success role-chip ms-1">MFA</span>
                       {% endif %}

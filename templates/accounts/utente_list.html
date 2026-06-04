@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load accounts_tags %}
 
 {% block title %}Utenti — {{ block.super }}{% endblock %}
 
@@ -45,7 +46,7 @@
             <tr>
               <td>{{ u.nome_completo }}</td>
               <td>{{ u.email }}</td>
-              <td><span class="badge bg-secondary">{{ u.get_ruolo_display }}</span></td>
+              <td><span class="badge {{ u.ruolo|ruolo_badge_class }}">{{ u.get_ruolo_display }}</span></td>
               <td>
                 {% if u.socio %}
                   {{ u.socio.gruppo }} · {{ u.socio.zona }}
