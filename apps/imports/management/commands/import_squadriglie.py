@@ -52,12 +52,26 @@ def trova_crp(email: str, cognome: str, nome: str):
     """Cerca Socio(capo) per email, poi per nome/cognome univoco.
 
     Restituisce (socio, trovato). L'import capi va eseguito prima.
+    Se l'email è duplicata nel DB, prova a raffinare per nome/cognome;
+    altrimenti prende il primo record trovato.
     """
     if email:
-        try:
-            return Socio.objects.get(email__iexact=email, categoria=Categoria.CAPO), True
-        except Socio.DoesNotExist:
-            pass
+        qs_email = Socio.objects.filter(email__iexact=email, categoria=Categoria.CAPO)
+        count = qs_email.count()
+        if count == 1:
+            return qs_email.first(), True
+        if count > 1:
+            # Email duplicata: prova a restringere per nome/cognome
+            narrowed = qs_email
+            if cognome:
+                narrowed = narrowed.filter(cognome__iexact=cognome)
+            if nome:
+                narrowed = narrowed.filter(nome__iexact=nome)
+            match = narrowed.first() or qs_email.first()
+            logger.warning(
+                "Email CRP duplicata (%s): trovati %d Socio, usato %s", email, count, match
+            )
+            return match, True
     if cognome:
         qs = Socio.objects.filter(cognome__iexact=cognome, categoria=Categoria.CAPO)
         if nome:
