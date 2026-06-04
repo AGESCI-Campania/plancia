@@ -29,6 +29,8 @@ Entrando nel dettaglio di un diario assegnato puoi:
    - **Approvato**, **Non approvato** o **Maggiori informazioni richieste**
    - Un campo note per motivare la decisione
 
+![Valutazione diario — Pattuglia GV](screenshots/24_valutazione_pgv.png)
+
 La tua proposta va all'Incaricato EG che la conferma o la modifica prima della pubblicazione.
 
 > Non puoi vedere la valutazione degli altri membri della Pattuglia sullo stesso diario,

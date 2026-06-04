@@ -31,11 +31,13 @@ def seed():
         PostoAzioneMissione,
     )
 
-    print("→ Seed zona/gruppo/reparto/squadriglia…")
+    print("→ Seed zona/gruppo/reparto/squadriglie…")
     zona, _ = Zona.objects.get_or_create(nome="ZONA HIRPINIA")
     gruppo, _ = Gruppo.objects.get_or_create(nome="AVELLINO 1", zona=zona)
     reparto, _ = Reparto.objects.get_or_create(nome="Reparto Aquile", gruppo=gruppo)
     squadriglia, _ = Squadriglia.objects.get_or_create(nome="Aquila", reparto=reparto)
+    squadriglia2, _ = Squadriglia.objects.get_or_create(nome="Lepre", reparto=reparto)
+    squadriglia3, _ = Squadriglia.objects.get_or_create(nome="Pantera", reparto=reparto)
 
     print("→ Seed soci…")
     crp_socio, _ = Socio.objects.get_or_create(
@@ -47,6 +49,11 @@ def seed():
         codice_socio="100002",
         defaults=dict(nome="Giulia", cognome="Verdi", categoria=Categoria.CAPO,
                       email="pgv@plancia.it", gruppo=gruppo, zona=zona),
+    )
+    incaricato_socio, _ = Socio.objects.get_or_create(
+        codice_socio="100003",
+        defaults=dict(nome="Anna", cognome="Neri", categoria=Categoria.CAPO,
+                      email="incaricato@plancia.it", gruppo=gruppo, zona=zona),
     )
     csq_socio, _ = Socio.objects.get_or_create(
         codice_socio="200001",
@@ -68,8 +75,20 @@ def seed():
     pgv_user = User.objects.filter(email="pgv@plancia.it").first()
     if pgv_user:
         pgv_user.set_password("test123")
+        pgv_user.ruolo = Ruolo.PGV
         pgv_user.socio = pgv_socio
-        pgv_user.save(update_fields=["password", "socio"])
+        pgv_user.save(update_fields=["password", "ruolo", "socio"])
+
+    incaricato_user, created = User.objects.get_or_create(
+        email="incaricato@plancia.it",
+        defaults=dict(username="incaricato_eg", ruolo=Ruolo.INCARICATO_EG, socio=incaricato_socio),
+    )
+    if created or not incaricato_user.has_usable_password():
+        incaricato_user.set_password("test123")
+        incaricato_user.save(update_fields=["password"])
+    incaricato_user.ruolo = Ruolo.INCARICATO_EG
+    incaricato_user.socio = incaricato_socio
+    incaricato_user.save(update_fields=["ruolo", "socio"])
 
     crp_user, created = User.objects.get_or_create(
         email="crp@plancia.it",
@@ -92,6 +111,7 @@ def seed():
     totp_secrets = {
         "admin@plancia.it": _crea_totp_se_mancante(admin),
         "segreteria@plancia.it": _crea_totp_se_mancante(seg),
+        "incaricato@plancia.it": _crea_totp_se_mancante(incaricato_user),
     }
 
     print("→ Edizione…")
@@ -100,7 +120,8 @@ def seed():
         ed.stato = StatoEdizione.APERTA
         ed.save(update_fields=["stato"])
 
-    print("→ Diario + tutti i moduli CSQ…")
+    print("→ Diario principale (CSQ/CRP) + tutti i moduli…")
+    diario = None
     if ed:
         diario, diario_creato = Diario.objects.get_or_create(
             squadriglia=squadriglia,
@@ -112,7 +133,6 @@ def seed():
             ),
         )
 
-        # Assicura stato compilazione
         if diario.stato != StatoDiario.IN_COMPILAZIONE:
             diario.stato = StatoDiario.IN_COMPILAZIONE
             diario.save(update_fields=["stato"])
@@ -127,7 +147,6 @@ def seed():
                 partecipa_evento=True,
             ),
         )
-        # Corregge eventuali valori storici non validi
         from apps.diaries.models import SPECIALITA_SQUADRIGLIA
         if ana.specialita not in SPECIALITA_SQUADRIGLIA:
             ana.specialita = "Esplorazione"
@@ -159,7 +178,6 @@ def seed():
         if not imp1.posti_azione.exists():
             PostoAzione.objects.create(impresa=imp1, descrizione="Allestimento del campo base e preparazione dei pasti")
             PostoAzione.objects.create(impresa=imp1, descrizione="Navigazione con bussola e mappa topografica")
-        # Svuota e ricrea specialità/brevetti con valori ufficiali
         imp1.esiti_specialita.all().delete()
         EsitoSpecialita.objects.create(impresa=imp1, tipo=TipoEsito.SPECIALITA, nome="Campeggiatore", stato="in_cammino")
         EsitoSpecialita.objects.create(impresa=imp1, tipo=TipoEsito.SPECIALITA, nome="Topografo", stato="in_cammino")
@@ -197,18 +215,62 @@ def seed():
             PostoAzioneMissione.objects.create(missione=miss, descrizione="Accoglienza e informazioni ai visitatori")
             PostoAzioneMissione.objects.create(missione=miss, descrizione="Raccolta fondi per il canile municipale")
 
-        print(f"   Diario {diario.pk} — tutti i moduli CSQ presenti.")
-    else:
-        diario = None
+        print(f"   Diario {diario.pk} (Aquila, IN_COMPILAZIONE) — moduli CSQ presenti.")
+
+    print("→ Diario Lepre (INVIATO) per screenshot Incaricato…")
+    diario_inviato = None
+    if ed:
+        diario_inviato, _ = Diario.objects.get_or_create(
+            squadriglia=squadriglia2,
+            edizione=ed,
+            defaults=dict(
+                csq=csq_socio, crp=crp_socio,
+                tipo=TipoDiario.NUOVO,
+                stato=StatoDiario.INVIATO,
+            ),
+        )
+        if diario_inviato.stato != StatoDiario.INVIATO:
+            diario_inviato.stato = StatoDiario.INVIATO
+            diario_inviato.save(update_fields=["stato"])
+        print(f"   Diario {diario_inviato.pk} (Lepre, INVIATO).")
+
+    print("→ Diario Pantera (IN_VALUTAZIONE) per screenshot Pattuglia GV…")
+    diario_valutazione = None
+    if ed and pgv_user:
+        diario_valutazione, _ = Diario.objects.get_or_create(
+            squadriglia=squadriglia3,
+            edizione=ed,
+            defaults=dict(
+                csq=csq_socio, crp=crp_socio,
+                tipo=TipoDiario.NUOVO,
+                stato=StatoDiario.IN_VALUTAZIONE,
+            ),
+        )
+        if diario_valutazione.stato != StatoDiario.IN_VALUTAZIONE:
+            diario_valutazione.stato = StatoDiario.IN_VALUTAZIONE
+            diario_valutazione.save(update_fields=["stato"])
+
+        from apps.evaluations.models import Valutazione, AssegnazionePGV
+        val, _ = Valutazione.objects.get_or_create(diario=diario_valutazione)
+        AssegnazionePGV.objects.get_or_create(
+            valutazione=val,
+            pgv=pgv_user,
+            defaults={"assegnato_da": incaricato_user},
+        )
+        print(f"   Diario {diario_valutazione.pk} (Pantera, IN_VALUTAZIONE) — PGV assegnata.")
 
     return {
         "admin": ("admin@plancia.it", "admin123"),
         "segreteria": ("segreteria@plancia.it", "test123"),
         "pgv": ("pgv@plancia.it", "test123"),
+        "incaricato": ("incaricato@plancia.it", "test123"),
         "crp": ("crp@plancia.it", "test123"),
         "csq": ("csq@plancia.it", "test123"),
         "diario_pk": diario.pk if diario else None,
+        "diario_inviato_pk": diario_inviato.pk if diario_inviato else None,
+        "diario_valutazione_pk": diario_valutazione.pk if diario_valutazione else None,
         "edizione_pk": ed.pk if ed else None,
+        "reparto_pk": reparto.pk,
         "totp_secrets": totp_secrets,
     }
 
@@ -287,7 +349,6 @@ def login(driver, email, password, totp_secret=None):
     driver.find_element("id", "id_password").send_keys(password)
     driver.find_element("css selector", "[type=submit]").click()
     time.sleep(1.5)
-    # Gestisce la pagina di verifica TOTP (utenti con MFA configurata)
     if "/accounts/2fa/authenticate/" in driver.current_url:
         try:
             code = _totp_code_now(totp_secret) if totp_secret else "000000"
@@ -338,20 +399,22 @@ def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     print("── Seed dati ───────────────────────────────────────────────")
     ctx = seed()
-    diario_pk   = ctx["diario_pk"]
-    edizione_pk = ctx["edizione_pk"]
-
-    totp = ctx.get("totp_secrets", {})
+    diario_pk            = ctx["diario_pk"]
+    diario_inviato_pk    = ctx["diario_inviato_pk"]
+    diario_valutazione_pk = ctx["diario_valutazione_pk"]
+    edizione_pk          = ctx["edizione_pk"]
+    reparto_pk           = ctx["reparto_pk"]
+    totp                 = ctx.get("totp_secrets", {})
 
     print("\n── Screenshot ──────────────────────────────────────────────")
     driver = make_driver()
     try:
-        # ── 1. Login page ──────────────────────────────────────────
+        # ── 01. Login page ────────────────────────────────────────
         driver.get(BASE_URL + "/accounts/login/")
         time.sleep(1)
         shot(driver, "01_login")
 
-        # ── 2. CSQ ─────────────────────────────────────────────────
+        # ── 02–09. Capo Squadriglia ───────────────────────────────
         login(driver, *ctx["csq"])
         shot(driver, "02_home_csq", "/")
         shot(driver, "03_diari_lista", "/diari/")
@@ -364,35 +427,55 @@ def main():
             shot(driver, "09_modulo_missione",      f"/diari/{diario_pk}/missione/",       wait=1.5)
         logout(driver)
 
-        # ── 3. CRP ─────────────────────────────────────────────────
+        # ── 10–11, 21–23. Capo Reparto ───────────────────────────
         login(driver, *ctx["crp"])
         shot(driver, "10_home_crp", "/")
         if diario_pk:
-            shot(driver, "11_relazione_finale", f"/diari/{diario_pk}/relazione/", wait=1.5)
+            shot(driver, "21_lista_diari_crp",      "/diari/")
+            shot(driver, "22_dettaglio_diario_crp", f"/diari/{diario_pk}/")
+            shot(driver, "23_cambia_csq",           f"/diari/{diario_pk}/cambia-csq/",    wait=1.5)
+            shot(driver, "11_relazione_finale",     f"/diari/{diario_pk}/relazione/",     wait=1.5)
         logout(driver)
 
-        # ── 4. PGV ─────────────────────────────────────────────────
+        # ── 12–13, 24. Pattuglia GV ──────────────────────────────
         login(driver, *ctx["pgv"])
         shot(driver, "12_home_pgv", "/")
         shot(driver, "13_diari_pgv", "/diari/")
+        if diario_valutazione_pk:
+            shot(driver, "24_valutazione_pgv",
+                 f"/valutazioni/diari/{diario_valutazione_pk}/", wait=1.2)
         logout(driver)
 
-        # ── 5. Segreteria ──────────────────────────────────────────
+        # ── 25–27. Incaricato EG ─────────────────────────────────
+        inc_email, inc_pw = ctx["incaricato"]
+        login(driver, inc_email, inc_pw, totp_secret=totp.get(inc_email))
+        shot(driver, "25_home_incaricato", "/")
+        shot(driver, "26_diari_incaricato", "/diari/")
+        if diario_inviato_pk:
+            shot(driver, "27_assegna_pgv",
+                 f"/valutazioni/diari/{diario_inviato_pk}/", wait=1.2)
+        logout(driver)
+
+        # ── 14–18, 28–29. Segreteria ─────────────────────────────
         seg_email, seg_pw = ctx["segreteria"]
         login(driver, seg_email, seg_pw, totp_secret=totp.get(seg_email))
         shot(driver, "14_home_segreteria", "/")
         shot(driver, "15_utenti_lista",    "/utenti/utenti/")
-        shot(driver, "16_impostazioni",    "/impostazioni/", wait=1.5)
+        shot(driver, "16_impostazioni",    "/impostazioni/",       wait=1.5)
         shot(driver, "17_import_storico",  "/import/")
         if edizione_pk:
             shot(driver, "18_edizione_detail", f"/edizioni/{edizione_pk}/", wait=1.2)
+        shot(driver, "28_gestione_inviti", "/notifiche/inviti/",   wait=1.2)
+        shot(driver, "29_cambia_crp_reparto",
+             f"/diari/reparto/{reparto_pk}/cambia-crp/",            wait=1.2)
         logout(driver)
 
-        # ── 6. Admin ───────────────────────────────────────────────
+        # ── 19–20, 30. Admin ─────────────────────────────────────
         adm_email, adm_pw = ctx["admin"]
         login(driver, adm_email, adm_pw, totp_secret=totp.get(adm_email))
         shot(driver, "19_home_admin", "/")
-        shot(driver, "20_utenti_admin", "/utenti/utenti/", wait=1)
+        shot(driver, "20_utenti_admin", "/utenti/utenti/",         wait=1)
+        shot(driver, "30_mfa_impostazione", "/accounts/2fa/",      wait=1)
         logout(driver)
 
     finally:

@@ -55,6 +55,8 @@ L'URL della piattaforma viene comunicato dalla Segreteria regionale.
 Dopo l'attivazione si accede con email e password, oppure con i pulsanti
 **Accedi con Google / Microsoft / Apple** se configurati dall'Admin.
 
+![Pagina di login](screenshots/01_login.png)
+
 Gli utenti con ruolo Admin, Segreteria o Incaricato EG devono configurare
 l'**autenticazione a due fattori (MFA)** al primo accesso tramite un'app
 authenticator (Google Authenticator, Aegis, ecc.).

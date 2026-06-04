@@ -3,6 +3,8 @@
 L'Incaricato EG supervisiona l'intera valutazione: assegna i diari alla PGV, conferma o
 modifica le proposte e pubblica gli esiti ufficiali.
 
+> L'Incaricato EG deve configurare l'**autenticazione a due fattori (MFA)** al primo accesso.
+
 ---
 
 ## Flusso di valutazione
@@ -13,10 +15,33 @@ Diario inviato → Assegnazione PGV → Proposta PGV → Revisione Incaricato �
 
 ---
 
+## Home page
+
+La home mostra l'edizione in corso, il numero di diari inviati in attesa di valutazione
+e lo stato complessivo delle assegnazioni.
+
+![Home Incaricato EG](screenshots/25_home_incaricato.png)
+
+---
+
+## Lista diari
+
+Dalla voce **Diari** accedi all'elenco completo dei diari di tutte le squadriglie,
+con il loro stato attuale (Inviato, In valutazione, Approvato, ecc.).
+
+![Lista diari — Incaricato EG](screenshots/26_diari_incaricato.png)
+
+---
+
 ## Assegnazione diari alla PGV
 
-Dal dettaglio di un diario in stato *Inviato*, usa il campo **Assegna PGV** (ricerca per nome)
-per scegliere il membro della pattuglia che dovrà valutarlo.
+Quando un diario è in stato *Inviato*, entra nel dettaglio di valutazione
+(`Gestione → Valutazione`) e usa il campo **Assegna PGV** per scegliere
+il membro della pattuglia che lo valuterà.
+
+![Assegna PGV al diario](screenshots/27_assegna_pgv.png)
+
+Il diario passa in stato *In valutazione* e diventa visibile al membro PGV assegnato.
 
 ---
 
@@ -34,7 +59,7 @@ Quando la PGV inserisce una proposta *Approvato* o *Non approvato*, il diario en
 ## Pubblicazione
 
 Puoi pubblicare i diari individualmente o in blocco (tutti o per scadenza).
-La pubblicazione rende visibile la valutazione al CSQ e al CRP.
+La pubblicazione rende visibile la valutazione al Capo Squadriglia e al Capo Reparto.
 
 > Dopo la pubblicazione non è più possibile modificare l'esito, salvo riapertura esplicita
 > (consentita solo se siamo ancora nella prima scadenza e la seconda non è ancora passata).
@@ -44,7 +69,7 @@ La pubblicazione rende visibile la valutazione al CSQ e al CRP.
 ## Riapertura per integrazioni
 
 Se un diario è stato valutato sulla prima scadenza e la seconda scadenza non è ancora passata,
-l'Incaricato può riaprirlo per permettere al CSQ di integrare il materiale.
+l'Incaricato può riaprirlo per permettere al Capo Squadriglia di integrare il materiale.
 
 ---
 

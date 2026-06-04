@@ -46,6 +46,24 @@ La home mostra l'edizione attiva e il riepilogo dei diari del tuo reparto.
 
 ---
 
+## Lista diari
+
+Dalla voce **Diari** nella barra di navigazione vedi tutti i diari delle squadriglie
+del tuo reparto, con lo stato attuale di ciascuno.
+
+![Lista diari Capo Reparto](screenshots/21_lista_diari_crp.png)
+
+---
+
+## Dettaglio diario
+
+Cliccando su un diario accedi al dettaglio, dove trovi lo stato di compilazione
+di ogni modulo e le azioni disponibili in base allo stato corrente.
+
+![Dettaglio diario Capo Reparto](screenshots/22_dettaglio_diario_crp.png)
+
+---
+
 ## Cambia il Capo Squadriglia
 
 Se un Capo Squadriglia deve essere sostituito (es. abbandona la squadriglia),
@@ -53,9 +71,12 @@ puoi aggiornare il referente direttamente dalla pagina del diario,
 finché il diario non è ancora stato inviato al Capo Reparto (stato *In compilazione*).
 
 1. Apri il **dettaglio del diario** dalla home o dalla lista diari del tuo reparto.
-2. Clicca il pulsante **"Cambia Capo Squadriglia"**.
+2. Clicca il pulsante **"Cambia Capo Squadriglia"** (visibile solo quando il diario è
+   in stato *In compilazione*).
 3. Cerca il nuovo Capo Squadriglia per nome, cognome o codice socio nel campo di ricerca.
 4. Selezionalo e clicca **"Salva"**.
+
+![Form Cambia Capo Squadriglia](screenshots/23_cambia_csq.png)
 
 Il diario viene aggiornato immediatamente. Il precedente Capo Squadriglia perde l'accesso
 al diario; il nuovo lo vede dalla propria home page.
