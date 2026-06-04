@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% load bootstrap_icons %}
+{% block title %}Attiva il tuo account — {{ invito.diario.squadriglia.nome }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+
+      <div class="card shadow-sm">
+        <div class="card-body p-4">
+          <h1 class="h4 mb-1">
+            {% bs_icon "person-check" size="22" extra_classes="me-1 text-success" %}
+            Attiva il tuo account
+          </h1>
+          <p class="text-muted small mb-4">
+            Squadriglia <strong>{{ invito.diario.squadriglia.nome }}</strong> —
+            edizione {{ invito.diario.edizione }}
+          </p>
+
+          <p class="mb-3">
+            Per accedere a <strong>Plancia</strong> conferma la tua identità inserendo
+            il tuo <strong>codice socio AGESCI</strong> (quello sulla tessera)
+            e il tuo <strong>indirizzo email</strong>, che userai per accedere in futuro.
+          </p>
+
+          <form method="post" action="" novalidate>
+            {% csrf_token %}
+
+            <div class="mb-3">
+              <label for="codice_socio" class="form-label fw-semibold">
+                Codice socio AGESCI
+              </label>
+              <input
+                type="text"
+                id="codice_socio"
+                name="codice_socio"
+                class="form-control"
+                value="{{ codice_inserito|default:'' }}"
+                placeholder="es. 12345"
+                inputmode="numeric"
+                autocomplete="off"
+                required
+              >
+              <div class="form-text">
+                Il codice numerico sulla tua tessera associativa.
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <label for="email" class="form-label fw-semibold">
+                Indirizzo email
+              </label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                class="form-control"
+                value="{{ email_inserita|default:'' }}"
+                placeholder="nome@esempio.it"
+                autocomplete="email"
+                required
+              >
+              <div class="form-text">
+                Questo sarà il tuo indirizzo di accesso alla piattaforma.
+              </div>
+            </div>
+
+            <div class="d-grid">
+              <button type="submit" class="btn btn-success btn-lg">
+                {% bs_icon "box-arrow-in-right" size="18" extra_classes="me-1" %}
+                Conferma e accedi
+              </button>
+            </div>
+          </form>
+
+        </div>
+      </div>
+
+      <p class="text-center text-muted small mt-3">
+        Hai problemi? Contatta il tuo Capo Reparto o la segreteria regionale.
+      </p>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

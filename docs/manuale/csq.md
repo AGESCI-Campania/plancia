@@ -4,6 +4,41 @@ Il Capo Squadriglia è il responsabile della compilazione del Diario di Bordo de
 
 ---
 
+## Primo accesso alla piattaforma
+
+Il tuo Capo Reparto riceverà un'email dalla Segreteria con la lista dei Capi Squadriglia
+del proprio reparto e un link personale per ognuno di voi. Può consegnartelo di persona,
+via chat o al prossimo incontro di reparto. Come canale aggiuntivo, potresti ricevere
+anche un'email diretta al tuo indirizzo.
+
+### Come attivare l'account
+
+1. Apri il link di attivazione che ti ha dato il tuo Capo Reparto.
+2. Inserisci il tuo **codice socio AGESCI** — il numero che trovi sulla tua tessera
+   associativa (solo cifre, senza lettere).
+3. Inserisci il tuo **indirizzo email**: lo userai per accedere in futuro.
+4. Clicca **"Conferma e accedi"**.
+
+Da questo momento puoi accedere con email e password. Per impostare la password,
+clicca il tuo nome in alto a destra → **Profilo** → **Cambia password**.
+
+> **Codice non corretto?** Controlla che stai inserendo il codice numerico sulla tessera
+> fisica, non il nome utente di altre piattaforme AGESCI. Se il problema persiste,
+> contatta il tuo Capo Reparto o la Segreteria regionale.
+
+> **Link scaduto o perso?** Contatta il tuo Capo Reparto o la Segreteria: possono
+> generare un nuovo link dalla pagina Gestione Inviti.
+
+---
+
+## Accessi successivi
+
+Una volta attivato l'account, accedi dal solito indirizzo web della piattaforma
+con email e password. Se configurato, puoi usare anche il pulsante
+**Accedi con Google / Microsoft / Apple**.
+
+---
+
 ## Accesso e home page
 
 Dopo il login, la home page mostra l'edizione attiva con un riepilogo dello stato del tuo diario.

@@ -43,7 +43,8 @@ class Categoria(models.TextChoices):
 
 
 codice_socio_validator = RegexValidator(
-    r"^[0-9]{4,8}$", "Il codice socio deve essere numerico, da 4 a 8 cifre."
+    r"^([0-9]{4,8}|tmp[0-9]{5})$",
+    "Il codice socio deve essere numerico (4-8 cifre) oppure provvisorio (tmpNNNNN).",
 )
 
 
@@ -52,11 +53,18 @@ class Socio(models.Model):
 
     Il codice socio e' l'identificativo univoco di piattaforma.
     Da Socio si selezionano i ruoli (capo -> tutti tranne CSQ; ragazzo -> solo CSQ).
+    I record con provvisorio=True sono CRP creati automaticamente durante l'import
+    squadriglie quando l'email non corrisponde a nessun Socio(capo) esistente.
+    Vengono sostituiti dalla riconciliazione manuale o automatica.
     """
 
     codice_socio = models.CharField(
         max_length=8, unique=True, validators=[codice_socio_validator],
-        help_text="Solo numerico, 4-8 cifre.",
+        help_text="Numerico 4-8 cifre (ufficiale) oppure tmpNNNNN (provvisorio).",
+    )
+    provvisorio = models.BooleanField(
+        default=False,
+        help_text="True per i CRP generati automaticamente da import senza codice socio.",
     )
     nome = models.CharField(max_length=120)
     cognome = models.CharField(max_length=120)
@@ -84,6 +92,22 @@ class Socio(models.Model):
     def email_modificabile_dall_interessato(self) -> bool:
         """L'email del capo NON e' modificabile dal capo; quella del ragazzo si'."""
         return self.categoria == Categoria.RAGAZZO
+
+    @classmethod
+    def genera_codice_tmp(cls) -> str:
+        """Genera il prossimo codice provvisorio univoco (tmpNNNNN).
+
+        Adatto all'uso sequenziale nei management command di import.
+        """
+        last = (
+            cls.objects
+            .filter(codice_socio__startswith="tmp")
+            .order_by("-codice_socio")
+            .values_list("codice_socio", flat=True)
+            .first()
+        )
+        n = (int(last[3:]) + 1) if last else 1
+        return f"tmp{n:05d}"
 
     # TODO (Claude Code): Zona/Gruppo/Reparto/Squadriglia vanno completati con i campi
     # accessori; il legame Socio<->User (OneToOne) si crea all'attivazione account.

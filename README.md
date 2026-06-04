@@ -123,6 +123,11 @@ Sorgenti: **Co.Ca. (BuonaStrada)** (capi → tutti i ruoli tranne Capo Squadrigl
 e Capo Reparto via email referente). Mappatura completa in `docs/Plancia_Progettazione.md`, Appendice D.
 **I CSV reali non vanno versionati** (dati di minori).
 
+Se l'email di un Capo Reparto non corrisponde a nessun Socio già importato, `import_squadriglie`
+crea automaticamente un **record provvisorio** con codice `tmpNNNNN` e i dati del tracciato (nome,
+cognome, email). Il record è sostituito dalla riconciliazione manuale/automatica nella pagina import.
+Questo garantisce che ogni diario abbia sempre un Capo Reparto, anche prima della riconciliazione.
+
 ## Impostazioni di piattaforma (solo Admin)
 Pagina `/impostazioni/` riservata ad Admin, IABR e Segreteria, organizzata in sezioni:
 
@@ -202,12 +207,12 @@ La documentazione operativa per ruolo si trova in `docs/manuale/`:
 
 | File | Ruolo |
 |---|---|
-| [`index.md`](docs/manuale/index.md) | Panoramica, ruoli, moduli |
-| [`csq.md`](docs/manuale/csq.md) | Capo Squadriglia — compilazione Diario moduli 1–5 |
-| [`crp.md`](docs/manuale/crp.md) | Capo Reparto — relazione finale (modulo 6) |
+| [`index.md`](docs/manuale/index.md) | Panoramica, ruoli, moduli, modalità di accesso |
+| [`csq.md`](docs/manuale/csq.md) | Capo Squadriglia — primo accesso (codice socio), compilazione Diario |
+| [`crp.md`](docs/manuale/crp.md) | Capo Reparto — distribuzione link CSQ, relazione finale |
 | [`pgv.md`](docs/manuale/pgv.md) | Pattuglia Guidoncini Verdi — valutazione |
 | [`incaricato.md`](docs/manuale/incaricato.md) | Incaricato EG — assegnazione, conferma, pubblicazione |
-| [`segreteria.md`](docs/manuale/segreteria.md) | Segreteria — utenti, edizioni, import, impostazioni |
+| [`segreteria.md`](docs/manuale/segreteria.md) | Segreteria — Gestione Inviti, import, edizioni, impostazioni |
 | [`admin.md`](docs/manuale/admin.md) | Admin — MFA, social auth, Google Drive OAuth, archiviazione |
 
 Le immagini sono in `docs/manuale/screenshots/` e vengono generate dallo script
@@ -215,21 +220,37 @@ Le immagini sono in `docs/manuale/screenshots/` e vengono generate dallo script
 
 ## Manuale — generazione PDF
 
-Il PDF del manuale viene **generato automaticamente** da GitHub Actions ad ogni nuova release
-e allegato come asset di rilascio (`.github/workflows/release-manual.yml`).
+GitHub Actions genera **cinque PDF separati** ad ogni nuova release e li allega come asset
+(`.github/workflows/release-manual.yml`):
 
-Per generarlo localmente con [pandoc](https://pandoc.org/):
+| PDF | Contenuto |
+|---|---|
+| `plancia_manuale.pdf` | Manuale completo (tutti i ruoli) |
+| `manuale_csq.pdf` | Solo Capo Squadriglia |
+| `manuale_crp.pdf` | Solo Capo Reparto |
+| `manuale_valutazione.pdf` | Pattuglia GV + Incaricato EG |
+| `manuale_amministrazione.pdf` | Segreteria + Incaricato EG + Admin |
+
+Per generarli localmente con [pandoc](https://pandoc.org/) (usa il file defaults condiviso):
 
 ```bash
-cd docs/manuale && pandoc --pdf-engine=xelatex --toc --toc-depth=2 \
+cd docs/manuale
+DATE=$(date +'%B %Y')
+
+# Manuale completo
+pandoc --defaults pandoc-defaults.yaml \
   -V title="Plancia — Manuale d'uso" -V subtitle="Guidoncini Verdi · AGESCI Campania" \
-  -V date="$(date +'%B %Y')" -V lang="it" -V geometry="margin=2.5cm" \
-  -V colorlinks=true -V linkcolor="teal" -V linestretch="1.25" \
+  -V date="$DATE" \
   index.md csq.md crp.md pgv.md incaricato.md segreteria.md admin.md \
   -o plancia_manuale.pdf
+
+# Oppure un singolo ruolo, es.:
+pandoc --defaults pandoc-defaults.yaml \
+  -V title="Plancia — Guida Capo Squadriglia" -V date="$DATE" \
+  csq.md -o manuale_csq.pdf
 ```
 
-Il PDF è escluso dal repository (artefatto generato).
+I PDF sono esclusi dal repository (artefatti generati).
 
 ## Licenza
 [MIT](LICENSE) — Copyright © 2026 Andrea Bruno.

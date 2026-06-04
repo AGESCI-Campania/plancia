@@ -21,7 +21,7 @@ def task_invia_invito(self, invito_pk: int) -> dict:
 
 @shared_task
 def task_invia_inviti_bulk(diario_pk: int, ruoli: list[str]) -> dict:
-    """Invia tutti gli inviti mancanti per un diario."""
+    """Invia tutti gli inviti mancanti per un singolo diario."""
     from apps.diaries.models import Diario
     from apps.notifications.service import crea_e_invia_invito
 
@@ -37,3 +37,31 @@ def task_invia_inviti_bulk(diario_pk: int, ruoli: list[str]) -> dict:
             crea_e_invia_invito(diario, socio.utente, ruolo)
             inviati += 1
     return {"ok": True, "inviati": inviati}
+
+
+@shared_task
+def task_invia_inviti_capi_edizione(edizione_pk: int) -> dict:
+    """Invia inviti a tutti i Capi Reparto dell'edizione."""
+    from apps.editions.models import Edizione
+    from apps.notifications.service import invia_inviti_capi_per_edizione
+
+    try:
+        edizione = Edizione.objects.get(pk=edizione_pk)
+    except Edizione.DoesNotExist:
+        return {"ok": False, "error": "Edizione non trovata"}
+
+    return {"ok": True, **invia_inviti_capi_per_edizione(edizione)}
+
+
+@shared_task
+def task_invia_inviti_csq_edizione(edizione_pk: int) -> dict:
+    """Crea inviti CSQ, invia email ai CRP (riepilogativa) e ai CSQ (se hanno email)."""
+    from apps.editions.models import Edizione
+    from apps.notifications.service import invia_inviti_csq_per_edizione
+
+    try:
+        edizione = Edizione.objects.get(pk=edizione_pk)
+    except Edizione.DoesNotExist:
+        return {"ok": False, "error": "Edizione non trovata"}
+
+    return {"ok": True, **invia_inviti_csq_per_edizione(edizione)}

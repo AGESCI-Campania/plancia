@@ -1,11 +1,11 @@
-name: Genera manuale PDF e allega alla release
+name: Genera manuali PDF e allega alla release
 
 on:
   release:
     types: [published]
 
 jobs:
-  build-manual:
+  build-manuals:
     runs-on: ubuntu-latest
 
     steps:
@@ -15,24 +15,64 @@ jobs:
       - name: Installa pandoc e xelatex
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y pandoc texlive-xetex texlive-lang-italian fonts-liberation
+          sudo apt-get install -y \
+            pandoc \
+            texlive-xetex \
+            texlive-lang-italian \
+            texlive-fonts-recommended \
+            fonts-liberation
 
-      - name: Genera PDF manuale
+      - name: Genera PDF manuali
         run: |
           cd docs/manuale
-          pandoc --pdf-engine=xelatex --toc --toc-depth=2 \
+          DATE=$(date +'%B %Y')
+
+          # Manuale completo (tutti i ruoli)
+          pandoc --defaults pandoc-defaults.yaml \
             -V title="Plancia — Manuale d'uso" \
             -V subtitle="Guidoncini Verdi · AGESCI Campania" \
-            -V date="$(date +'%B %Y')" \
-            -V lang="it" \
-            -V geometry="margin=2.5cm" \
-            -V colorlinks=true \
-            -V linkcolor="teal" \
-            -V linestretch="1.25" \
+            -V date="$DATE" \
             index.md csq.md crp.md pgv.md incaricato.md segreteria.md admin.md \
             -o plancia_manuale.pdf
+
+          # Manuale Capo Squadriglia
+          pandoc --defaults pandoc-defaults.yaml \
+            -V title="Plancia — Guida per il Capo Squadriglia" \
+            -V subtitle="Guidoncini Verdi · AGESCI Campania" \
+            -V date="$DATE" \
+            csq.md \
+            -o manuale_csq.pdf
+
+          # Manuale Capo Reparto
+          pandoc --defaults pandoc-defaults.yaml \
+            -V title="Plancia — Guida per il Capo Reparto" \
+            -V subtitle="Guidoncini Verdi · AGESCI Campania" \
+            -V date="$DATE" \
+            crp.md \
+            -o manuale_crp.pdf
+
+          # Manuale Valutazione diari (Pattuglia GV + Incaricato EG)
+          pandoc --defaults pandoc-defaults.yaml \
+            -V title="Plancia — Guida alla Valutazione dei Diari" \
+            -V subtitle="Pattuglia GV e Incaricato EG · AGESCI Campania" \
+            -V date="$DATE" \
+            pgv.md incaricato.md \
+            -o manuale_valutazione.pdf
+
+          # Manuale Amministrazione (Admin, Segreteria, Incaricato EG / IABR)
+          pandoc --defaults pandoc-defaults.yaml \
+            -V title="Plancia — Guida per l'Amministrazione" \
+            -V subtitle="Admin, Segreteria e Incaricato EG · AGESCI Campania" \
+            -V date="$DATE" \
+            segreteria.md incaricato.md admin.md \
+            -o manuale_amministrazione.pdf
 
       - name: Allega PDF alla release
         uses: softprops/action-gh-release@v2
         with:
-          files: docs/manuale/plancia_manuale.pdf
+          files: |
+            docs/manuale/plancia_manuale.pdf
+            docs/manuale/manuale_csq.pdf
+            docs/manuale/manuale_crp.pdf
+            docs/manuale/manuale_valutazione.pdf
+            docs/manuale/manuale_amministrazione.pdf

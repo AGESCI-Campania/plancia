@@ -12,6 +12,10 @@ TAG_REGISTRY: dict[str, list[str]] = {
     "invito_crp": ["nome", "cognome", "titolo_piattaforma", "link_attivazione",
                    "edizione", "reparto", "scadenza"],
     "invito_pgv": ["nome", "cognome", "titolo_piattaforma", "link_attivazione", "edizione"],
+    # Email riepilogativa al CRP con la lista dei suoi Capi Squadriglia e i link per loro.
+    # squadriglie_lista è una lista di dict: {nome_csq, squadriglia, link_attivazione}
+    "invito_crp_csq_lista": ["nome", "cognome", "titolo_piattaforma", "edizione",
+                              "reparto", "squadriglie_lista"],
     "esito_pubblicato": ["nome", "cognome", "titolo_piattaforma", "squadriglia", "esito", "note"],
     "dilazione": ["nome", "cognome", "titolo_piattaforma", "squadriglia",
                   "nuova_scadenza", "motivazione"],
@@ -73,6 +77,12 @@ class StatoInvito(models.TextChoices):
     SCADUTO = "scaduto", "Scaduto"
 
 
+class TipoInvito(models.TextChoices):
+    STANDARD = "standard", "Standard (link email)"
+    # Il link è consegnato al CRP; l'attivazione richiede conferma del codice socio.
+    CODICE_SOCIO = "codice_socio", "Via codice socio (Capo Squadriglia)"
+
+
 class Invito(models.Model):
     """Invito con token per attivare l'account di CSQ, CRP o PGV. Vedi docs sez. 8."""
 
@@ -86,6 +96,9 @@ class Invito(models.Model):
         "accounts.User", on_delete=models.CASCADE, related_name="inviti_ricevuti"
     )
     ruolo_target = models.CharField(max_length=20, choices=Ruolo.choices)
+    tipo = models.CharField(
+        max_length=15, choices=TipoInvito.choices, default=TipoInvito.STANDARD
+    )
     token = models.UUIDField(default=uuid.uuid4, unique=True, db_index=True)
     stato = models.CharField(
         max_length=10, choices=StatoInvito.choices, default=StatoInvito.INVIATO

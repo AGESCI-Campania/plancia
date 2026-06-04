@@ -1,0 +1,10 @@
+pdf-engine: xelatex
+toc: true
+toc-depth: 2
+variables:
+  lang: it
+  geometry: "margin=2.5cm"
+  colorlinks: true
+  linkcolor: "teal"
+  linestretch: "1.25"
+  fontsize: "11pt"

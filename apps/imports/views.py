@@ -1,5 +1,6 @@
 # apps/imports/views.py
 """Schermata di riconciliazione manuale import. Vedi docs sez. 14."""
+
 from __future__ import annotations
 
 from django.contrib import messages
@@ -53,9 +54,9 @@ class RiconciliaRigaView(RuoloRequiredMixin, View):
             return redirect("imports:log_detail", pk=riga.log_id)
 
         from apps.org.models import Categoria, Socio
+
         socio = get_object_or_404(Socio, pk=socio_pk, categoria=Categoria.CAPO)
 
-        # Aggiorna il Diario collegato (lookup via edizione del log + codice CSQ)
         _aggiorna_diario_crp(riga, socio)
 
         riga.socio_match = socio
@@ -83,18 +84,14 @@ class RiprovaAnomalieView(RuoloRequiredMixin, View):
     ruoli_ammessi = _STAFF
 
     def post(self, request, log_pk):
-        log = get_object_or_404(
-            LogImportazione, pk=log_pk, tipo=TipoImport.SQUADRIGLIE
-        )
+        log = get_object_or_404(LogImportazione, pk=log_pk, tipo=TipoImport.SQUADRIGLIE)
         righe = log.righe.filter(stato_match=StatoMatch.DA_RICONCILIARE)
 
         if not righe.exists():
             messages.info(request, "Nessuna anomalia da riprovare.")
             return redirect("imports:log_detail", pk=log_pk)
 
-        from apps.imports.management.commands.import_squadriglie import (
-            _parse_crp_nome, trova_crp
-        )
+        from apps.imports.management.commands.import_squadriglie import _parse_crp_nome, trova_crp
 
         risolte = 0
         ancora_aperte = 0
@@ -105,7 +102,11 @@ class RiprovaAnomalieView(RuoloRequiredMixin, View):
             crp_raw = (dati.get("NomeReferente") or "").strip()
             crp_cognome, crp_nome = _parse_crp_nome(crp_raw) if crp_raw else ("", "")
 
+            # Cerca solo tra i Socio(capo) NON provvisori
             crp_socio, trovato = trova_crp(crp_email, crp_cognome, crp_nome)
+            if trovato and getattr(crp_socio, "provvisorio", False):
+                trovato = False
+                crp_socio = None
             if trovato:
                 _aggiorna_diario_crp(riga, crp_socio)
                 riga.socio_match = crp_socio
@@ -125,7 +126,11 @@ class RiprovaAnomalieView(RuoloRequiredMixin, View):
             messages.success(
                 request,
                 f"Risolte {risolte} anomali{'a' if risolte == 1 else 'e'}."
-                + (f" Ne restano {ancora_aperte} da riconciliare manualmente." if ancora_aperte else ""),
+                + (
+                    f" Ne restano {ancora_aperte} da riconciliare manualmente."
+                    if ancora_aperte
+                    else ""
+                ),
             )
         else:
             messages.warning(
@@ -141,8 +146,16 @@ class RiprovaAnomalieView(RuoloRequiredMixin, View):
 # Helper condiviso
 # ---------------------------------------------------------------------------
 
+
 def _aggiorna_diario_crp(riga: RigaImportazione, crp_socio) -> None:
-    """Imposta il CRP sul Diario associato alla riga (se il log ha un'edizione)."""
+    """Sostituisce il CRP sul Diario associato alla riga con il Socio(capo) reale.
+
+    Gestisce tre casi:
+    - Diario con crp=None (vecchio comportamento)
+    - Diario con crp provvisorio (nuovo: creato durante import)
+    In entrambi i casi trasferisce l'eventuale User dal provvisorio al Socio reale
+    e cancella il Socio provvisorio.
+    """
     log = riga.log
     if not log.edizione_id:
         return
@@ -150,12 +163,40 @@ def _aggiorna_diario_crp(riga: RigaImportazione, crp_socio) -> None:
     codice_csq = (dati.get("Codice") or "").strip()
     if not codice_csq:
         return
+
+    from django.db.models import Q
+
     from apps.diaries.models import Diario
     from apps.org.models import Socio
+
     csq = Socio.objects.filter(codice_socio=codice_csq).first()
-    if csq:
-        Diario.objects.filter(
-            edizione_id=log.edizione_id,
-            csq=csq,
-            crp__isnull=True,
-        ).update(crp=crp_socio)
+    if not csq:
+        return
+
+    diari_da_aggiornare = Diario.objects.filter(
+        edizione_id=log.edizione_id,
+        csq=csq,
+    ).filter(Q(crp__isnull=True) | Q(crp__provvisorio=True))
+
+    # Raccogli i CRP provvisori prima di sovrascriverli
+    provvisori = list(
+        Socio.objects.filter(
+            provvisorio=True,
+            diari_crp__in=diari_da_aggiornare,
+        ).distinct()
+    )
+
+    diari_da_aggiornare.update(crp=crp_socio)
+
+    # Trasferisci l'eventuale User e cancella i Socio provvisori
+    for prov in provvisori:
+        _trasferisci_utente_provvisorio(prov, crp_socio)
+
+
+def _trasferisci_utente_provvisorio(provvisorio, reale) -> None:
+    """Sposta l'account utente dal Socio provvisorio a quello reale, poi elimina il provvisorio."""
+    if hasattr(provvisorio, "utente") and provvisorio.utente is not None:
+        utente = provvisorio.utente
+        utente.socio = reale
+        utente.save(update_fields=["socio"])
+    provvisorio.delete()

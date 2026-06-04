@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="it">
+<body style="font-family:sans-serif; color:#222; max-width:600px; margin:auto; padding:24px">
+  <h2>{{ titolo_piattaforma }} — Guidoncini Verdi {{ edizione }}</h2>
+  <p>Ciao <strong>{{ nome }} {{ cognome }}</strong>,</p>
+  <p>
+    i Capi Squadriglia del tuo reparto (<strong>{{ reparto }}</strong>) devono attivare
+    il proprio account su <strong>{{ titolo_piattaforma }}</strong> per compilare il
+    Diario di Bordo dell'edizione {{ edizione }}.
+  </p>
+  <p>
+    <strong>Come funziona:</strong> ogni Capo Squadriglia deve aprire il link
+    qui sotto e inserire il proprio <em>codice socio AGESCI</em> (quello sulla tessera)
+    e la propria email. Consegna questo messaggio ai tuoi Capi Squadriglia di persona,
+    via chat o al prossimo incontro di reparto.
+  </p>
+
+  <table style="width:100%; border-collapse:collapse; margin:24px 0; font-size:0.92em">
+    <thead>
+      <tr style="background:#5AA02C; color:#fff">
+        <th style="padding:8px 12px; text-align:left">Squadriglia</th>
+        <th style="padding:8px 12px; text-align:left">Capo Squadriglia</th>
+        <th style="padding:8px 12px; text-align:left">Link di accesso</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for sq in squadriglie_lista %}
+      <tr style="border-bottom:1px solid #e0e0e0">
+        <td style="padding:8px 12px">{{ sq.squadriglia }}</td>
+        <td style="padding:8px 12px">{{ sq.nome_csq }}</td>
+        <td style="padding:8px 12px">
+          <a href="{{ sq.link_attivazione }}"
+             style="background:#5AA02C; color:#fff; padding:6px 14px; border-radius:4px;
+                    text-decoration:none; font-size:0.85em; white-space:nowrap">
+            Accedi
+          </a>
+          <br>
+          <small style="color:#666; word-break:break-all">{{ sq.link_attivazione }}</small>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <p>
+    <strong>Nota:</strong> ogni link è personale e può essere usato una sola volta.
+    Se un Capo Squadriglia perde il link, puoi richiedere un nuovo invito dalla pagina
+    <em>Gestione Inviti</em> su {{ titolo_piattaforma }}.
+  </p>
+
+  <hr style="border:none; border-top:1px solid #ddd; margin:24px 0">
+  <p><small>{{ titolo_piattaforma }} — AGESCI Campania</small></p>
+</body>
+</html>

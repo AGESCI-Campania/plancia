@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% load bootstrap_icons %}
+{% block title %}Gestione Inviti{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <h1 class="h3 mb-1">Gestione Inviti</h1>
+  {% if edizione %}
+    <p class="text-muted mb-4">Edizione {{ edizione }}</p>
+  {% endif %}
+
+  {% if not edizione %}
+    <div class="alert alert-warning">Nessuna edizione attiva. Apri o crea un'edizione prima di inviare gli inviti.</div>
+  {% else %}
+
+    {# --- Riepilogo stato --- #}
+    <div class="row g-3 mb-4">
+      <div class="col-md-6">
+        <div class="card h-100">
+          <div class="card-header d-flex align-items-center gap-2">
+            {% bs_icon "person-lines-fill" size="16" %}
+            <strong>Capi Reparto</strong>
+          </div>
+          <div class="card-body">
+            <div class="row text-center">
+              <div class="col">
+                <div class="fs-3 fw-bold">{{ stato_inviti.capi_totale }}</div>
+                <div class="text-muted small">Totale</div>
+              </div>
+              <div class="col">
+                <div class="fs-3 fw-bold text-warning">{{ stato_inviti.capi_da_invitare }}</div>
+                <div class="text-muted small">Da invitare</div>
+              </div>
+              <div class="col">
+                <div class="fs-3 fw-bold text-primary">{{ stato_inviti.capi_inviati }}</div>
+                <div class="text-muted small">Invitati</div>
+              </div>
+              <div class="col">
+                <div class="fs-3 fw-bold text-success">{{ stato_inviti.capi_attivati }}</div>
+                <div class="text-muted small">Attivati</div>
+              </div>
+            </div>
+            <div class="mt-3 d-grid">
+              <form method="post" action="{% url 'notifications:invia_inviti_edizione' %}">
+                {% csrf_token %}
+                <input type="hidden" name="tipo" value="capi">
+                <button class="btn btn-primary w-100"
+                  {% if stato_inviti.capi_da_invitare == 0 %}disabled{% endif %}>
+                  {% bs_icon "send" size="14" extra_classes="me-1" %}
+                  Invia inviti ai Capi Reparto
+                  {% if stato_inviti.capi_da_invitare > 0 %}
+                    <span class="badge bg-light text-dark ms-1">{{ stato_inviti.capi_da_invitare }}</span>
+                  {% endif %}
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="card h-100">
+          <div class="card-header d-flex align-items-center gap-2">
+            {% bs_icon "people-fill" size="16" %}
+            <strong>Capi Squadriglia</strong>
+          </div>
+          <div class="card-body">
+            <div class="row text-center">
+              <div class="col">
+                <div class="fs-3 fw-bold">{{ stato_inviti.csq_totale }}</div>
+                <div class="text-muted small">Totale</div>
+              </div>
+              <div class="col">
+                <div class="fs-3 fw-bold text-warning">{{ stato_inviti.csq_da_invitare }}</div>
+                <div class="text-muted small">Da invitare</div>
+              </div>
+              <div class="col">
+                <div class="fs-3 fw-bold text-primary">{{ stato_inviti.csq_inviati }}</div>
+                <div class="text-muted small">Invitati</div>
+              </div>
+              <div class="col">
+                <div class="fs-3 fw-bold text-success">{{ stato_inviti.csq_attivati }}</div>
+                <div class="text-muted small">Attivati</div>
+              </div>
+            </div>
+            <div class="mt-3 d-grid">
+              <form method="post" action="{% url 'notifications:invia_inviti_edizione' %}">
+                {% csrf_token %}
+                <input type="hidden" name="tipo" value="csq">
+                <button class="btn btn-success w-100"
+                  {% if stato_inviti.csq_da_invitare == 0 %}disabled{% endif %}>
+                  {% bs_icon "send" size="14" extra_classes="me-1" %}
+                  Invia inviti ai Capi Squadriglia
+                  {% if stato_inviti.csq_da_invitare > 0 %}
+                    <span class="badge bg-light text-dark ms-1">{{ stato_inviti.csq_da_invitare }}</span>
+                  {% endif %}
+                </button>
+              </form>
+            </div>
+            <p class="text-muted small mt-2 mb-0">
+              {% bs_icon "info-circle" size="12" extra_classes="me-1" %}
+              Il link di accesso verrà consegnato ai Capi Reparto, che lo condivideranno
+              con i propri Capi Squadriglia. Come canale secondario, viene inviata anche
+              un'email diretta al Capo Squadriglia (se disponibile).
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# --- Tabella diari --- #}
+    <h2 class="h5 mb-3">Dettaglio per squadriglia</h2>
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Squadriglia</th>
+            <th>Capo Squadriglia</th>
+            <th>Capo Reparto</th>
+            <th class="text-center">Invito CSQ</th>
+            <th class="text-center">Invito Capo Reparto</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for diario in diari %}
+            {% with inviti=diario.inviti.all %}
+            <tr>
+              <td>
+                <span class="fw-semibold">{{ diario.squadriglia.nome }}</span>
+                <br><small class="text-muted">{{ diario.squadriglia.reparto }}</small>
+              </td>
+              <td>
+                {% if diario.csq %}
+                  {{ diario.csq.cognome }} {{ diario.csq.nome }}
+                  {% if diario.csq.email and not "@noemail.internal" in diario.csq.email %}
+                    <br><small class="text-muted">{{ diario.csq.email }}</small>
+                  {% else %}
+                    <br><small class="text-warning">{% bs_icon "exclamation-triangle" size="12" %} Email non disponibile</small>
+                  {% endif %}
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if diario.crp %}
+                  {{ diario.crp.cognome }} {{ diario.crp.nome }}
+                  {% if diario.crp.provvisorio %}
+                    <br><small class="text-warning">
+                      {% bs_icon "clock" size="12" %} Da riconciliare
+                    </small>
+                  {% else %}
+                    <br><small class="text-muted">{{ diario.crp.email }}</small>
+                  {% endif %}
+                {% else %}
+                  <span class="text-danger">Mancante</span>
+                {% endif %}
+              </td>
+              <td class="text-center">
+                {% with inv_csq=inviti|dictsortreversed:"inviato_at" %}
+                  {% for inv in inv_csq %}
+                    {% if inv.ruolo_target == "csq" %}
+                      {% if inv.stato == "attivato" %}
+                        <span class="badge bg-success">{% bs_icon "check-circle" size="12" %} Attivato</span>
+                      {% elif inv.stato == "inviato" %}
+                        <span class="badge bg-primary">{% bs_icon "envelope" size="12" %} Inviato</span>
+                      {% endif %}
+                      {% break %}
+                    {% endif %}
+                  {% empty %}
+                    <span class="text-muted small">Non inviato</span>
+                  {% endfor %}
+                {% endwith %}
+              </td>
+              <td class="text-center">
+                {% with inv_crp=inviti|dictsortreversed:"inviato_at" %}
+                  {% for inv in inv_crp %}
+                    {% if inv.ruolo_target == "crp" %}
+                      {% if inv.stato == "attivato" %}
+                        <span class="badge bg-success">{% bs_icon "check-circle" size="12" %} Attivato</span>
+                      {% elif inv.stato == "inviato" %}
+                        <span class="badge bg-primary">{% bs_icon "envelope" size="12" %} Inviato</span>
+                      {% endif %}
+                      {% break %}
+                    {% endif %}
+                  {% empty %}
+                    <span class="text-muted small">Non inviato</span>
+                  {% endfor %}
+                {% endwith %}
+              </td>
+              <td class="text-end">
+                {# Reinvio individuale #}
+                {% for inv in inviti %}
+                  {% if inv.stato == "inviato" %}
+                    <form method="post" action="{% url 'notifications:reinvia_invito' inv.pk %}" class="d-inline">
+                      {% csrf_token %}
+                      <input type="hidden" name="next" value="{% url 'notifications:gestione_inviti' %}">
+                      <button class="btn btn-outline-secondary btn-sm" title="Reinvia">
+                        {% bs_icon "arrow-clockwise" size="13" %}
+                      </button>
+                    </form>
+                  {% endif %}
+                {% endfor %}
+              </td>
+            </tr>
+            {% endwith %}
+          {% empty %}
+            <tr>
+              <td colspan="6" class="text-center text-muted py-4">
+                Nessun diario trovato per questa edizione.
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+  {% endif %}
+</div>
+{% endblock %}

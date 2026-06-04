@@ -177,6 +177,14 @@ Il backup include dump PostgreSQL + archivio media/log con retention 30 giorni.
 
 ---
 
+## Gestione Inviti e primo accesso utenti
+
+L'Admin ha accesso alla pagina **Gestione Inviti** (stessa della Segreteria).
+Vedi la sezione corrispondente nella **[Guida Segreteria](segreteria.md)** per
+il dettaglio del flusso inviti Capi Reparto e Capi Squadriglia.
+
+---
+
 ## Impersonazione
 
 L'Admin può impersonare qualsiasi utente compresa la Segreteria.

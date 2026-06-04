@@ -52,6 +52,34 @@ Le sezioni disponibili:
 
 ---
 
+## Gestione Inviti
+
+Da **Gestione → Inviti** puoi inviare e monitorare gli inviti per l'edizione attiva.
+La pagina mostra contatori e stato (non inviato / inviato / attivato) per ogni squadriglia.
+
+### Sequenza consigliata
+
+1. Esegui gli import (Co.Ca. → Squadriglie) e riconcilia le eventuali anomalie.
+2. Clicca **"Invia inviti ai Capi Reparto"**: ogni CRP riceve il proprio link di accesso.
+3. Dopo che i CRP hanno attivato l'account (o in parallelo), clicca
+   **"Invia inviti ai Capi Squadriglia"**.
+
+### Cosa succede con l'invio ai Capi Squadriglia
+
+- Ogni Capo Reparto riceve un'**email riepilogativa** con la tabella dei propri
+  Capi Squadriglia e il loro link personale. Il CRP deve consegnarli ai ragazzi.
+- Se il Capo Squadriglia ha un'email nel tracciato, riceve anche un'**email diretta**
+  come canale secondario (l'email potrebbe essere errata, quindi non è il canale primario).
+- L'attivazione richiede il **codice socio AGESCI** (dalla tessera) + una email:
+  questo garantisce che l'account sia attivato dalla persona giusta.
+
+### Reinvio individuale
+
+Dalla tabella della pagina Gestione Inviti puoi reinviare l'invito a un singolo
+utente con il pulsante **↺** accanto al suo nome.
+
+---
+
 ## Import anagrafiche
 
 Da **Gestione → Import anagrafiche** trovi lo storico di tutti gli import eseguiti.
@@ -69,8 +97,32 @@ I tre tipi di import (avviabili da Impostazioni o da riga di comando):
 > I CSV reali non vanno mai caricati nel repository (contengono dati di minori).
 > Usa sempre file di test dalla cartella `fixtures/`.
 
-Ogni riga non riconciliata (CRP non trovato per email) viene segnalata nella schermata
-di **riconciliazione manuale**, accessibile dallo storico import.
+### Capi Reparto non trovati — record provvisori
+
+Se durante l'import squadriglie un Capo Reparto non viene trovato per email
+(ad esempio il tracciato Co.Ca. non è ancora stato importato, o l'email è diversa),
+la piattaforma crea automaticamente un **Capo Reparto provvisorio** con i dati
+disponibili dal tracciato Evento (nome, cognome, email).
+Il codice socio è temporaneo (formato `tmpNNNNN`) e sarà sostituito dalla riconciliazione.
+
+Questo garantisce che ogni diario abbia sempre un Capo Reparto associato —
+anche prima della riconciliazione — e che i Capi Reparto provvisori possano già
+ricevere l'invito e distribuire i link ai loro Capi Squadriglia.
+
+I record provvisori sono identificati dal badge **"Da riconciliare"** nella pagina
+Gestione Inviti. Effettua la riconciliazione prima di pubblicare i risultati.
+
+### Riconciliazione manuale
+
+Ogni riga anomala è accessibile dallo storico import. Puoi:
+
+- Cliccare **"Riprova anomalie"** dopo un nuovo import Co.Ca. per abbinare
+  automaticamente i CRP ora presenti nel DB.
+- Usare il form di riconciliazione manuale per abbinare singole righe cercando
+  il Socio capo per nome, cognome o codice socio.
+
+Quando riconcili un CRP provvisorio che ha già attivato l'account, l'account utente
+viene trasferito automaticamente al Socio reale senza perdita di dati.
 
 ---
 

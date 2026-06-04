@@ -46,7 +46,13 @@ Il Diario è composto da sei moduli e segue un flusso a due fasi:
 ## Accesso alla piattaforma
 
 L'URL della piattaforma viene comunicato dalla Segreteria regionale.
-Si accede con email e password ricevuti via invito, oppure con i pulsanti
+
+| Ruolo | Come si accede la prima volta |
+|---|---|
+| Admin, Segreteria, Incaricato EG, PGV, Capo Reparto | Email di invito con link di attivazione diretto |
+| Capo Squadriglia | Link consegnato dal proprio Capo Reparto + conferma codice socio AGESCI e email |
+
+Dopo l'attivazione si accede con email e password, oppure con i pulsanti
 **Accedi con Google / Microsoft / Apple** se configurati dall'Admin.
 
 Gli utenti con ruolo Admin, Segreteria o Incaricato EG devono configurare

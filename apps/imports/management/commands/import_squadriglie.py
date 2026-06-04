@@ -66,6 +66,30 @@ def _get_or_create_squadriglia(zona_nome, gruppo_nome, reparto_nome, sq_nome):
     return squadriglia
 
 
+def _crea_crp_provvisorio(email: str, cognome: str, nome: str, zona, gruppo):
+    """Crea un Socio(capo, provvisorio) con codice tmp quando il CRP non è in DB.
+
+    Il codice tmpNNNNN identifica il record come provvisorio e verrà sostituito
+    con il codice socio reale durante la riconciliazione.
+    """
+    from apps.org.models import Socio
+    if email:
+        existing = Socio.objects.filter(email__iexact=email, provvisorio=True).first()
+        if existing:
+            return existing
+    codice_tmp = Socio.genera_codice_tmp()
+    return Socio.objects.create(
+        codice_socio=codice_tmp,
+        nome=nome,
+        cognome=cognome,
+        email=email,
+        categoria=Categoria.CAPO,
+        zona=zona,
+        gruppo=gruppo,
+        provvisorio=True,
+    )
+
+
 class Command(BaseCommand):
     help = "Importa le squadriglie iscritte. Eseguire DOPO import_coca."
 
@@ -151,6 +175,14 @@ class Command(BaseCommand):
 
                     crp_socio, crp_trovato = trova_crp(crp_email, crp_cognome, crp_nome)
 
+                    if not crp_trovato and (crp_email or crp_cognome):
+                        # Crea un CRP provvisorio con i dati disponibili (email e nome
+                        # dal tracciato Evento sono certificati, manca solo il codice socio).
+                        # Verrà sostituito dalla riconciliazione manuale o automatica.
+                        crp_socio = _crea_crp_provvisorio(
+                            crp_email, crp_cognome, crp_nome, zona, gruppo
+                        )
+
                     from apps.diaries.models import Anagrafica, Diario, TipoDiario
                     diario, _ = Diario.objects.get_or_create(
                         edizione=edizione,
@@ -166,22 +198,28 @@ class Command(BaseCommand):
                         defaults={"specialita": specialita},
                     )
 
-                    stato_riga = StatoMatch.OK if crp_trovato else StatoMatch.DA_RICONCILIARE
-                    note_riga = "" if crp_trovato else (
-                        f"CRP non trovato — email: {crp_email or '—'}, nome: {crp_raw or '—'}. "
-                        "Dopo aver importato o inserito il capo, usa 'Riprova anomalie'."
-                    )
+                    if crp_trovato:
+                        stato_riga = StatoMatch.OK
+                        note_riga = ""
+                        ok += 1
+                    elif crp_socio:
+                        stato_riga = StatoMatch.DA_RICONCILIARE
+                        note_riga = (
+                            f"CRP provvisorio creato — email: {crp_email or '—'}, "
+                            f"nome: {crp_raw or '—'}. Codice socio da riconciliare."
+                        )
+                        da_riconciliare += 1
+                    else:
+                        stato_riga = StatoMatch.DA_RICONCILIARE
+                        note_riga = "CRP non trovato e dati insufficienti per crearlo."
+                        da_riconciliare += 1
+
                     riga_objs.append(RigaImportazione(
                         log=log, numero=i, dati_grezzi=dict(row),
                         stato_match=stato_riga,
                         socio_match=crp_socio,
                         note=note_riga,
                     ))
-
-                    if crp_trovato:
-                        ok += 1
-                    else:
-                        da_riconciliare += 1
                 else:
                     ok += 1
 
