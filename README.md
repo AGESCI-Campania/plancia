@@ -184,6 +184,11 @@ crea automaticamente un **record provvisorio** con codice `tmpNNNNN` e i dati de
 cognome, email). Il record è sostituito dalla riconciliazione manuale/automatica nella pagina import.
 Questo garantisce che ogni diario abbia sempre un Capo Reparto, anche prima della riconciliazione.
 
+**Gestione errori per record**: se un singolo record causa un errore DB (valore troppo lungo,
+violazione di unicità, ecc.) viene marcato `SCARTATA` nello storico con il messaggio di errore come
+nota — l'import **non si interrompe** e prosegue sui record successivi. I record scartati possono
+essere corretti nel CSV e re-importati; il log dell'import è sempre visibile in Impostazioni → Import.
+
 ## Impostazioni di piattaforma (solo Admin)
 Pagina `/impostazioni/` riservata ad Admin, IABR e Segreteria, organizzata in sezioni:
 
