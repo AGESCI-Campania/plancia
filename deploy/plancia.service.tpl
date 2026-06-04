@@ -23,7 +23,7 @@ Environment=COMPOSE_PROFILES=${COMPOSE_PROFILES}
 ExecStartPre=/usr/bin/docker compose --env-file .env.prod pull --quiet
 ExecStart=/usr/bin/docker compose --env-file .env.prod up -d --wait
 ExecStop=/usr/bin/docker compose --env-file .env.prod down
-ExecReload=/usr/bin/docker compose --env-file .env.prod restart web worker beat
+ExecReload=/bin/sh -c 'cd ${INSTALL_DIR} && /usr/bin/docker compose --env-file .env.prod build --quiet web worker beat && /usr/bin/docker compose --env-file .env.prod restart web worker beat'
 TimeoutStartSec=300
 TimeoutStopSec=120
 Restart=on-failure
