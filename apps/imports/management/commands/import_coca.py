@@ -21,6 +21,50 @@ from apps.org.models import Categoria, Gruppo, Socio, Zona
 logger = logging.getLogger(__name__)
 
 
+def leggi_csv(path: str, delimiter: str = ",") -> list[dict]:
+    """Legge un CSV gestendo le righe iniziali non-dati.
+
+    Salta (in qualunque ordine e combinazione):
+    - righe ``sep=X`` (direttiva Excel per il separatore)
+    - righe con ID evento (es. ``Evento24139``)
+    Se la riga ``sep=`` è presente, il delimitatore viene auto-rilevato
+    ignorando il parametro ``delimiter``.
+    Le colonne senza intestazione (chiave vuota o None) vengono scartate.
+    """
+    with open(path, encoding="utf-8-sig", newline="") as f:
+        raw = f.read()
+
+    lines = raw.splitlines(keepends=True)
+    detected_delimiter = delimiter
+    skip = 0
+    for line in lines:
+        stripped = line.strip()
+        low = stripped.lower()
+        if low.startswith("sep="):
+            sep_char = stripped[4:].strip()
+            if sep_char:
+                detected_delimiter = sep_char
+            skip += 1
+        elif stripped.startswith("Evento") or stripped.startswith("evento"):
+            skip += 1
+        else:
+            break
+
+    import io
+    reader = csv.reader(io.StringIO(raw), delimiter=detected_delimiter)
+    all_rows = list(reader)[skip:]
+
+    if not all_rows:
+        return []
+
+    header_row = all_rows[0]
+    return [
+        {k: v for k, v in zip(header_row, row) if k is not None and k.strip() != ""}
+        for row in all_rows[1:]
+        if any(v.strip() for v in row if v)
+    ]
+
+
 def _clean(v: str) -> str:
     v = (v or "").strip()
     if v.startswith('="') and v.endswith('"'):
@@ -46,7 +90,7 @@ class Command(BaseCommand):
         dry_run: bool = opts["dry_run"]
 
         try:
-            rows = self._leggi_csv(path)
+            rows = leggi_csv(path)
         except FileNotFoundError as exc:
             raise CommandError(str(exc)) from exc
 
@@ -133,9 +177,3 @@ class Command(BaseCommand):
             f"{'[DRY-RUN] ' if dry_run else ''}Co.Ca.: {ok} ok, {scartati} scartati."
         ))
 
-    def _leggi_csv(self, path: str) -> list[dict]:
-        with open(path, encoding="utf-8-sig", newline="") as f:
-            first = f.readline()
-            if not first.lower().startswith("sep="):
-                f.seek(0)
-            return list(csv.DictReader(f))

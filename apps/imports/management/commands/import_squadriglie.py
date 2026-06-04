@@ -21,7 +21,6 @@ Uso: uv run python manage.py import_squadriglie path/al/file.csv --edizione <pk>
 """
 from __future__ import annotations
 
-import csv
 import logging
 
 from django.core.management.base import BaseCommand, CommandError
@@ -30,38 +29,12 @@ from django.db import transaction
 from apps.imports.models import LogImportazione, RigaImportazione, StatoMatch, TipoImport
 from apps.org.models import Categoria, Reparto, Socio, Squadriglia
 
-from .import_coca import _clean, _get_or_create_zona_gruppo
+from .import_coca import _clean, _get_or_create_zona_gruppo, leggi_csv
 
 logger = logging.getLogger(__name__)
 
 SI = {"si", "sì", "s", "true", "x", "1"}
 
-
-def _leggi_csv(path: str) -> list[dict]:
-    """Legge il CSV del tracciato Evento saltando l'eventuale riga ID-evento in testa."""
-    with open(path, encoding="utf-8-sig", newline="") as f:
-        all_rows = list(csv.reader(f, delimiter=";"))
-
-    if not all_rows:
-        return []
-
-    # Il tracciato Evento ha una prima riga con solo l'ID evento (es. "Evento24139")
-    # e le intestazioni reali nella riga successiva.
-    first_cell = str(all_rows[0][0]).strip() if all_rows[0] else ""
-    if first_cell.startswith("Evento") or (first_cell and not any(
-        c in first_cell for c in ("Codice", "Nome", "Cognome", "BC", "PIC")
-    )):
-        header_row = all_rows[1] if len(all_rows) > 1 else []
-        data_rows = all_rows[2:]
-    else:
-        header_row = all_rows[0]
-        data_rows = all_rows[1:]
-
-    return [
-        {k: v for k, v in zip(header_row, row) if k is not None and k != ""}
-        for row in data_rows
-        if any(v.strip() for v in row if v)
-    ]
 
 
 def _parse_crp_nome(raw: str) -> tuple[str, str]:
@@ -163,7 +136,7 @@ class Command(BaseCommand):
             raise CommandError(f"Edizione {edizione_pk} non trovata.") from exc
 
         try:
-            rows = _leggi_csv(path)
+            rows = leggi_csv(path, delimiter=";")
         except FileNotFoundError as exc:
             raise CommandError(str(exc)) from exc
 

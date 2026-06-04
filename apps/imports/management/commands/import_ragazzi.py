@@ -9,7 +9,6 @@ Uso: uv run python manage.py import_ragazzi path/al/file.csv [--dry-run]
 """
 from __future__ import annotations
 
-import csv
 import logging
 
 from django.core.management.base import BaseCommand, CommandError
@@ -18,7 +17,7 @@ from django.db import transaction
 from apps.imports.models import LogImportazione, RigaImportazione, StatoMatch, TipoImport
 from apps.org.models import Categoria, Socio
 
-from .import_coca import _clean, _get_or_create_zona_gruppo
+from .import_coca import _clean, _get_or_create_zona_gruppo, leggi_csv
 
 logger = logging.getLogger(__name__)
 
@@ -35,11 +34,7 @@ class Command(BaseCommand):
         dry_run: bool = opts["dry_run"]
 
         try:
-            with open(path, encoding="utf-8-sig", newline="") as f:
-                first = f.readline()
-                if not first.lower().startswith("sep="):
-                    f.seek(0)
-                rows = list(csv.DictReader(f))
+            rows = leggi_csv(path)
         except FileNotFoundError as exc:
             raise CommandError(str(exc)) from exc
 
