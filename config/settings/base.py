@@ -46,6 +46,7 @@ THIRD_PARTY_APPS = [
     "hijack",
     "hijack.contrib.admin",
     "django_bootstrap_icons",
+    "anymail",
 ]
 
 LOCAL_APPS = [
@@ -261,6 +262,20 @@ EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
 
 # Cartella dove la modalita' "simulato" scrive i messaggi (un file per invio).
 LOG_DIR = BASE_DIR / "logs"
+
+# --- Mailpit (debug email in produzione) ------------------------------------
+# URL interno raggiungibile da Django per il proxy web UI e per l'SMTP.
+# In nginx-docker mode: mailpit e web sono nella stessa rete compose.
+# In nginx-host/apache-host mode: impostare http://localhost:8025 (porta esposta su loopback).
+MAILPIT_INTERNAL_URL = env.str("MAILPIT_INTERNAL_URL", default="http://mailpit:8025")
+MAILPIT_SMTP_HOST = env.str("MAILPIT_SMTP_HOST", default="mailpit")
+MAILPIT_SMTP_PORT = env.int("MAILPIT_SMTP_PORT", default=1025)
+
+# --- Anymail (provider transazionale) ---------------------------------------
+# I valori vengono sovrascritti a runtime dalla PlanciaEmailBackend che legge da DB.
+# Le variabili d'ambiente qui sotto servono come fallback in ambienti senza DB
+# o per il secret webhook (leggi docs/guide/email_provider.md).
+ANYMAIL: dict = {}
 EMAIL_FILE_PATH = LOG_DIR / "email"
 (EMAIL_FILE_PATH).mkdir(parents=True, exist_ok=True)
 

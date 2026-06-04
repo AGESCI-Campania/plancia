@@ -94,27 +94,66 @@
     </div>
     <div class="card-body">
       <div class="row g-3 mb-3">
-        {% include "siteconfig/_campo.html" with field=form.email_mode col="col-md-5" %}
-        {% include "siteconfig/_campo.html" with field=form.from_email col="col-md-7" %}
+        {% include "siteconfig/_campo.html" with field=form.email_mode col="col-md-4" %}
+        {% include "siteconfig/_campo.html" with field=form.email_provider col="col-md-4" %}
+        {% include "siteconfig/_campo.html" with field=form.from_email col="col-md-4" %}
       </div>
 
-      <p class="small fw-semibold text-muted mb-2 border-top pt-3">Configurazione SMTP</p>
-      <div class="row g-3">
-        {% include "siteconfig/_campo.html" with field=form.smtp_host col="col-md-7" %}
-        {% include "siteconfig/_campo.html" with field=form.smtp_port col="col-md-2" %}
-        <div class="col-md-3 d-flex align-items-end pb-1">
-          <div class="form-check form-switch ms-2">
-            {{ form.smtp_use_tls }}
-            <label class="form-check-label small fw-semibold" for="{{ form.smtp_use_tls.id_for_label }}">
-              {{ form.smtp_use_tls.label }}
-            </label>
+      {# Sezione SMTP — visibile solo quando provider = smtp #}
+      <div id="email-smtp-section">
+        <p class="small fw-semibold text-muted mb-2 border-top pt-3">Configurazione SMTP</p>
+        <div class="row g-3">
+          {% include "siteconfig/_campo.html" with field=form.smtp_host col="col-md-7" %}
+          {% include "siteconfig/_campo.html" with field=form.smtp_port col="col-md-2" %}
+          <div class="col-md-3 d-flex align-items-end pb-1">
+            <div class="form-check form-switch ms-2">
+              {{ form.smtp_use_tls }}
+              <label class="form-check-label small fw-semibold" for="{{ form.smtp_use_tls.id_for_label }}">
+                {{ form.smtp_use_tls.label }}
+              </label>
+            </div>
           </div>
+          {% include "siteconfig/_campo.html" with field=form.smtp_user col="col-md-6" %}
+          {% include "siteconfig/_campo.html" with field=form.smtp_password col="col-md-6" %}
         </div>
-        {% include "siteconfig/_campo.html" with field=form.smtp_user col="col-md-6" %}
-        {% include "siteconfig/_campo.html" with field=form.smtp_password col="col-md-6" %}
+      </div>
+
+      {# Sezione provider transazionale — visibile solo quando provider != smtp #}
+      <div id="email-anymail-section">
+        <p class="small fw-semibold text-muted mb-2 border-top pt-3">
+          Provider transazionale
+          <span class="badge bg-info text-dark fw-normal ms-1">tracking bounce/errori</span>
+        </p>
+        <div class="row g-3">
+          {% include "siteconfig/_campo.html" with field=form.email_provider_api_key col="col-md-8" %}
+          {% include "siteconfig/_campo.html" with field=form.email_provider_webhook_secret col="col-md-4" %}
+        </div>
+        <div class="mt-2">
+          <small class="text-muted">
+            {% bs_icon "info-circle" size="13" extra_classes="me-1" %}
+            URL webhook da configurare nel provider:
+            <code>{{ request.scheme }}://{{ request.get_host }}/anymail/webhook/</code>
+            — vedi <a href="/docs/guide/email_provider.md" target="_blank">guida configurazione</a>.
+          </small>
+        </div>
       </div>
     </div>
   </div>
+
+  <script>
+  (function () {
+    const providerEl = document.getElementById("{{ form.email_provider.id_for_label }}");
+    const smtpSection = document.getElementById("email-smtp-section");
+    const anymailSection = document.getElementById("email-anymail-section");
+    function toggle() {
+      const isSMTP = providerEl.value === "smtp";
+      smtpSection.style.display = isSMTP ? "" : "none";
+      anymailSection.style.display = isSMTP ? "none" : "";
+    }
+    providerEl.addEventListener("change", toggle);
+    toggle();
+  })();
+  </script>
 
   {# ── 4. Stato e diagnostica ─────────────────────────────────────────── #}
   <div class="card mb-4 shadow-sm">

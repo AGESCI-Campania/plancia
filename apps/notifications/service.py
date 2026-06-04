@@ -2,11 +2,19 @@
 """Logica di invio inviti e notifiche email. Vedi docs sez. 8."""
 from __future__ import annotations
 
+import logging
+
 from django.conf import settings
-from django.core.mail import EmailMessage
 from django.urls import reverse
 
 from apps.notifications.models import Invito, StatoInvito, TipoInvito, render_mail
+
+try:
+    from anymail.message import AnymailMessage as _MailMessageClass
+except ImportError:
+    from django.core.mail import EmailMessage as _MailMessageClass  # type: ignore[assignment]
+
+logger = logging.getLogger(__name__)
 
 
 def _titolo_piattaforma() -> str:
@@ -60,16 +68,20 @@ def invia_invito(invito: Invito) -> bool:
         return False
 
     try:
-        msg = EmailMessage(
+        msg = _MailMessageClass(
             subject=oggetto,
             body=corpo,
             from_email=settings.DEFAULT_FROM_EMAIL,
             to=[email_dest],
         )
         msg.content_subtype = "html"
+        # metadata per il tracking delivery (anymail); ignorato da SMTP
+        if hasattr(msg, "metadata"):
+            msg.metadata = {"invito_pk": str(invito.pk)}
         msg.send()
         return True
     except Exception:
+        logger.exception("Errore invio email invito pk=%s a %s", invito.pk, email_dest)
         return False
 
 
@@ -286,7 +298,7 @@ def _invia_riepilogo_csq_a_crp(crp, diario_ref, squadriglie: list) -> bool:
     })
 
     try:
-        msg = EmailMessage(
+        msg = _MailMessageClass(
             subject=f"{titolo} — Attivazione account Capi Squadriglia",
             body=corpo,
             from_email=settings.DEFAULT_FROM_EMAIL,
@@ -296,4 +308,5 @@ def _invia_riepilogo_csq_a_crp(crp, diario_ref, squadriglie: list) -> bool:
         msg.send()
         return True
     except Exception:
+        logger.exception("Errore invio email riepilogo CSQ a CRP %s", crp.email)
         return False

@@ -1,0 +1,19 @@
+{% load bootstrap_icons %}
+{# Badge delivery status — incluso in gestione_inviti.html; inv = oggetto Invito #}
+{% if inv.delivery_status == "bounce" %}
+  <br><span class="badge bg-danger mt-1" title="{{ inv.delivery_error }}">
+    {% bs_icon "x-circle" size="11" %} Bounce
+  </span>
+{% elif inv.delivery_status == "spam" %}
+  <br><span class="badge bg-warning text-dark mt-1">
+    {% bs_icon "shield-exclamation" size="11" %} Spam
+  </span>
+{% elif inv.delivery_status == "fallito" %}
+  <br><span class="badge bg-danger mt-1" title="{{ inv.delivery_error }}">
+    {% bs_icon "exclamation-triangle" size="11" %} Errore
+  </span>
+{% elif inv.delivery_status == "consegnato" %}
+  <br><span class="badge bg-success bg-opacity-50 mt-1">
+    {% bs_icon "check2" size="11" %} Consegnato
+  </span>
+{% endif %}

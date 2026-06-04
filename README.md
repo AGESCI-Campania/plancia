@@ -135,7 +135,7 @@ Pagina `/impostazioni/` riservata ad Admin, IABR e Segreteria, organizzata in se
 |---|---|
 | **Identità** | Titolo · Sottotitolo (visualizzati nella navbar) |
 | **Footer** | Testo rich text · Fino a 5 link tipizzati (Sito web, Email, Facebook, Instagram, TikTok) con etichetta opzionale |
-| **Posta elettronica** | Modalità email · From · SMTP host/porta/TLS/credenziali |
+| **Posta elettronica** | Modalità email · Provider (SMTP / Brevo / Mailgun / ecc.) · API key · Webhook secret · From · SMTP |
 | **Stato e diagnostica** | Manutenzione · Debug toolbar · Debug diagnostico |
 | **Import tracciati** | Avvia import Co.Ca. / Ragazzi / Evento + link storico |
 | **Template email** | Elenco tutte le chiavi con stato (DB / file default) |
@@ -144,6 +144,15 @@ Pagina `/impostazioni/` riservata ad Admin, IABR e Segreteria, organizzata in se
 direttamente dalla pagina impostazioni. Se il template non è in DB usa il file di default
 `templates/mail/<chiave>.html`; il pulsante **"Importa da file"** carica quel file come punto
 di partenza per la personalizzazione. Il pulsante **"Elimina"** ripristina il fallback su file.
+
+**Provider email transazionali** (tracking bounce/errori): selezionare un provider (Brevo,
+Mailgun, MailerSend, Postmark, SendGrid, SparkPost, Amazon SES) e inserire l'API key. Il webhook
+di tracking va configurato nel pannello del provider con l'URL `/anymail/webhook/`.
+Guida completa: [`docs/guide/email_provider.md`](docs/guide/email_provider.md).
+
+**Modalità Mailpit (debug)**: selezionare la modalità "Mailpit" per intercettare tutte le email
+senza inviarle ai destinatari reali. Richiede il profilo Docker `mailpit`. Le email intercettate
+sono visibili su `/mailadmin/` (solo Admin/staff).
 
 Le impostazioni vengono iniettate automaticamente in ogni template tramite il context processor
 `apps.siteconfig.context_processors.impostazioni` (variabile `{{ impostazioni }}`).

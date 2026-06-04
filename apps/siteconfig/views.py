@@ -16,7 +16,7 @@ from django.views.generic import UpdateView
 
 from apps.accounts.mixins import RuoloRequiredMixin
 from apps.accounts.models import Ruolo
-from apps.notifications.models import MailTemplate, TAG_REGISTRY
+from apps.notifications.models import TAG_REGISTRY, MailTemplate
 from apps.siteconfig.forms import FooterLinkFormSet, ImpostazioniForm, MailTemplateForm
 from apps.siteconfig.models import Impostazioni
 
@@ -84,9 +84,10 @@ class LanciaImportView(RuoloRequiredMixin, View):
 
         # Salva il file in MEDIA_ROOT/imports/tmp/ rendendolo accessibile al worker Celery
         import os
+        import time
+
         from django.conf import settings
         from django.utils.text import get_valid_filename
-        import time
 
         tmp_dir = os.path.join(settings.MEDIA_ROOT, "imports", "tmp")
         os.makedirs(tmp_dir, exist_ok=True)
@@ -172,8 +173,8 @@ class MailTemplateImportaView(RuoloRequiredMixin, View):
             messages.warning(request, f"Il template «{chiave}» esiste già — modifica quello.")
             return redirect("siteconfig:mail_template_edit", chiave=chiave)
 
-        from django.template.loader import get_template
         from django.template import TemplateDoesNotExist
+        from django.template.loader import get_template
         try:
             tpl = get_template(f"mail/{chiave}.html")
             corpo = tpl.template.source
@@ -258,3 +259,63 @@ class MailTemplateDeleteView(RuoloRequiredMixin, View):
         tpl.delete()
         messages.success(request, f"Template «{chiave}» eliminato — verrà usato il file di default.")
         return redirect("siteconfig:impostazioni")
+
+
+class MailpitProxyView(View):
+    """Proxy verso Mailpit per il debug delle email in produzione.
+
+    Accessibile su /mailadmin/ solo per utenti staff. Richiede che Mailpit sia
+    avviato con --ui-web-path /mailadmin e raggiungibile all'URL MAILPIT_INTERNAL_URL.
+    """
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not request.user.is_staff:
+            from django.contrib.auth.views import redirect_to_login
+            return redirect_to_login(request.get_full_path())
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request, path=""):
+        return self._proxy(request, path)
+
+    def post(self, request, path=""):
+        return self._proxy(request, path)
+
+    def delete(self, request, path=""):
+        return self._proxy(request, path)
+
+    def _proxy(self, request, path):
+        import urllib.error
+        import urllib.request
+        from urllib.parse import urlencode
+
+        from django.http import HttpResponse
+
+        mailpit_base = getattr(settings, "MAILPIT_INTERNAL_URL", "http://mailpit:8025").rstrip("/")
+        target_path = f"/mailadmin/{path}".rstrip("/") or "/mailadmin/"
+        target_url = mailpit_base + target_path
+        if request.GET:
+            target_url += "?" + urlencode(request.GET)
+
+        headers = {}
+        for name in ("Content-Type", "Accept", "X-Requested-With"):
+            if name in request.headers:
+                headers[name] = request.headers[name]
+
+        body = request.body if request.method in ("POST", "PUT", "PATCH") else None
+        req = urllib.request.Request(target_url, data=body, headers=headers, method=request.method)
+
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                content = resp.read()
+                content_type = resp.headers.get("Content-Type", "text/html")
+                return HttpResponse(content, status=resp.status, content_type=content_type)
+        except urllib.error.HTTPError as e:
+            return HttpResponse(e.read(), status=e.code)
+        except Exception as e:
+            return HttpResponse(
+                f"<h1>Mailpit non raggiungibile</h1><pre>{e}</pre>"
+                "<p>Avvia Mailpit con il profilo <code>mailpit</code>: "
+                "<code>COMPOSE_PROFILES=proxy-nginx,mailpit docker compose up -d</code></p>",
+                status=503,
+                content_type="text/html",
+            )

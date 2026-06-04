@@ -4,6 +4,8 @@ from django.contrib import admin
 from django.urls import include, path
 
 from apps.editions.views import HomeView
+from apps.notifications.webhooks import AnymailWebhookDispatchView
+from apps.siteconfig.views import MailpitProxyView
 
 urlpatterns = [
     path("", HomeView.as_view(), name="home"),
@@ -22,6 +24,9 @@ urlpatterns = [
     path("stats/", include("apps.stats.urls", namespace="stats")),
     path("api/soci/", include("apps.org.urls")),
     path("drive/", include("apps.storage_drive.urls", namespace="storage_drive")),
+    path("anymail/webhook/", AnymailWebhookDispatchView.as_view(), name="anymail_webhook"),
+    path("mailadmin/", MailpitProxyView.as_view(), name="mailpit_proxy"),
+    path("mailadmin/<path:path>", MailpitProxyView.as_view(), name="mailpit_proxy_path"),
 ]
 
 if settings.DEBUG:

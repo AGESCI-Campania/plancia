@@ -4,9 +4,21 @@ from django.db import models
 
 
 class EmailMode(models.TextChoices):
-    REALE = "reale", "Invio reale (SMTP)"
+    REALE = "reale", "Invio reale"
     SIMULATO = "simulato", "Simulato (solo log su file)"
     SIMULATO_PIU_INVIO = "simulato_piu_invio", "Simulato + invio reale"
+    MAILPIT = "mailpit", "Mailpit (debug UI — /mailadmin/)"
+
+
+class EmailProvider(models.TextChoices):
+    SMTP = "smtp", "SMTP tradizionale"
+    BREVO = "brevo", "Brevo"
+    MAILGUN = "mailgun", "Mailgun"
+    MAILERSEND = "mailersend", "MailerSend"
+    POSTMARK = "postmark", "Postmark"
+    SENDGRID = "sendgrid", "SendGrid"
+    SPARKPOST = "sparkpost", "SparkPost"
+    SES = "ses", "Amazon SES"
 
 
 class TipoLink(models.TextChoices):
@@ -27,15 +39,30 @@ class Impostazioni(models.Model):
         max_length=200, default="Guidoncini Verdi - AGESCI Campania", blank=True
     )
 
-    # Mail (SMTP) - la password va cifrata a riposo (TODO: campo cifrato)
-    smtp_host = models.CharField(max_length=200, blank=True)
-    smtp_port = models.PositiveIntegerField(default=587)
-    smtp_user = models.CharField(max_length=200, blank=True)
-    smtp_password = models.CharField(max_length=255, blank=True)
-    smtp_use_tls = models.BooleanField(default=True)
-    from_email = models.EmailField(blank=True)
+    # Mail — provider e modalità
     email_mode = models.CharField(
         max_length=20, choices=EmailMode.choices, default=EmailMode.SIMULATO
+    )
+    email_provider = models.CharField(
+        max_length=20, choices=EmailProvider.choices, default=EmailProvider.SMTP,
+        verbose_name="provider email",
+        help_text="SMTP tradizionale oppure provider transazionale (con tracking bounce/errori).",
+    )
+    from_email = models.EmailField(blank=True, verbose_name="mittente (from)")
+    # Impostazioni SMTP (usate solo quando email_provider = smtp)
+    smtp_host = models.CharField(max_length=200, blank=True, verbose_name="SMTP host")
+    smtp_port = models.PositiveIntegerField(default=587, verbose_name="SMTP porta")
+    smtp_user = models.CharField(max_length=200, blank=True, verbose_name="SMTP utente")
+    smtp_password = models.CharField(max_length=255, blank=True, verbose_name="SMTP password")
+    smtp_use_tls = models.BooleanField(default=True, verbose_name="SMTP usa TLS")
+    # Impostazioni provider transazionale (usate quando email_provider != smtp)
+    email_provider_api_key = models.CharField(
+        max_length=500, blank=True, verbose_name="API key provider",
+        help_text="Chiave API del provider transazionale. Non usata con SMTP.",
+    )
+    email_provider_webhook_secret = models.CharField(
+        max_length=500, blank=True, verbose_name="webhook secret",
+        help_text="Secret per verificare i webhook di tracking (bounce, consegna, ecc.).",
     )
 
     # Footer
@@ -66,7 +93,7 @@ class Impostazioni(models.Model):
         cache.delete(self.CACHE_KEY)
 
     @classmethod
-    def get(cls) -> "Impostazioni":
+    def get(cls) -> Impostazioni:
         obj = cache.get(cls.CACHE_KEY)
         if obj is None:
             obj, _ = cls.objects.get_or_create(pk=1)

@@ -2,8 +2,8 @@ from django import forms
 from django.forms import inlineformset_factory
 from tinymce.widgets import TinyMCE
 
-from apps.notifications.models import MailTemplate, TAG_REGISTRY
-from apps.siteconfig.models import FooterLink, Impostazioni
+from apps.notifications.models import MailTemplate
+from apps.siteconfig.models import EmailProvider, FooterLink, Impostazioni
 
 _ctrl = {"class": "form-control"}
 _sel = {"class": "form-select"}
@@ -25,8 +25,9 @@ class ImpostazioniForm(forms.ModelForm):
         fields = [
             "titolo", "sottotitolo",
             "footer_testo",
-            "email_mode", "from_email",
+            "email_mode", "email_provider", "from_email",
             "smtp_host", "smtp_port", "smtp_user", "smtp_password", "smtp_use_tls",
+            "email_provider_api_key", "email_provider_webhook_secret",
             "manutenzione", "debug_toolbar", "debug_diagnostico",
         ]
         widgets = {
@@ -34,16 +35,38 @@ class ImpostazioniForm(forms.ModelForm):
             "sottotitolo": forms.TextInput(attrs=_ctrl),
             "footer_testo": _FOOTER_TINYMCE,
             "email_mode": forms.Select(attrs=_sel),
+            "email_provider": forms.Select(attrs=_sel),
             "from_email": forms.EmailInput(attrs=_ctrl),
             "smtp_host": forms.TextInput(attrs=_ctrl),
             "smtp_port": forms.NumberInput(attrs=_ctrl),
             "smtp_user": forms.TextInput(attrs=_ctrl),
             "smtp_password": forms.PasswordInput(render_value=True, attrs=_ctrl),
             "smtp_use_tls": forms.CheckboxInput(attrs=_sw),
+            "email_provider_api_key": forms.PasswordInput(
+                render_value=True,
+                attrs={**_ctrl, "autocomplete": "off"},
+            ),
+            "email_provider_webhook_secret": forms.PasswordInput(
+                render_value=True,
+                attrs={**_ctrl, "autocomplete": "off"},
+            ),
             "manutenzione": forms.CheckboxInput(attrs=_sw),
             "debug_toolbar": forms.CheckboxInput(attrs=_sw),
             "debug_diagnostico": forms.CheckboxInput(attrs=_sw),
         }
+
+    def clean(self):
+        cd = super().clean()
+        provider = cd.get("email_provider", EmailProvider.SMTP)
+        mode = cd.get("email_mode", "simulato")
+        if mode == "reale" and provider == EmailProvider.SMTP and not cd.get("smtp_host"):
+            self.add_error("smtp_host", "SMTP host obbligatorio per l'invio reale via SMTP.")
+        if mode == "reale" and provider != EmailProvider.SMTP and not cd.get("email_provider_api_key"):
+            self.add_error(
+                "email_provider_api_key",
+                "API key obbligatoria per l'invio reale con provider transazionale.",
+            )
+        return cd
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

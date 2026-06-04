@@ -31,8 +31,9 @@ SECURE_CSP = {
 # axes per primo in produzione
 AUTHENTICATION_BACKENDS = ["axes.backends.AxesStandaloneBackend", *AUTHENTICATION_BACKENDS]
 
-# Email reale via SMTP
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+# Email: gestita da PlanciaEmailBackend (base.py).
+# Provider e credenziali configurabili da Impostazioni admin.
+# SMTP fallback per ambienti senza DB o prima configurazione:
 EMAIL_HOST = env.str("EMAIL_HOST", default="")
 EMAIL_PORT = env.int("EMAIL_PORT", default=587)
 EMAIL_HOST_USER = env.str("EMAIL_HOST_USER", default="")

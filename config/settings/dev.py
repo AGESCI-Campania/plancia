@@ -10,6 +10,10 @@ EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "localhost"
 EMAIL_PORT = 1025
 EMAIL_USE_TLS = False
+# Mailpit proxy (/mailadmin/) — in dev Mailpit gira su localhost
+MAILPIT_INTERNAL_URL = "http://localhost:8025"
+MAILPIT_SMTP_HOST = "localhost"
+MAILPIT_SMTP_PORT = 1025
 
 # In dev non bloccare il login con la verifica email
 ACCOUNT_EMAIL_VERIFICATION = "none"

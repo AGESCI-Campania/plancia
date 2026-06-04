@@ -77,6 +77,15 @@ class StatoInvito(models.TextChoices):
     SCADUTO = "scaduto", "Scaduto"
 
 
+class DeliveryStatus(models.TextChoices):
+    IN_ATTESA = "in_attesa", "In attesa"
+    INVIATO = "inviato", "Inviato al provider"
+    CONSEGNATO = "consegnato", "Consegnato"
+    BOUNCE = "bounce", "Bounce (non recapitato)"
+    SPAM = "spam", "Segnalato come spam"
+    FALLITO = "fallito", "Errore di invio"
+
+
 class TipoInvito(models.TextChoices):
     STANDARD = "standard", "Standard (link email)"
     # Il link è consegnato al CRP; l'attivazione richiede conferma del codice socio.
@@ -105,6 +114,12 @@ class Invito(models.Model):
     )
     inviato_at = models.DateTimeField(auto_now_add=True)
     attivato_at = models.DateTimeField(null=True, blank=True)
+    # Tracking consegna (popolato da anymail signals; vuoto con SMTP tradizionale)
+    provider_message_id = models.CharField(max_length=200, blank=True, db_index=True)
+    delivery_status = models.CharField(
+        max_length=20, choices=DeliveryStatus.choices, default=DeliveryStatus.IN_ATTESA,
+    )
+    delivery_error = models.CharField(max_length=500, blank=True)
 
     class Meta:
         ordering = ["-inviato_at"]
