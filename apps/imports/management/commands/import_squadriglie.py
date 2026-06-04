@@ -7,9 +7,14 @@ CRP vengono salvate come 'da_riconciliare' e possono essere riproposte in
 seguito senza re-importare il file, ad esempio dopo un nuovo import capi o
 l'inserimento manuale del capo (pulsante "Riprova anomalie" nella UI).
 
-CSV: UTF-8 con BOM, separatore ';'.
+Formato CSV atteso: UTF-8 con BOM, separatore ';'.
+La prima riga contiene l'ID evento (es. "Evento24139") — viene saltata.
+La seconda riga contiene le intestazioni di colonna.
 - CSQ: Codice + Cognome + Nome → upsert Socio(ragazzo); email aggiornata se presente.
+  Se il Codice è assente/non valido, viene creato un Socio(ragazzo, provvisorio=True)
+  con codice tmpNNNNN; la riga è marcata DA_RICONCILIARE.
 - CRP: match Socio(capo) per email (EmailReferente); fallback per nome/cognome.
+- Colonne: "Nome squadriglia", "Nome reparto", "Specialità di squadriglia".
 - Crea Diario + Anagrafica; tipo = rinnovo se "E' una riconferma?" == sì.
 
 Uso: uv run python manage.py import_squadriglie path/al/file.csv --edizione <pk> [--dry-run]
@@ -30,6 +35,33 @@ from .import_coca import _clean, _get_or_create_zona_gruppo
 logger = logging.getLogger(__name__)
 
 SI = {"si", "sì", "s", "true", "x", "1"}
+
+
+def _leggi_csv(path: str) -> list[dict]:
+    """Legge il CSV del tracciato Evento saltando l'eventuale riga ID-evento in testa."""
+    with open(path, encoding="utf-8-sig", newline="") as f:
+        all_rows = list(csv.reader(f, delimiter=";"))
+
+    if not all_rows:
+        return []
+
+    # Il tracciato Evento ha una prima riga con solo l'ID evento (es. "Evento24139")
+    # e le intestazioni reali nella riga successiva.
+    first_cell = str(all_rows[0][0]).strip() if all_rows[0] else ""
+    if first_cell.startswith("Evento") or (first_cell and not any(
+        c in first_cell for c in ("Codice", "Nome", "Cognome", "BC", "PIC")
+    )):
+        header_row = all_rows[1] if len(all_rows) > 1 else []
+        data_rows = all_rows[2:]
+    else:
+        header_row = all_rows[0]
+        data_rows = all_rows[1:]
+
+    return [
+        {k: v for k, v in zip(header_row, row) if k is not None and k != ""}
+        for row in data_rows
+        if any(v.strip() for v in row if v)
+    ]
 
 
 def _parse_crp_nome(raw: str) -> tuple[str, str]:
@@ -70,14 +102,9 @@ def _get_or_create_squadriglia(zona_nome, gruppo_nome, reparto_nome, sq_nome):
 
 
 def _crea_crp_provvisorio(email: str, cognome: str, nome: str, zona, gruppo):
-    """Crea un Socio(capo, provvisorio) con codice tmp quando il CRP non è in DB.
-
-    Il codice tmpNNNNN identifica il record come provvisorio e verrà sostituito
-    con il codice socio reale durante la riconciliazione.
-    """
-    from apps.org.models import Socio
+    """Crea un Socio(capo, provvisorio) con codice tmp quando il CRP non è in DB."""
     if email:
-        existing = Socio.objects.filter(email__iexact=email, provvisorio=True).first()
+        existing = Socio.objects.filter(email__iexact=email, provvisorio=True, categoria=Categoria.CAPO).first()
         if existing:
             return existing
     codice_tmp = Socio.genera_codice_tmp()
@@ -87,6 +114,27 @@ def _crea_crp_provvisorio(email: str, cognome: str, nome: str, zona, gruppo):
         cognome=cognome,
         email=email,
         categoria=Categoria.CAPO,
+        zona=zona,
+        gruppo=gruppo,
+        provvisorio=True,
+    )
+
+
+def _crea_csq_provvisorio(cognome: str, nome: str, email: str, zona, gruppo):
+    """Crea un Socio(ragazzo, provvisorio) con codice tmp quando il codice CSQ è assente."""
+    if email:
+        existing = Socio.objects.filter(
+            email__iexact=email, provvisorio=True, categoria=Categoria.RAGAZZO
+        ).first()
+        if existing:
+            return existing
+    codice_tmp = Socio.genera_codice_tmp()
+    return Socio.objects.create(
+        codice_socio=codice_tmp,
+        nome=nome,
+        cognome=cognome,
+        email=email,
+        categoria=Categoria.RAGAZZO,
         zona=zona,
         gruppo=gruppo,
         provvisorio=True,
@@ -115,8 +163,7 @@ class Command(BaseCommand):
             raise CommandError(f"Edizione {edizione_pk} non trovata.") from exc
 
         try:
-            with open(path, encoding="utf-8-sig", newline="") as f:
-                rows = list(csv.DictReader(f, delimiter=";"))
+            rows = _leggi_csv(path)
         except FileNotFoundError as exc:
             raise CommandError(str(exc)) from exc
 
@@ -134,20 +181,13 @@ class Command(BaseCommand):
         try:
             with transaction.atomic():
                 for i, row in enumerate(rows, 1):
+                    dati_grezzi = {k: (str(v) if v is not None else "") for k, v in row.items()}
                     codice_csq = _clean(row.get("Codice", ""))
                     nome_csq = _clean(row.get("Nome", ""))
                     cognome_csq = _clean(row.get("Cognome", ""))
                     email_csq = _clean(row.get("Indirizzo mail capo squadriglia", ""))
 
-                    if not codice_csq or not codice_csq.isdigit() or not (4 <= len(codice_csq) <= 8):
-                        scartati += 1
-                        if not dry_run:
-                            riga_objs.append(RigaImportazione(
-                                log=log, numero=i, dati_grezzi={k: v for k, v in row.items() if k is not None},
-                                stato_match=StatoMatch.SCARTATA,
-                                note="Codice CSQ non valido",
-                            ))
-                        continue
+                    codice_valido = codice_csq and codice_csq.isdigit() and (4 <= len(codice_csq) <= 8)
 
                     crp_raw = _clean(row.get("NomeReferente", ""))
                     crp_email = _clean(row.get("EmailReferente", ""))
@@ -155,12 +195,21 @@ class Command(BaseCommand):
 
                     zona_nome = _clean(row.get("Zona", "")) or "Sconosciuta"
                     gruppo_nome = _clean(row.get("Gruppo", "")) or "Sconosciuto"
-                    reparto_nome = _clean(row.get("Reparto", "")) or "Reparto"
-                    sq_nome = _clean(row.get("Squadriglia", "")) or cognome_csq or "Squadriglia"
+                    reparto_nome = (
+                        _clean(row.get("Nome reparto", "") or row.get("Reparto", "")) or "Reparto"
+                    )
+                    sq_nome = (
+                        _clean(row.get("Nome squadriglia", "") or row.get("Squadriglia", ""))
+                        or cognome_csq or "Squadriglia"
+                    )
                     tipo_riconferma = row.get(
                         "E' una riconferma? (indicare sì se si tratta di una riconferma)", ""
                     ).strip().lower() in SI
-                    specialita = _clean(row.get("Specialita", "") or row.get("Specialità", ""))
+                    specialita = _clean(
+                        row.get("Specialità di squadriglia", "")
+                        or row.get("Specialita", "")
+                        or row.get("Specialità", "")
+                    )
 
                     if not dry_run:
                         sp = transaction.savepoint()
@@ -169,24 +218,28 @@ class Command(BaseCommand):
                             squadriglia = _get_or_create_squadriglia(
                                 zona_nome, gruppo_nome, reparto_nome, sq_nome
                             )
-                            csq, _ = Socio.objects.update_or_create(
-                                codice_socio=codice_csq,
-                                defaults={
-                                    "nome": nome_csq,
-                                    "cognome": cognome_csq,
-                                    "categoria": Categoria.RAGAZZO,
-                                    "zona": zona,
-                                    "gruppo": gruppo,
-                                    **({"email": email_csq} if email_csq else {}),
-                                },
-                            )
+
+                            if codice_valido:
+                                csq, _ = Socio.objects.update_or_create(
+                                    codice_socio=codice_csq,
+                                    defaults={
+                                        "nome": nome_csq,
+                                        "cognome": cognome_csq,
+                                        "categoria": Categoria.RAGAZZO,
+                                        "zona": zona,
+                                        "gruppo": gruppo,
+                                        **({"email": email_csq} if email_csq else {}),
+                                    },
+                                )
+                                csq_provvisorio = False
+                            else:
+                                # Codice assente o non valido: crea CSQ provvisorio
+                                csq = _crea_csq_provvisorio(cognome_csq, nome_csq, email_csq, zona, gruppo)
+                                csq_provvisorio = True
 
                             crp_socio, crp_trovato = trova_crp(crp_email, crp_cognome, crp_nome)
 
                             if not crp_trovato and (crp_email or crp_cognome):
-                                # Crea un CRP provvisorio con i dati disponibili (email e nome
-                                # dal tracciato Evento sono certificati, manca solo il codice socio).
-                                # Verrà sostituito dalla riconciliazione manuale o automatica.
                                 crp_socio = _crea_crp_provvisorio(
                                     crp_email, crp_cognome, crp_nome, zona, gruppo
                                 )
@@ -207,7 +260,15 @@ class Command(BaseCommand):
 
                             transaction.savepoint_commit(sp)
 
-                            if crp_trovato:
+                            if csq_provvisorio:
+                                stato_riga = StatoMatch.DA_RICONCILIARE
+                                note_riga = (
+                                    f"CSQ provvisorio creato (codice assente) — "
+                                    f"{cognome_csq} {nome_csq}, email: {email_csq or '—'}. "
+                                    "Codice socio da riconciliare."
+                                )
+                                da_riconciliare += 1
+                            elif crp_trovato:
                                 stato_riga = StatoMatch.OK
                                 note_riga = ""
                                 ok += 1
@@ -224,7 +285,7 @@ class Command(BaseCommand):
                                 da_riconciliare += 1
 
                             riga_objs.append(RigaImportazione(
-                                log=log, numero=i, dati_grezzi={k: v for k, v in row.items() if k is not None},
+                                log=log, numero=i, dati_grezzi=dati_grezzi,
                                 stato_match=stato_riga,
                                 socio_match=crp_socio,
                                 note=note_riga,
@@ -237,7 +298,7 @@ class Command(BaseCommand):
                                 "Squadriglie riga %d (codice CSQ %s): %s", i, codice_csq, exc
                             )
                             riga_objs.append(RigaImportazione(
-                                log=log, numero=i, dati_grezzi={k: v for k, v in row.items() if k is not None},
+                                log=log, numero=i, dati_grezzi=dati_grezzi,
                                 stato_match=StatoMatch.SCARTATA,
                                 note=str(exc)[:255],
                             ))
