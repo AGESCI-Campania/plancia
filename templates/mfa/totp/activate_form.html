@@ -31,7 +31,7 @@
             <label class="form-label fw-semibold">{% trans "Codice segreto (alternativa al QR)" %}</label>
             <div class="input-group">
               <input type="text" class="form-control form-control-sm font-monospace"
-                     value="{{ form.secret.value }}" readonly id="totp-secret">
+                     value="{{ form.secret }}" readonly id="totp-secret">
               <button class="btn btn-outline-secondary btn-sm" type="button"
                       onclick="navigator.clipboard.writeText(document.getElementById('totp-secret').value)">
                 Copia
@@ -46,20 +46,16 @@
         <form method="post" action="{% url 'mfa_activate_totp' %}">
           {% csrf_token %}
           {% for field in form %}
-            {% if field.html_name != 'secret' %}
-              <div class="mb-3">
-                <label for="{{ field.id_for_label }}" class="form-label fw-semibold">{{ field.label }}</label>
-                <input type="text" name="{{ field.html_name }}" id="{{ field.id_for_label }}"
-                       class="form-control form-control-lg text-center {% if field.errors %}is-invalid{% endif %}"
-                       autocomplete="one-time-code" inputmode="numeric" maxlength="6"
-                       placeholder="000000" autofocus required>
-                {% for error in field.errors %}
-                  <div class="invalid-feedback">{{ error }}</div>
-                {% endfor %}
-              </div>
-            {% else %}
-              {{ field.as_hidden }}
-            {% endif %}
+            <div class="mb-3">
+              <label for="{{ field.id_for_label }}" class="form-label fw-semibold">{{ field.label }}</label>
+              <input type="text" name="{{ field.html_name }}" id="{{ field.id_for_label }}"
+                     class="form-control form-control-lg text-center {% if field.errors %}is-invalid{% endif %}"
+                     autocomplete="one-time-code" inputmode="numeric" maxlength="6"
+                     placeholder="000000" autofocus required>
+              {% for error in field.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+              {% endfor %}
+            </div>
           {% endfor %}
 
           {% if form.non_field_errors %}
