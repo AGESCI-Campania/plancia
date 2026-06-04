@@ -35,3 +35,6 @@ deploy/plancia.apache.conf
 .mypy_cache/
 .ruff_cache/
 htmlcov/
+
+# MkDocs build output
+site/

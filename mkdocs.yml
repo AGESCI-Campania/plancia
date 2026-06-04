@@ -1,0 +1,69 @@
+site_name: Plancia — Guidoncini Verdi
+site_description: Piattaforma per la gestione dei Guidoncini Verdi, AGESCI Campania (Branca E/G)
+site_author: AGESCI Campania
+docs_dir: docs
+repo_url: https://github.com/AGESCI-Campania/plancia
+repo_name: AGESCI-Campania/plancia
+
+theme:
+  name: material
+  language: it
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: green
+      accent: light-green
+      toggle:
+        icon: material/brightness-7
+        name: Passa alla modalità scura
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: green
+      accent: light-green
+      toggle:
+        icon: material/brightness-4
+        name: Passa alla modalità chiara
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - content.code.annotate
+
+plugins:
+  - search:
+      lang: it
+
+markdown_extensions:
+  - tables
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Manuale d'uso:
+    - Panoramica e ruoli: manuale/index.md
+    - Capo Squadriglia: manuale/csq.md
+    - Capo Reparto: manuale/crp.md
+    - Pattuglia Guidoncini Verdi: manuale/pgv.md
+    - Incaricato EG: manuale/incaricato.md
+    - Segreteria: manuale/segreteria.md
+    - Amministratore: manuale/admin.md
+  - Guide tecniche:
+    - Configurazione email: guide/email_provider.md
+    - Google Drive OAuth: guide/google_drive_oauth.md
+    - Autenticazione social: guide/social_auth.md
+  - Specifica di progetto: Plancia_Progettazione.md
