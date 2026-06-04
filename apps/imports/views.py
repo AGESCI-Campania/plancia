@@ -23,6 +23,12 @@ class ImportLogListView(RuoloRequiredMixin, ListView):
     paginate_by = 30
     ordering = ["-creato_at"]
 
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        from apps.editions.models import Edizione
+        ctx["edizioni_import"] = Edizione.objects.order_by("-anno")
+        return ctx
+
 
 class ImportLogDetailView(RuoloRequiredMixin, DetailView):
     model = LogImportazione

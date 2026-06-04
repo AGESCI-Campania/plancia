@@ -75,12 +75,12 @@ class LanciaImportView(RuoloRequiredMixin, View):
     def post(self, request, tracciato):
         if tracciato not in self.TRACCIATI_VALIDI:
             messages.error(request, "Tracciato non valido.")
-            return redirect("siteconfig:impostazioni")
+            return redirect("imports:log_list")
 
         file_obj = request.FILES.get("file")
         if not file_obj:
             messages.error(request, "Seleziona un file CSV prima di avviare l'import.")
-            return redirect("siteconfig:impostazioni")
+            return redirect("imports:log_list")
 
         # Salva il file in MEDIA_ROOT/imports/tmp/ rendendolo accessibile al worker Celery
         import os
@@ -103,14 +103,14 @@ class LanciaImportView(RuoloRequiredMixin, View):
                 edizione_pk = int(request.POST.get("edizione_pk", ""))
             except (ValueError, TypeError):
                 messages.error(request, "Seleziona un'edizione per l'import squadriglie iscritte.")
-                return redirect("siteconfig:impostazioni")
+                return redirect("imports:log_list")
 
         from apps.imports.tasks import task_lancia_import
         task_lancia_import.delay(tracciato, path=path, edizione_pk=edizione_pk)
 
         label = {"coca": "Capi (Co.Ca.)", "ragazzi": "Ragazzi", "squadriglie": "Squadriglie iscritte"}
         messages.success(request, f"Import «{label[tracciato]}» avviato. Controlla lo storico per l'esito.")
-        return redirect("siteconfig:impostazioni")
+        return redirect("imports:log_list")
 
 
 class MailTemplateEditView(RuoloRequiredMixin, View):

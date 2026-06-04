@@ -1,9 +1,120 @@
 {% extends "base.html" %}
-{% block title %}Storico import{% endblock %}
+{% load bootstrap_icons %}
+{% block title %}Import tracciati{% endblock %}
 
 {% block content %}
 <div class="container py-4">
-  <h1 class="h4 mb-3">Storico import</h1>
+  <h1 class="h4 mb-3">Import tracciati</h1>
+
+  {# ── Box import ─────────────────────────────────────────────────────────── #}
+  <div class="card mb-4 shadow-sm">
+    <div class="card-header d-flex align-items-center gap-2">
+      {% bs_icon "cloud-upload" size="20" extra_classes="text-success" %}
+      <span class="fw-semibold">Carica tracciato</span>
+    </div>
+    <div class="card-body">
+      <p class="text-muted small mb-1">
+        Carica il file CSV e avvia l'import. L'ordine consigliato è:
+        <strong>1. Capi</strong> → <strong>2. Squadriglie iscritte</strong> → <strong>3. Ragazzi</strong> (opzionale).
+      </p>
+      <p class="text-muted small mb-3">
+        L'import squadriglie iscritte crea i Capi Squadriglia (ragazzi) direttamente dal file;
+        l'import Ragazzi è opzionale e aggiorna i dati tramite codice socio.
+      </p>
+
+      <div class="row g-3">
+
+        {# --- Capi (Co.Ca.) --- #}
+        <div class="col-md-4">
+          <div class="card h-100 border-secondary">
+            <div class="card-header bg-light py-2 small fw-semibold">
+              {% bs_icon "person-badge" size="14" extra_classes="me-1" %} 1. Capi (Co.Ca.)
+            </div>
+            <div class="card-body">
+              <p class="small text-muted mb-2">
+                Importa i capi dal tracciato Co.Ca. (export da <strong>BuonaStrada</strong>).
+                Deve essere eseguito prima dell'import squadriglie per consentire l'abbinamento del Capo Reparto.
+              </p>
+              <form method="post" action="{% url 'siteconfig:lancia_import' 'coca' %}"
+                    enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="mb-2">
+                  <input type="file" name="file" accept=".csv" class="form-control form-control-sm" required>
+                </div>
+                <button class="btn btn-outline-secondary btn-sm w-100">
+                  {% bs_icon "upload" size="14" extra_classes="me-1" %} Importa Capi
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        {# --- Squadriglie iscritte --- #}
+        <div class="col-md-4">
+          <div class="card h-100 border-primary">
+            <div class="card-header bg-light py-2 small fw-semibold">
+              {% bs_icon "flag" size="14" extra_classes="me-1" %} 2. Squadriglie iscritte
+            </div>
+            <div class="card-body">
+              <p class="small text-muted mb-2">
+                Importa le squadriglie dal CSV dell'evento su <strong>BuonaCaccia</strong>.
+                Crea i diari e abbina il Capo Reparto per email. Le anomalie (Capo Reparto non trovato)
+                si recuperano con "Riprova anomalie" dopo aver completato l'import capi.
+              </p>
+              <form method="post" action="{% url 'siteconfig:lancia_import' 'squadriglie' %}"
+                    enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="mb-2">
+                  <select name="edizione_pk" class="form-select form-select-sm" required>
+                    <option value="">— Seleziona edizione —</option>
+                    {% for ed in edizioni_import %}
+                      <option value="{{ ed.pk }}">{{ ed }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="mb-2">
+                  <input type="file" name="file" accept=".csv" class="form-control form-control-sm" required>
+                </div>
+                <button class="btn btn-outline-primary btn-sm w-100">
+                  {% bs_icon "upload" size="14" extra_classes="me-1" %} Importa Squadriglie iscritte
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        {# --- Ragazzi (opzionale) --- #}
+        <div class="col-md-4">
+          <div class="card h-100 border-secondary border-opacity-50">
+            <div class="card-header bg-light py-2 small fw-semibold text-muted">
+              {% bs_icon "people" size="14" extra_classes="me-1" %} 3. Ragazzi <span class="badge bg-secondary fw-normal ms-1">opzionale</span>
+            </div>
+            <div class="card-body">
+              <p class="small text-muted mb-2">
+                Importa i ragazzi dal tracciato (export da <strong>BuonaStrada</strong>).
+                Arricchisce i dati dei Capi Squadriglia tramite codice socio. Se non eseguito,
+                i Capi Squadriglia potranno correggere i propri dati in autonomia dalla piattaforma.
+              </p>
+              <form method="post" action="{% url 'siteconfig:lancia_import' 'ragazzi' %}"
+                    enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="mb-2">
+                  <input type="file" name="file" accept=".csv" class="form-control form-control-sm" required>
+                </div>
+                <button class="btn btn-outline-secondary btn-sm w-100">
+                  {% bs_icon "upload" size="14" extra_classes="me-1" %} Importa Ragazzi
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+      </div>{# /row #}
+    </div>
+  </div>
+
+  {# ── Storico ─────────────────────────────────────────────────────────────── #}
+  <h2 class="h5 mb-3">Storico import</h2>
 
   <div class="table-responsive">
     <table class="table table-hover align-middle">
