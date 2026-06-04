@@ -58,7 +58,7 @@ services:
     profiles: ["mailpit"]
     environment:
       MP_MAX_MESSAGES: 500
-      MP_UI_WEB_PATH: /mailadmin
+      MP_WEBROOT: /mailadmin
     restart: unless-stopped
 
   nginx:
