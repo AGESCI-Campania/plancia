@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Errore del server — Plancia</title>
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+        crossorigin="anonymous">
+  <style>
+    :root { --ag-primary: #dc3545; }
+    body { min-height: 100vh; display: flex; flex-direction: column; }
+    .navbar-error {
+      background-color: #dc3545;
+      padding: .75rem 1rem;
+    }
+    .navbar-error .brand {
+      color: #fff;
+      font-weight: 600;
+      font-size: 1.1rem;
+      text-decoration: none;
+    }
+    main { flex: 1; display: flex; align-items: center; justify-content: center; }
+  </style>
+</head>
+<body class="bg-light">
+
+  <nav class="navbar-error d-flex align-items-center">
+    <a class="brand" href="/">Plancia</a>
+  </nav>
+
+  <main>
+    <div class="text-center py-5 px-3">
+      <div class="mb-3 text-danger" style="font-size:5rem;line-height:1">&#9888;</div>
+      <h1 class="display-4 fw-bold text-danger mb-2">500</h1>
+      <p class="lead mb-1">Errore interno del server</p>
+      <p class="text-muted mb-4">
+        Si è verificato un errore imprevisto. Il problema è stato registrato.<br>
+        Riprova tra qualche minuto o contatta l'amministratore.
+      </p>
+      <a href="/" class="btn btn-danger">Torna alla home</a>
+    </div>
+  </main>
+
+  <footer class="text-center text-muted small py-3">
+    Plancia — Guidoncini Verdi AGESCI Campania
+  </footer>
+
+</body>
+</html>
