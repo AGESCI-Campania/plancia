@@ -6,11 +6,18 @@ Fogli:
                  PostoAzione, EsitoSpecialita; stato → RELAZIONE_FINALE
   Risposte staff → RelazioneFinale; stato → INVIATO
 
+Opzione --importa-foto:
+  Legge le sottocartelle Drive (una per diario, formato
+  'Zona X_Gruppo_Reparto_NomeSquadriglia'), abbina i file ai moduli
+  usando i filename presenti negli URL dell'Excel, crea record Allegato.
+
 Uso:
   uv run python manage.py import_risposte_eg /percorso/file.xlsx
   uv run python manage.py import_risposte_eg /percorso/file.xlsx --dry-run
   uv run python manage.py import_risposte_eg /percorso/file.xlsx --solo-staff
   uv run python manage.py import_risposte_eg /percorso/file.xlsx --edizione 1
+  uv run python manage.py import_risposte_eg /percorso/file.xlsx \\
+    --importa-foto --foto-folder-id <DRIVE_FOLDER_ID> --foto-account <EMAIL>
 """
 from __future__ import annotations
 
@@ -96,6 +103,19 @@ def _primo_url(testo: str) -> str:
 # ---------------------------------------------------------------------------
 # Ricerca Diario
 # ---------------------------------------------------------------------------
+
+def _parse_drive_folder_name(nome: str) -> tuple[str, str, str, str] | None:
+    """Parsa 'Zona X_Gruppo_Reparto_Squadriglia' → (zona_core, gruppo, reparto, sq).
+
+    Split su '_' con maxsplit=3: zona (prima parte), gruppo, reparto, squadriglia.
+    """
+    parts = nome.split("_", 3)
+    if len(parts) != 4:
+        return None
+    zona_raw, gruppo, reparto, squadriglia = parts
+    zona_core = re.sub(r"^zona\s+", "", zona_raw.strip(), flags=re.IGNORECASE).strip()
+    return zona_core, gruppo.strip(), reparto.strip(), squadriglia.strip()
+
 
 def _normalizza_zona(zona: str) -> str:
     """Rimuove il prefisso 'Zona'/'ZONA' per il confronto."""
@@ -369,6 +389,18 @@ class Command(BaseCommand):
             "--dry-run", action="store_true",
             help="Stampa le operazioni senza salvare nulla.",
         )
+        parser.add_argument(
+            "--importa-foto", action="store_true",
+            help="Importa le foto da Google Drive (richiede --foto-folder-id e --foto-account).",
+        )
+        parser.add_argument(
+            "--foto-folder-id",
+            help="ID cartella Drive padre contenente le sottocartelle per diario.",
+        )
+        parser.add_argument(
+            "--foto-account",
+            help="Email account Google Drive (deve essere in DriveCredenziali).",
+        )
 
     def handle(self, *args, **options):
         import openpyxl
@@ -457,4 +489,181 @@ class Command(BaseCommand):
                 self.style.SUCCESS(f"  Risposte staff: {ok2} importate, {skip2} saltate, {err2} errori.")
             )
 
+        # --- Foto da Google Drive ---
+        if options["importa_foto"]:
+            if not options["foto_folder_id"] or not options["foto_account"]:
+                raise CommandError(
+                    "--importa-foto richiede --foto-folder-id e --foto-account."
+                )
+            self._importa_foto(
+                wb=wb,
+                edizione=edizione,
+                folder_id=options["foto_folder_id"],
+                account_email=options["foto_account"],
+                dry_run=dry_run,
+                verbosity=verbosity,
+            )
+
         self.stdout.write(self.style.SUCCESS("\nImport completato."))
+
+    # ------------------------------------------------------------------
+    # Import foto da Google Drive
+    # ------------------------------------------------------------------
+
+    def _importa_foto(self, wb, edizione, folder_id, account_email,
+                      dry_run, verbosity):
+        from apps.diaries.models import Allegato, StatoSync
+        from apps.storage_drive.models import DriveCredenziali
+        from apps.storage_drive.service import _build_drive_service
+
+        try:
+            cred = DriveCredenziali.objects.get(account_email=account_email)
+        except DriveCredenziali.DoesNotExist:
+            raise CommandError(
+                f"Account Drive '{account_email}' non trovato in DriveCredenziali. "
+                "Connetti prima l'account tramite /impostazioni/ o /edizioni/<pk>/modifica/."
+            ) from None
+
+        service = _build_drive_service(cred)
+
+        # 1. Costruisce la mappa filename → modulo dall'Excel
+        modulo_map = self._build_filename_modulo_map(wb)
+        self.stdout.write(
+            f"\n→ Foto Drive (cartella: {folder_id}, account: {account_email})…"
+        )
+
+        # 2. Lista tutte le sottocartelle nel folder padre
+        sottocartelle = self._lista_sottocartelle(service, folder_id)
+        self.stdout.write(f"  {len(sottocartelle)} sottocartelle trovate.")
+
+        ok = err = 0
+        for cartella in sottocartelle:
+            nome_cartella = cartella["name"]
+            parsed = _parse_drive_folder_name(nome_cartella)
+            if not parsed:
+                self.stdout.write(
+                    self.style.WARNING(f"  Cartella ignorata (formato non riconosciuto): {nome_cartella}")
+                )
+                continue
+
+            zona_core, gruppo, reparto, nome_sq = parsed
+            diario = _trova_diario(nome_sq, reparto, gruppo, zona_core, edizione)
+            if not diario:
+                err += 1
+                if verbosity >= 2:
+                    self.stdout.write(
+                        self.style.ERROR(f"  Diario non trovato per: {nome_cartella}")
+                    )
+                continue
+
+            # 3. Lista i file nella sottocartella
+            files = self._lista_file(service, cartella["id"])
+            importati = 0
+            for f in files:
+                filename = f["name"]
+                modulo = modulo_map.get(filename)
+                if not modulo:
+                    # Cerca per corrispondenza parziale (Jotform aggiunge prefissi)
+                    for k, v in modulo_map.items():
+                        if filename in k or k in filename:
+                            modulo = v
+                            break
+                if not modulo:
+                    modulo = "impresa_1"  # fallback
+
+                if dry_run:
+                    importati += 1
+                    continue
+
+                _, created = Allegato.objects.get_or_create(
+                    diario=diario,
+                    drive_file_id=f["id"],
+                    defaults={
+                        "modulo": modulo,
+                        "nome": filename,
+                        "mime": f.get("mimeType", ""),
+                        "dimensione": int(f.get("size", 0) or 0),
+                        "stato_sync": StatoSync.CARICATO,
+                        "caricato_da": None,
+                    },
+                )
+                if created:
+                    importati += 1
+
+            ok += 1
+            if verbosity >= 2:
+                dr = " (dry-run)" if dry_run else ""
+                self.stdout.write(f"  {nome_cartella}: {importati} file{dr}")
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"  Foto: {ok} cartelle elaborate, {err} non trovate."
+            )
+        )
+
+    def _build_filename_modulo_map(self, wb) -> dict[str, str]:
+        """Costruisce {filename → modulo} dagli URL foto dell'Excel."""
+        ws = wb["Risposte EG"]
+        mapping: dict[str, str] = {}
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            if not row[1]:
+                continue
+            for col_idx, modulo in [(29, "impresa_1"), (41, "impresa_2"), (46, "missione")]:
+                cell_val = row[col_idx - 1]
+                if not cell_val:
+                    continue
+                for url in str(cell_val).split("\n"):
+                    url = url.strip()
+                    if url.startswith("http"):
+                        filename = url.rstrip("/").split("/")[-1]
+                        if filename:
+                            mapping[filename] = modulo
+        return mapping
+
+    @staticmethod
+    def _lista_sottocartelle(service, folder_id: str) -> list[dict]:
+        """Lista ricorsiva delle sottocartelle (una pagina alla volta)."""
+        risultati = []
+        page_token = None
+        while True:
+            kwargs: dict = {
+                "q": (
+                    f"'{folder_id}' in parents "
+                    "and mimeType='application/vnd.google-apps.folder' "
+                    "and trashed=false"
+                ),
+                "pageSize": 500,
+                "fields": "nextPageToken, files(id, name)",
+            }
+            if page_token:
+                kwargs["pageToken"] = page_token
+            resp = service.files().list(**kwargs).execute()
+            risultati.extend(resp.get("files", []))
+            page_token = resp.get("nextPageToken")
+            if not page_token:
+                break
+        return risultati
+
+    @staticmethod
+    def _lista_file(service, folder_id: str) -> list[dict]:
+        """Lista i file (non cartelle) in una cartella Drive."""
+        risultati = []
+        page_token = None
+        while True:
+            kwargs: dict = {
+                "q": (
+                    f"'{folder_id}' in parents "
+                    "and mimeType!='application/vnd.google-apps.folder' "
+                    "and trashed=false"
+                ),
+                "pageSize": 200,
+                "fields": "nextPageToken, files(id, name, size, mimeType, webViewLink)",
+            }
+            if page_token:
+                kwargs["pageToken"] = page_token
+            resp = service.files().list(**kwargs).execute()
+            risultati.extend(resp.get("files", []))
+            page_token = resp.get("nextPageToken")
+            if not page_token:
+                break
+        return risultati
