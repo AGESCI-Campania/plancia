@@ -167,11 +167,12 @@ SOCIALACCOUNT_PROVIDERS = {
     "apple": {
         "APP": {
             "client_id": _APPLE_CLIENT_ID,
-            "secret": _APPLE_PRIVATE_KEY,
-            "key": _APPLE_KEY_ID,
-            "certificate_key": _APPLE_PRIVATE_KEY,
+            "secret": _APPLE_KEY_ID,       # KEY_ID — usato come `kid` nell'header JWT
+            "key": _APPLE_TEAM_ID,         # TEAM_ID — usato come `iss` nel JWT
+            "settings": {
+                "certificate_key": _APPLE_PRIVATE_KEY,  # chiave privata PEM
+            },
         },
-        "TEAM_ID": _APPLE_TEAM_ID,
     },
 }
 
