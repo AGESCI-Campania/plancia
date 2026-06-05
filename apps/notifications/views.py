@@ -326,15 +326,22 @@ class InviaInvitiEdizoneView(RuoloRequiredMixin, View):
 
 
 def _calcola_stato_inviti(diari) -> dict:
-    """Restituisce contatori aggregati per la pagina gestione inviti."""
+    """Restituisce contatori aggregati per la pagina gestione inviti.
+
+    I CRP vengono deduplicati: un Capo Reparto che gestisce N squadriglie
+    conta come 1 solo invito, aggregando gli inviti da tutti i suoi diari.
+    """
     from apps.notifications.models import StatoInvito
 
-    capi_totale = capi_inviati = capi_attivati = 0
     csq_totale = csq_inviati = csq_attivati = 0
+
+    # CRP: raccoglie TUTTI gli inviti per ogni CRP univoco (PK Socio → lista inviti)
+    crp_inviti: dict[int, list] = {}
 
     for diario in diari:
         inviti_diario = list(diario.inviti.all())
 
+        # CSQ: uno per diario — logica invariata
         csq_totale += 1
         inv_csq = [i for i in inviti_diario if i.ruolo_target == "csq"]
         if any(i.stato == StatoInvito.ATTIVATO for i in inv_csq):
@@ -342,13 +349,21 @@ def _calcola_stato_inviti(diari) -> dict:
         elif any(i.stato == StatoInvito.INVIATO for i in inv_csq):
             csq_inviati += 1
 
+        # CRP: aggrega per CRP univoco usando il PK del Socio
         if diario.crp:
-            capi_totale += 1
-            inv_crp = [i for i in inviti_diario if i.ruolo_target == "crp"]
-            if any(i.stato == StatoInvito.ATTIVATO for i in inv_crp):
-                capi_attivati += 1
-            elif any(i.stato == StatoInvito.INVIATO for i in inv_crp):
-                capi_inviati += 1
+            pk = diario.crp.pk
+            if pk not in crp_inviti:
+                crp_inviti[pk] = []
+            crp_inviti[pk].extend(i for i in inviti_diario if i.ruolo_target == "crp")
+
+    capi_totale = len(crp_inviti)
+    capi_attivati = 0
+    capi_inviati = 0
+    for inviti in crp_inviti.values():
+        if any(i.stato == StatoInvito.ATTIVATO for i in inviti):
+            capi_attivati += 1
+        elif any(i.stato == StatoInvito.INVIATO for i in inviti):
+            capi_inviati += 1
 
     return {
         "capi_totale": capi_totale,
