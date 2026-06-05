@@ -3,7 +3,12 @@ from django.forms import inlineformset_factory
 from tinymce.widgets import TinyMCE
 
 from apps.notifications.models import MailTemplate
-from apps.siteconfig.models import EmailProvider, FooterLink, Impostazioni, PaginaStatica
+from apps.siteconfig.models import (
+    EmailProvider,
+    FooterLink,
+    Impostazioni,
+    PaginaStatica,
+)
 
 _ctrl = {"class": "form-control"}
 _sel = {"class": "form-select"}
@@ -25,9 +30,10 @@ class ImpostazioniForm(forms.ModelForm):
         fields = [
             "titolo", "sottotitolo",
             "footer_testo",
-            "email_mode", "email_provider", "from_email",
+            "email_mode", "from_email",
+            "email_backend_standard", "email_backend_massivo",
             "smtp_host", "smtp_port", "smtp_user", "smtp_password", "smtp_use_tls",
-            "email_provider_api_key", "email_provider_webhook_secret",
+            "email_provider", "email_provider_api_key", "email_provider_webhook_secret",
             "manutenzione", "debug_toolbar", "debug_diagnostico",
         ]
         widgets = {
@@ -35,6 +41,8 @@ class ImpostazioniForm(forms.ModelForm):
             "sottotitolo": forms.TextInput(attrs=_ctrl),
             "footer_testo": _FOOTER_TINYMCE,
             "email_mode": forms.Select(attrs=_sel),
+            "email_backend_standard": forms.Select(attrs=_sel),
+            "email_backend_massivo": forms.Select(attrs=_sel),
             "email_provider": forms.Select(attrs=_sel),
             "from_email": forms.EmailInput(attrs=_ctrl),
             "smtp_host": forms.TextInput(attrs=_ctrl),

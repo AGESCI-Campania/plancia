@@ -333,3 +333,9 @@ GOOGLE_OAUTH_REDIRECT_URI = env.str(
     "GOOGLE_OAUTH_REDIRECT_URI",
     default="http://localhost:8000/drive/oauth/callback/",
 )
+
+# --- Gmail SMTP OAuth (scope https://mail.google.com/) ----------------------
+GOOGLE_GMAIL_SMTP_REDIRECT_URI = env.str(
+    "GOOGLE_GMAIL_SMTP_REDIRECT_URI",
+    default="http://localhost:8000/impostazioni/gmail-smtp/oauth/callback/",
+)

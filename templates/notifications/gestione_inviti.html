@@ -45,6 +45,13 @@
               <form method="post" action="{% url 'notifications:invia_inviti_edizione' %}">
                 {% csrf_token %}
                 <input type="hidden" name="tipo" value="capi">
+                <div class="mb-2">
+                  <select name="backend_tipo" class="form-select form-select-sm">
+                    <option value="massivo">Predefinito ({{ backend_massivo_label }})</option>
+                    <option value="smtp">SMTP</option>
+                    <option value="transazionale">Provider transazionale</option>
+                  </select>
+                </div>
                 <button class="btn btn-primary w-100"
                   {% if stato_inviti.capi_da_invitare == 0 %}disabled{% endif %}>
                   {% bs_icon "send" size="14" extra_classes="me-1" %}
@@ -88,6 +95,13 @@
               <form method="post" action="{% url 'notifications:invia_inviti_edizione' %}">
                 {% csrf_token %}
                 <input type="hidden" name="tipo" value="csq">
+                <div class="mb-2">
+                  <select name="backend_tipo" class="form-select form-select-sm">
+                    <option value="massivo">Predefinito ({{ backend_massivo_label }})</option>
+                    <option value="smtp">SMTP</option>
+                    <option value="transazionale">Provider transazionale</option>
+                  </select>
+                </div>
                 <button class="btn btn-success w-100"
                   {% if stato_inviti.csq_da_invitare == 0 %}disabled{% endif %}>
                   {% bs_icon "send" size="14" extra_classes="me-1" %}

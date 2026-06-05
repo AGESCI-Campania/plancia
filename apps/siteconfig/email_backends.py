@@ -1,16 +1,21 @@
 # apps/siteconfig/email_backends.py
-"""Backend email che rispetta Impostazioni.email_mode e Impostazioni.email_provider.
+"""Backend email che supporta SMTP, provider transazionali e Gmail OAuth2.
 
-Modalità (email_mode):
-- reale               -> invia via provider configurato (SMTP o transazionale)
-- simulato            -> NON invia: scrive ogni messaggio in logs/email/ (.eml)
-- simulato_piu_invio  -> scrive il log E invia
+Routing per tipo di invio:
+  standard  → email_backend_standard (default: SMTP)
+  massivo   → email_backend_massivo  (default: provider transazionale)
 
-Provider transazionali (email_provider != smtp):
-- Usa django-anymail con API key letta da DB (thread-safe con Gunicorn sync workers).
-- Supportati: Brevo, Mailgun, MailerSend, Postmark, SendGrid, SparkPost, Amazon SES.
+email_mode sovrascrive il routing:
+  MAILPIT           → entrambi i tipi vanno a Mailpit
+  SIMULATO          → scrive su file, non invia
+  SIMULATO_PIU_INVIO → scrive su file E invia via backend configurato
+  REALE             → usa il routing per tipo
 """
+from __future__ import annotations
+
+import base64
 import logging
+import smtplib
 
 from django.conf import settings
 from django.core.mail.backends.base import BaseEmailBackend
@@ -31,7 +36,6 @@ _PROVIDER_BACKEND = {
     "ses": "anymail.backends.amazon_ses.EmailBackend",
 }
 
-# Chiave nel dict ANYMAIL corrispondente all'API key del provider
 _PROVIDER_ANYMAIL_KEY = {
     "brevo": "BREVO_API_KEY",
     "mailgun": "MAILGUN_API_KEY",
@@ -39,10 +43,9 @@ _PROVIDER_ANYMAIL_KEY = {
     "postmark": "POSTMARK_SERVER_TOKEN",
     "sendgrid": "SENDGRID_API_KEY",
     "sparkpost": "SPARKPOST_API_KEY",
-    "ses": None,  # usa boto3/IAM
+    "ses": None,
 }
 
-# Chiave nel dict ANYMAIL corrispondente al webhook secret del provider
 _PROVIDER_WEBHOOK_KEY = {
     "brevo": "BREVO_WEBHOOK_SECRET",
     "mailgun": "MAILGUN_WEBHOOK_SIGNING_KEY",
@@ -53,7 +56,6 @@ _PROVIDER_WEBHOOK_KEY = {
     "ses": None,
 }
 
-# Modulo e classe per il webhook receiver di ciascun provider
 PROVIDER_WEBHOOK_VIEW = {
     "brevo": ("anymail.webhooks.brevo", "BrevoTrackingWebhookView"),
     "mailgun": ("anymail.webhooks.mailgun", "MailgunTrackingWebhookView"),
@@ -66,75 +68,227 @@ PROVIDER_WEBHOOK_VIEW = {
 
 
 def build_anymail_settings(imp) -> dict:
-    """Costruisce il dict ANYMAIL dalle impostazioni DB, partendo dai default in settings.py."""
+    """Costruisce il dict ANYMAIL dalle impostazioni DB."""
     provider = imp.email_provider
     result = dict(getattr(settings, "ANYMAIL", {}))
-
     api_key_setting = _PROVIDER_ANYMAIL_KEY.get(provider)
     if api_key_setting and imp.email_provider_api_key:
         result[api_key_setting] = imp.email_provider_api_key
-
     webhook_key_setting = _PROVIDER_WEBHOOK_KEY.get(provider)
     if webhook_key_setting and imp.email_provider_webhook_secret:
         result[webhook_key_setting] = imp.email_provider_webhook_secret
-
     return result
 
 
-class PlanciaEmailBackend(BaseEmailBackend):
-    def send_messages(self, email_messages):
-        # import locale per evitare problemi all'avvio/migrazioni
-        from apps.siteconfig.models import EmailMode, EmailProvider, Impostazioni
+# ---------------------------------------------------------------------------
+# Gmail OAuth2 SMTP
+# ---------------------------------------------------------------------------
+
+def _get_gmail_access_token(creds) -> str:
+    """Recupera o rinnova il token di accesso Gmail via OAuth2."""
+    from django.utils import timezone
+
+    if not creds.scaduto:
+        return creds.access_token
+
+    try:
+        from google.auth.transport.requests import Request
+        from google.oauth2.credentials import Credentials as GoogleCredentials
+    except ImportError as exc:
+        raise ImportError(
+            "google-auth è necessario per Gmail OAuth. "
+            "Esegui: uv add google-auth google-auth-oauthlib"
+        ) from exc
+
+    goog_creds = GoogleCredentials(
+        token=creds.access_token or None,
+        refresh_token=creds.refresh_token,
+        token_uri="https://oauth2.googleapis.com/token",
+        client_id=settings.GOOGLE_OAUTH_CLIENT_ID,
+        client_secret=settings.GOOGLE_OAUTH_CLIENT_SECRET,
+    )
+    goog_creds.refresh(Request())
+
+    creds.access_token = goog_creds.token
+    if goog_creds.expiry:
+        expires = goog_creds.expiry
+        expires = timezone.make_aware(expires) if expires.tzinfo is None else expires
+        creds.expires_at = expires
+    creds.save(update_fields=["access_token", "expires_at", "aggiornato_at"])
+    return creds.access_token
+
+
+class GmailOAuth2Backend(SmtpBackend):
+    """Backend SMTP Gmail con autenticazione XOAUTH2 (OAuth2).
+
+    Usa GOOGLE_OAUTH_CLIENT_ID/SECRET per rinnovare il token.
+    Richiede che Impostazioni.smtp_gmail_account sia valorizzato
+    e GmailSMTPCredenziali contenga il refresh_token.
+    """
+
+    def open(self):
+        if self.connection:
+            return False
+
+        from apps.siteconfig.models import GmailSMTPCredenziali, Impostazioni
 
         imp = Impostazioni.get()
-        sent = 0
-
-        if imp.email_mode in (EmailMode.SIMULATO, EmailMode.SIMULATO_PIU_INVIO):
-            fb = FileBackend(file_path=str(settings.EMAIL_FILE_PATH))
-            sent = fb.send_messages(email_messages)
-
-        if imp.email_mode == EmailMode.MAILPIT:
-            smtp = SmtpBackend(
-                host=settings.MAILPIT_SMTP_HOST,
-                port=settings.MAILPIT_SMTP_PORT,
-                use_tls=False,
-            )
-            sent = smtp.send_messages(email_messages)
-
-        elif imp.email_mode in (EmailMode.REALE, EmailMode.SIMULATO_PIU_INVIO):
-            if imp.email_provider == EmailProvider.SMTP:
-                smtp = SmtpBackend(
-                    host=imp.smtp_host or settings.EMAIL_HOST,
-                    port=imp.smtp_port or settings.EMAIL_PORT,
-                    username=imp.smtp_user or settings.EMAIL_HOST_USER,
-                    password=imp.smtp_password or settings.EMAIL_HOST_PASSWORD,
-                    use_tls=imp.smtp_use_tls,
-                )
-                sent = smtp.send_messages(email_messages)
-            else:
-                sent = self._send_via_anymail(email_messages, imp)
-
-        return sent
-
-    def _send_via_anymail(self, messages, imp):
-        """Invia via anymail con impostazioni lette da DB.
-
-        Usa override_settings come context manager: thread-safe con Gunicorn sync workers.
-        """
-        provider = imp.email_provider
-        backend_path = _PROVIDER_BACKEND.get(provider)
-        if not backend_path:
-            logger.error("Provider anymail non supportato: %s", provider)
-            return 0
-
-        anymail_settings = build_anymail_settings(imp)
         try:
-            with override_settings(ANYMAIL=anymail_settings):
-                backend_cls = import_string(backend_path)
+            creds = GmailSMTPCredenziali.objects.get(account_email=imp.smtp_gmail_account)
+        except GmailSMTPCredenziali.DoesNotExist:
+            raise ValueError(
+                "Credenziali Gmail OAuth non trovate. "
+                "Collega un account Gmail nelle impostazioni SMTP."
+            ) from None
+
+        access_token = _get_gmail_access_token(creds)
+
+        try:
+            conn = smtplib.SMTP("smtp.gmail.com", 587, timeout=self.timeout)
+            conn.ehlo()
+            conn.starttls()
+            conn.ehlo()
+            auth_string = f"user={creds.account_email}\1auth=Bearer {access_token}\1\1"
+            auth_b64 = base64.b64encode(auth_string.encode("ascii")).decode("ascii")
+            conn.auth("XOAUTH2", lambda challenge: auth_b64)
+            self.connection = conn
+            return True
+        except Exception:
+            if not self.fail_silently:
+                raise
+            return False
+
+
+# ---------------------------------------------------------------------------
+# Backend factory helpers
+# ---------------------------------------------------------------------------
+
+def _smtp_backend(imp, fail_silently: bool = False) -> BaseEmailBackend:
+    """Restituisce il backend SMTP configurato (password o Gmail OAuth)."""
+    if imp.smtp_use_gmail_oauth:
+        return GmailOAuth2Backend(fail_silently=fail_silently)
+    return SmtpBackend(
+        host=imp.smtp_host or settings.EMAIL_HOST,
+        port=imp.smtp_port or settings.EMAIL_PORT,
+        username=imp.smtp_user or settings.EMAIL_HOST_USER,
+        password=imp.smtp_password or settings.EMAIL_HOST_PASSWORD,
+        use_tls=imp.smtp_use_tls,
+        fail_silently=fail_silently,
+    )
+
+
+class _AnymailBackend(BaseEmailBackend):
+    """Wrapper anymail che applica l'override settings al momento dell'invio."""
+
+    def __init__(self, backend_path: str, anymail_settings: dict, fail_silently: bool = False):
+        self._backend_path = backend_path
+        self._anymail_settings = anymail_settings
+        super().__init__(fail_silently=fail_silently)
+
+    def send_messages(self, messages):
+        try:
+            with override_settings(ANYMAIL=self._anymail_settings):
+                backend_cls = import_string(self._backend_path)
                 backend = backend_cls(fail_silently=self.fail_silently)
                 return backend.send_messages(messages) or 0
         except Exception:
-            logger.exception("Errore invio anymail (provider=%s)", provider)
+            logger.exception("Errore invio anymail (%s)", self._backend_path)
             if not self.fail_silently:
                 raise
             return 0
+
+
+def _transazionale_backend(imp, fail_silently: bool = False) -> BaseEmailBackend:
+    """Restituisce il backend provider transazionale configurato."""
+    from apps.siteconfig.models import EmailProvider
+
+    if imp.email_provider == EmailProvider.SMTP:
+        logger.warning("email_backend=transazionale ma email_provider=smtp: fallback a SMTP")
+        return _smtp_backend(imp, fail_silently)
+
+    backend_path = _PROVIDER_BACKEND.get(imp.email_provider)
+    if not backend_path:
+        logger.error("Provider anymail non supportato: %s — fallback a SMTP", imp.email_provider)
+        return _smtp_backend(imp, fail_silently)
+
+    return _AnymailBackend(
+        backend_path=backend_path,
+        anymail_settings=build_anymail_settings(imp),
+        fail_silently=fail_silently,
+    )
+
+
+class _TeeBackend(BaseEmailBackend):
+    """Invia via più backend contemporaneamente (usato per SIMULATO_PIU_INVIO)."""
+
+    def __init__(self, backends: list, fail_silently: bool = False):
+        self._backends = backends
+        super().__init__(fail_silently=fail_silently)
+
+    def send_messages(self, messages):
+        sent = 0
+        for backend in self._backends:
+            try:
+                sent = max(sent, backend.send_messages(messages) or 0)
+            except Exception:
+                if not self.fail_silently:
+                    raise
+        return sent
+
+
+# ---------------------------------------------------------------------------
+# Routing pubblico
+# ---------------------------------------------------------------------------
+
+def get_connection_per_tipo(tipo: str = "standard", fail_silently: bool = False) -> BaseEmailBackend:
+    """Restituisce una connessione mail per il tipo di invio.
+
+    tipo: 'standard' | 'massivo'
+    Rispetta email_mode: MAILPIT e SIMULATO sovrascrivono entrambi i tipi.
+    """
+    from apps.siteconfig.models import BackendPosta, EmailMode, Impostazioni
+
+    imp = Impostazioni.get()
+
+    if imp.email_mode == EmailMode.SIMULATO:
+        return FileBackend(
+            file_path=str(settings.EMAIL_FILE_PATH),
+            fail_silently=fail_silently,
+        )
+
+    if imp.email_mode == EmailMode.MAILPIT:
+        return SmtpBackend(
+            host=getattr(settings, "MAILPIT_SMTP_HOST", "localhost"),
+            port=getattr(settings, "MAILPIT_SMTP_PORT", 1025),
+            use_tls=False,
+            fail_silently=fail_silently,
+        )
+
+    # REALE o SIMULATO_PIU_INVIO
+    backend_key = (
+        imp.email_backend_massivo if tipo == "massivo"
+        else imp.email_backend_standard
+    )
+    real = (
+        _transazionale_backend(imp, fail_silently)
+        if backend_key == BackendPosta.TRANSAZIONALE
+        else _smtp_backend(imp, fail_silently)
+    )
+
+    if imp.email_mode == EmailMode.SIMULATO_PIU_INVIO:
+        file_conn = FileBackend(file_path=str(settings.EMAIL_FILE_PATH), fail_silently=True)
+        return _TeeBackend([file_conn, real], fail_silently=fail_silently)
+
+    return real
+
+
+# ---------------------------------------------------------------------------
+# Backend globale (EMAIL_BACKEND) — usato da allauth, sistema, ecc.
+# ---------------------------------------------------------------------------
+
+class PlanciaEmailBackend(BaseEmailBackend):
+    """Backend globale: legge email_mode e instrada a SMTP o provider transazionale."""
+
+    def send_messages(self, email_messages):
+        conn = get_connection_per_tipo("standard", fail_silently=self.fail_silently)
+        return conn.send_messages(email_messages)

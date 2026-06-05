@@ -93,15 +93,19 @@
       <span class="fw-semibold">Posta elettronica</span>
     </div>
     <div class="card-body">
+      {# Modalità e routing #}
       <div class="row g-3 mb-3">
         {% include "siteconfig/_campo.html" with field=form.email_mode col="col-md-4" %}
-        {% include "siteconfig/_campo.html" with field=form.email_provider col="col-md-4" %}
         {% include "siteconfig/_campo.html" with field=form.from_email col="col-md-4" %}
       </div>
+      <div class="row g-3 mb-3">
+        {% include "siteconfig/_campo.html" with field=form.email_backend_standard col="col-md-6" %}
+        {% include "siteconfig/_campo.html" with field=form.email_backend_massivo col="col-md-6" %}
+      </div>
 
-      {# Sezione SMTP — visibile solo quando provider = smtp #}
-      <div id="email-smtp-section">
-        <p class="small fw-semibold text-muted mb-2 border-top pt-3">Configurazione SMTP</p>
+      {# ── SMTP ─────────────────────────────────────────────────────────── #}
+      <div class="border-top pt-3 mt-2 mb-3">
+        <p class="small fw-semibold text-muted mb-2">Backend SMTP</p>
         <div class="row g-3">
           {% include "siteconfig/_campo.html" with field=form.smtp_host col="col-md-7" %}
           {% include "siteconfig/_campo.html" with field=form.smtp_port col="col-md-2" %}
@@ -116,16 +120,55 @@
           {% include "siteconfig/_campo.html" with field=form.smtp_user col="col-md-6" %}
           {% include "siteconfig/_campo.html" with field=form.smtp_password col="col-md-6" %}
         </div>
+
+        {# Gmail OAuth SMTP #}
+        <div class="mt-3 p-3 bg-light rounded">
+          <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+            <div>
+              <strong class="small">Gmail OAuth2 (XOAUTH2)</strong>
+              <div class="text-muted small">
+                Sostituisce host/user/password con autenticazione OAuth per smtp.gmail.com.
+                {% if impostazioni.smtp_use_gmail_oauth and impostazioni.smtp_gmail_account %}
+                  <span class="badge bg-success ms-1">Attivo: {{ impostazioni.smtp_gmail_account }}</span>
+                {% else %}
+                  <span class="badge bg-secondary ms-1">Non attivo</span>
+                {% endif %}
+              </div>
+            </div>
+            <div class="d-flex gap-2">
+              {% if impostazioni.smtp_use_gmail_oauth and impostazioni.smtp_gmail_account %}
+                <a href="{% url 'siteconfig:gmail_smtp_oauth_init' %}"
+                   class="btn btn-outline-primary btn-sm">Cambia account</a>
+                <form method="post" action="{% url 'siteconfig:gmail_smtp_oauth_disconnect' %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-outline-danger btn-sm">Scollega</button>
+                </form>
+              {% else %}
+                <a href="{% url 'siteconfig:gmail_smtp_oauth_init' %}"
+                   class="btn btn-outline-primary btn-sm">
+                  {% bs_icon "google" size="14" extra_classes="me-1" %}Collega Gmail
+                </a>
+              {% endif %}
+            </div>
+          </div>
+          <div class="mt-2">
+            <small class="text-muted">
+              Aggiungi <code>{{ request.scheme }}://{{ request.get_host }}/impostazioni/gmail-smtp/oauth/callback/</code>
+              come URI di reindirizzamento autorizzato in Google Cloud Console (stesso client OAuth del Drive).
+            </small>
+          </div>
+        </div>
       </div>
 
-      {# Sezione provider transazionale — visibile solo quando provider != smtp #}
-      <div id="email-anymail-section">
-        <p class="small fw-semibold text-muted mb-2 border-top pt-3">
-          Provider transazionale
+      {# ── Provider transazionale ───────────────────────────────────────── #}
+      <div class="border-top pt-3 mt-2">
+        <p class="small fw-semibold text-muted mb-2">
+          Backend provider transazionale
           <span class="badge bg-info text-dark fw-normal ms-1">tracking bounce/errori</span>
         </p>
         <div class="row g-3">
-          {% include "siteconfig/_campo.html" with field=form.email_provider_api_key col="col-md-8" %}
+          {% include "siteconfig/_campo.html" with field=form.email_provider col="col-md-4" %}
+          {% include "siteconfig/_campo.html" with field=form.email_provider_api_key col="col-md-4" %}
           {% include "siteconfig/_campo.html" with field=form.email_provider_webhook_secret col="col-md-4" %}
         </div>
         <div class="mt-2">
@@ -133,27 +176,11 @@
             {% bs_icon "info-circle" size="13" extra_classes="me-1" %}
             URL webhook da configurare nel provider:
             <code>{{ request.scheme }}://{{ request.get_host }}/anymail/webhook/</code>
-            — vedi <a href="/docs/guide/email_provider.md" target="_blank">guida configurazione</a>.
           </small>
         </div>
       </div>
     </div>
   </div>
-
-  <script>
-  (function () {
-    const providerEl = document.getElementById("{{ form.email_provider.id_for_label }}");
-    const smtpSection = document.getElementById("email-smtp-section");
-    const anymailSection = document.getElementById("email-anymail-section");
-    function toggle() {
-      const isSMTP = providerEl.value === "smtp";
-      smtpSection.style.display = isSMTP ? "" : "none";
-      anymailSection.style.display = isSMTP ? "none" : "";
-    }
-    providerEl.addEventListener("change", toggle);
-    toggle();
-  })();
-  </script>
 
   {# ── 4. Stato e diagnostica ─────────────────────────────────────────── #}
   <div class="card mb-4 shadow-sm">

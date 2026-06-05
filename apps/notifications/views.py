@@ -155,14 +155,13 @@ class ReinvioInvitoView(RuoloRequiredMixin, View):
         invito = get_object_or_404(Invito, pk=pk)
 
         # CRP può reinviare solo gli inviti CSQ dei propri diari
-        if request.user.ruolo == Ruolo.CRP:
-            if (
-                not invito.diario
-                or invito.ruolo_target != Ruolo.CSQ
-                or invito.diario.crp != request.user.socio
-            ):
-                messages.error(request, "Non sei autorizzato a reinviare questo invito.")
-                return redirect(request.POST.get("next") or "diaries:list")
+        if request.user.ruolo == Ruolo.CRP and (
+            not invito.diario
+            or invito.ruolo_target != Ruolo.CSQ
+            or invito.diario.crp != request.user.socio
+        ):
+            messages.error(request, "Non sei autorizzato a reinviare questo invito.")
+            return redirect(request.POST.get("next") or "diaries:list")
 
         from apps.notifications.service import reinvia_invito
 
@@ -266,6 +265,10 @@ class GestioneInvitiView(RuoloRequiredMixin, View):
             ctx["diari"] = diari
             ctx["stato_inviti"] = _calcola_stato_inviti(diari)
 
+        from apps.siteconfig.models import BackendPosta, Impostazioni
+        imp = Impostazioni.get()
+        ctx["backend_massivo_label"] = BackendPosta(imp.email_backend_massivo).label
+
         return render(request, self.template_name, ctx)
 
 
@@ -291,14 +294,18 @@ class InviaInvitiEdizoneView(RuoloRequiredMixin, View):
             return redirect("notifications:gestione_inviti")
 
         tipo = request.POST.get("tipo")
+        backend_tipo = request.POST.get("backend_tipo", "massivo")
+        if backend_tipo not in ("massivo", "standard", "smtp", "transazionale"):
+            backend_tipo = "massivo"
+
         if tipo == "capi":
-            task_invia_inviti_capi_edizione.delay(edizione.pk)
+            task_invia_inviti_capi_edizione.delay(edizione.pk, backend_tipo=backend_tipo)
             messages.success(
                 request,
                 "Invio inviti ai Capi Reparto accodato. Riceveranno l'email entro pochi minuti.",
             )
         elif tipo == "csq":
-            task_invia_inviti_csq_edizione.delay(edizione.pk)
+            task_invia_inviti_csq_edizione.delay(edizione.pk, backend_tipo=backend_tipo)
             messages.success(
                 request,
                 "Invio inviti ai Capi Squadriglia accodato. "

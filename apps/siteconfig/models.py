@@ -21,6 +21,11 @@ class EmailProvider(models.TextChoices):
     SES = "ses", "Amazon SES"
 
 
+class BackendPosta(models.TextChoices):
+    SMTP = "smtp", "SMTP"
+    TRANSAZIONALE = "transazionale", "Provider transazionale"
+
+
 class TipoLink(models.TextChoices):
     SITO_WEB = "sito_web", "Sito web"
     EMAIL = "email", "Email"
@@ -63,6 +68,27 @@ class Impostazioni(models.Model):
     email_provider_webhook_secret = models.CharField(
         max_length=500, blank=True, verbose_name="webhook secret",
         help_text="Secret per verificare i webhook di tracking (bounce, consegna, ecc.).",
+    )
+    # Routing: quale backend usare per tipo di invio
+    email_backend_standard = models.CharField(
+        max_length=20, choices=BackendPosta.choices, default=BackendPosta.SMTP,
+        verbose_name="backend email standard",
+        help_text="Backend per email di sistema (reset password, MFA, notifiche singole).",
+    )
+    email_backend_massivo = models.CharField(
+        max_length=20, choices=BackendPosta.choices, default=BackendPosta.TRANSAZIONALE,
+        verbose_name="backend invii massivi",
+        help_text="Backend per inviti bulk (Capi Reparto e Capi Squadriglia).",
+    )
+    # Gmail OAuth per SMTP
+    smtp_use_gmail_oauth = models.BooleanField(
+        default=False,
+        verbose_name="usa Gmail OAuth2 per SMTP",
+        help_text="Se attivo, usa XOAUTH2 per smtp.gmail.com invece di username/password.",
+    )
+    smtp_gmail_account = models.EmailField(
+        blank=True,
+        verbose_name="account Gmail OAuth collegato",
     )
 
     # Footer
@@ -143,3 +169,27 @@ class FooterLink(models.Model):
 
     def __str__(self) -> str:
         return f"{self.get_tipo_display()} — {self.url}"
+
+
+class GmailSMTPCredenziali(models.Model):
+    """Credenziali OAuth2 per Gmail SMTP (XOAUTH2). Una riga per account."""
+
+    account_email = models.EmailField(unique=True, verbose_name="account Gmail")
+    access_token = models.CharField(max_length=2000, blank=True, verbose_name="access token")
+    refresh_token = models.CharField(max_length=2000, verbose_name="refresh token")
+    expires_at = models.DateTimeField(null=True, blank=True, verbose_name="scadenza token")
+    aggiornato_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Credenziali Gmail SMTP"
+        verbose_name_plural = "Credenziali Gmail SMTP"
+
+    def __str__(self) -> str:
+        return self.account_email
+
+    @property
+    def scaduto(self) -> bool:
+        from django.utils import timezone
+        if not self.expires_at:
+            return True
+        return timezone.now() >= self.expires_at

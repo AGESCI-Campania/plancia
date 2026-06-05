@@ -28,7 +28,7 @@ def _link_attivazione(token) -> str:
     return f"{base}{path}"
 
 
-def invia_invito(invito: Invito) -> bool:
+def invia_invito(invito: Invito, backend_tipo: str = "standard") -> bool:
     """Invia l'email di invito e aggiorna lo stato.
 
     Ritorna True se l'invio ha avuto successo.
@@ -68,6 +68,8 @@ def invia_invito(invito: Invito) -> bool:
         return False
 
     try:
+        from apps.siteconfig.email_backends import get_connection_per_tipo
+
         msg = _MailMessageClass(
             subject=oggetto,
             body=corpo,
@@ -75,9 +77,9 @@ def invia_invito(invito: Invito) -> bool:
             to=[email_dest],
         )
         msg.content_subtype = "html"
-        # metadata per il tracking delivery (anymail); ignorato da SMTP
         if hasattr(msg, "metadata"):
             msg.metadata = {"invito_pk": str(invito.pk)}
+        msg.connection = get_connection_per_tipo(backend_tipo)
         msg.send()
         return True
     except Exception:
@@ -161,7 +163,7 @@ def _invalida_inviti_precedenti(utente, ruolo_target: str) -> None:
     ).update(stato=StatoInvito.SCADUTO)
 
 
-def invia_inviti_capi_per_edizione(edizione) -> dict:
+def invia_inviti_capi_per_edizione(edizione, backend_tipo: str = "massivo") -> dict:
     """Crea e invia inviti a tutti i Capi Reparto dell'edizione che non hanno ancora un invito attivo.
 
     Restituisce contatori {inviati, saltati_gia_attivati, saltati_senza_email}.
@@ -202,7 +204,7 @@ def invia_inviti_capi_per_edizione(edizione) -> dict:
             diario=diario, utente=utente, ruolo_target="crp",
             tipo=TipoInvito.STANDARD,
         )
-        task_invia_invito.delay(invito.pk)
+        task_invia_invito.delay(invito.pk, backend_tipo=backend_tipo)
         inviati += 1
 
     return {
@@ -212,7 +214,7 @@ def invia_inviti_capi_per_edizione(edizione) -> dict:
     }
 
 
-def invia_inviti_csq_per_edizione(edizione) -> dict:
+def invia_inviti_csq_per_edizione(edizione, backend_tipo: str = "massivo") -> dict:
     """Crea inviti per tutti i Capi Squadriglia dell'edizione.
 
     Per ciascun Capo Reparto invia una email riepilogativa con la lista dei suoi
@@ -251,7 +253,7 @@ def invia_inviti_csq_per_edizione(edizione) -> dict:
 
         # Canale secondario: email diretta al CSQ
         if csq.email and not csq.email.endswith("@noemail.internal"):
-            task_invia_invito.delay(invito.pk)
+            task_invia_invito.delay(invito.pk, backend_tipo=backend_tipo)
             email_csq_inviate += 1
 
         # Accumula per email riepilogativa al CRP
@@ -272,6 +274,7 @@ def invia_inviti_csq_per_edizione(edizione) -> dict:
             crp=entry["crp"],
             diario_ref=entry["diario_ref"],
             squadriglie=entry["squadriglie"],
+            backend_tipo=backend_tipo,
         )
         if ok:
             email_crp_inviate += 1
@@ -283,7 +286,7 @@ def invia_inviti_csq_per_edizione(edizione) -> dict:
     }
 
 
-def _invia_riepilogo_csq_a_crp(crp, diario_ref, squadriglie: list) -> bool:
+def _invia_riepilogo_csq_a_crp(crp, diario_ref, squadriglie: list, backend_tipo: str = "massivo") -> bool:
     """Invia al CRP la email con la tabella dei suoi CSQ e i link di attivazione."""
     from django.template.loader import render_to_string
 
@@ -298,6 +301,8 @@ def _invia_riepilogo_csq_a_crp(crp, diario_ref, squadriglie: list) -> bool:
     })
 
     try:
+        from apps.siteconfig.email_backends import get_connection_per_tipo
+
         msg = _MailMessageClass(
             subject=f"{titolo} — Attivazione account Capi Squadriglia",
             body=corpo,
@@ -305,6 +310,7 @@ def _invia_riepilogo_csq_a_crp(crp, diario_ref, squadriglie: list) -> bool:
             to=[crp.email],
         )
         msg.content_subtype = "html"
+        msg.connection = get_connection_per_tipo(backend_tipo)
         msg.send()
         return True
     except Exception:

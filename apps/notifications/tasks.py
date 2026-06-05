@@ -4,7 +4,7 @@ from celery import shared_task
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
-def task_invia_invito(self, invito_pk: int) -> dict:
+def task_invia_invito(self, invito_pk: int, backend_tipo: str = "standard") -> dict:
     from apps.notifications.models import Invito
     from apps.notifications.service import invia_invito
 
@@ -13,7 +13,7 @@ def task_invia_invito(self, invito_pk: int) -> dict:
     except Invito.DoesNotExist:
         return {"ok": False, "error": "Invito non trovato"}
 
-    ok = invia_invito(invito)
+    ok = invia_invito(invito, backend_tipo=backend_tipo)
     if not ok:
         raise self.retry(exc=Exception("Invio fallito"))
     return {"ok": True, "invito_pk": invito_pk}
@@ -40,7 +40,7 @@ def task_invia_inviti_bulk(diario_pk: int, ruoli: list[str]) -> dict:
 
 
 @shared_task
-def task_invia_inviti_capi_edizione(edizione_pk: int) -> dict:
+def task_invia_inviti_capi_edizione(edizione_pk: int, backend_tipo: str = "massivo") -> dict:
     """Invia inviti a tutti i Capi Reparto dell'edizione."""
     from apps.editions.models import Edizione
     from apps.notifications.service import invia_inviti_capi_per_edizione
@@ -50,11 +50,11 @@ def task_invia_inviti_capi_edizione(edizione_pk: int) -> dict:
     except Edizione.DoesNotExist:
         return {"ok": False, "error": "Edizione non trovata"}
 
-    return {"ok": True, **invia_inviti_capi_per_edizione(edizione)}
+    return {"ok": True, **invia_inviti_capi_per_edizione(edizione, backend_tipo=backend_tipo)}
 
 
 @shared_task
-def task_invia_inviti_csq_edizione(edizione_pk: int) -> dict:
+def task_invia_inviti_csq_edizione(edizione_pk: int, backend_tipo: str = "massivo") -> dict:
     """Crea inviti CSQ, invia email ai CRP (riepilogativa) e ai CSQ (se hanno email)."""
     from apps.editions.models import Edizione
     from apps.notifications.service import invia_inviti_csq_per_edizione
@@ -64,4 +64,4 @@ def task_invia_inviti_csq_edizione(edizione_pk: int) -> dict:
     except Edizione.DoesNotExist:
         return {"ok": False, "error": "Edizione non trovata"}
 
-    return {"ok": True, **invia_inviti_csq_per_edizione(edizione)}
+    return {"ok": True, **invia_inviti_csq_per_edizione(edizione, backend_tipo=backend_tipo)}

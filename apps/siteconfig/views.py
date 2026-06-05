@@ -266,6 +266,144 @@ class MailTemplateDeleteView(RuoloRequiredMixin, View):
         return redirect("siteconfig:impostazioni")
 
 
+GMAIL_SMTP_SCOPES = [
+    "https://mail.google.com/",
+    "openid",
+    "https://www.googleapis.com/auth/userinfo.email",
+]
+
+
+class GmailSMTPOAuthInitView(RuoloRequiredMixin, View):
+    """Avvia il flusso OAuth Google per Gmail SMTP (scope mail.google.com)."""
+
+    ruoli_ammessi = (Ruolo.ADMIN, Ruolo.SEGRETERIA, Ruolo.INCARICATO_EG)
+
+    def get(self, request):
+        import base64
+        import hashlib
+        import secrets
+
+        from google_auth_oauthlib.flow import Flow
+
+        code_verifier = secrets.token_urlsafe(96)
+        code_challenge = (
+            base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest())
+            .decode()
+            .rstrip("=")
+        )
+
+        flow = Flow.from_client_config(
+            {
+                "web": {
+                    "client_id": settings.GOOGLE_OAUTH_CLIENT_ID,
+                    "client_secret": settings.GOOGLE_OAUTH_CLIENT_SECRET,
+                    "redirect_uris": [settings.GOOGLE_GMAIL_SMTP_REDIRECT_URI],
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                }
+            },
+            scopes=GMAIL_SMTP_SCOPES,
+            redirect_uri=settings.GOOGLE_GMAIL_SMTP_REDIRECT_URI,
+        )
+        auth_url, state = flow.authorization_url(
+            access_type="offline",
+            prompt="consent",
+            code_challenge=code_challenge,
+            code_challenge_method="S256",
+        )
+        request.session["gmail_smtp_oauth_state"] = state
+        request.session["gmail_smtp_oauth_code_verifier"] = code_verifier
+        return redirect(auth_url)
+
+
+class GmailSMTPOAuthCallbackView(View):
+    """Callback OAuth Gmail SMTP: scambia il codice e salva GmailSMTPCredenziali."""
+
+    def get(self, request):
+        import os
+
+        from django.utils import timezone
+        from google_auth_oauthlib.flow import Flow
+        from googleapiclient.discovery import build
+
+        from apps.siteconfig.models import GmailSMTPCredenziali, Impostazioni
+
+        state = request.session.pop("gmail_smtp_oauth_state", None)
+        code_verifier = request.session.pop("gmail_smtp_oauth_code_verifier", None)
+
+        if not state or state != request.GET.get("state"):
+            messages.error(request, "Sessione OAuth non valida. Riprova.")
+            return redirect("siteconfig:impostazioni")
+
+        os.environ.setdefault("OAUTHLIB_INSECURE_TRANSPORT", "1")
+
+        flow = Flow.from_client_config(
+            {
+                "web": {
+                    "client_id": settings.GOOGLE_OAUTH_CLIENT_ID,
+                    "client_secret": settings.GOOGLE_OAUTH_CLIENT_SECRET,
+                    "redirect_uris": [settings.GOOGLE_GMAIL_SMTP_REDIRECT_URI],
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                }
+            },
+            scopes=GMAIL_SMTP_SCOPES,
+            state=state,
+            redirect_uri=settings.GOOGLE_GMAIL_SMTP_REDIRECT_URI,
+        )
+        flow.fetch_token(
+            authorization_response=request.build_absolute_uri(),
+            code_verifier=code_verifier,
+        )
+        creds = flow.credentials
+
+        service = build("oauth2", "v2", credentials=creds)
+        email = service.userinfo().get().execute().get("email", "")
+
+        expires_at = None
+        if creds.expiry:
+            expires_at = (
+                timezone.make_aware(creds.expiry)
+                if creds.expiry.tzinfo is None
+                else creds.expiry
+            )
+
+        GmailSMTPCredenziali.objects.update_or_create(
+            account_email=email,
+            defaults={
+                "access_token": creds.token,
+                "refresh_token": creds.refresh_token or "",
+                "expires_at": expires_at,
+            },
+        )
+
+        imp = Impostazioni.get()
+        imp.smtp_gmail_account = email
+        imp.smtp_use_gmail_oauth = True
+        imp.save(update_fields=["smtp_gmail_account", "smtp_use_gmail_oauth", "aggiornato_at"])
+
+        messages.success(request, f"Account Gmail {email} collegato per SMTP OAuth.")
+        return redirect("siteconfig:impostazioni")
+
+
+class GmailSMTPOAuthDisconnectView(RuoloRequiredMixin, View):
+    """Scollega l'account Gmail OAuth e disabilita Gmail SMTP."""
+
+    ruoli_ammessi = (Ruolo.ADMIN, Ruolo.SEGRETERIA, Ruolo.INCARICATO_EG)
+
+    def post(self, request):
+        from apps.siteconfig.models import GmailSMTPCredenziali, Impostazioni
+
+        imp = Impostazioni.get()
+        if imp.smtp_gmail_account:
+            GmailSMTPCredenziali.objects.filter(account_email=imp.smtp_gmail_account).delete()
+        imp.smtp_use_gmail_oauth = False
+        imp.smtp_gmail_account = ""
+        imp.save(update_fields=["smtp_use_gmail_oauth", "smtp_gmail_account", "aggiornato_at"])
+        messages.success(request, "Account Gmail scollegato.")
+        return redirect("siteconfig:impostazioni")
+
+
 class PaginaStaticaPublicView(View):
     """Pagina pubblica (privacy / termini). Non richiede autenticazione."""
 
