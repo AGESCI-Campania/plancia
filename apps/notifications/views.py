@@ -134,6 +134,27 @@ class AttivazoneInvitoView(View):
     def _attiva_e_login(self, request, invito: Invito):
         invito.attiva()
         utente = invito.utente
+
+        # Assicura che l'utente abbia una Nomina per il ruolo dell'invito.
+        # Necessario quando l'utente esisteva già con un ruolo diverso (es. Admin
+        # che è anche Capo Reparto): _attiva_e_login è l'unico punto di attivazione.
+        from apps.accounts.models import Nomina
+        edizione = invito.diario.edizione if invito.diario else None
+        if not Nomina.objects.filter(utente=utente, ruolo=invito.ruolo_target, attiva=True).exists():
+            aveva_ruoli = Nomina.objects.filter(utente=utente, attiva=True).exists()
+            Nomina.objects.create(
+                utente=utente,
+                socio=getattr(utente, "socio", None),
+                ruolo=invito.ruolo_target,
+                nominato_da=None,
+                edizione=edizione,
+                attiva=True,
+            )
+            # Solo se è il primo ruolo attivo, imposta ruolo attivo sull'utente
+            if not aveva_ruoli:
+                utente.ruolo = invito.ruolo_target
+                utente.save(update_fields=["ruolo"])
+
         utente.backend = "django.contrib.auth.backends.ModelBackend"
         login(request, utente)
         messages.success(request, f"Benvenuto/a, {utente.get_full_name() or utente.email}!")
