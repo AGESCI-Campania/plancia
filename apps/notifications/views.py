@@ -249,20 +249,34 @@ class GestioneInvitiView(RuoloRequiredMixin, View):
                 .prefetch_related("inviti")
                 .order_by("squadriglia__reparto__nome", "squadriglia__nome")
             )
-            # Precalcola l'ultimo invito per ruolo su ogni diario (usa la prefetch).
+            from django.utils import timezone
+
+            _epoch = timezone.datetime.min.replace(tzinfo=timezone.utc)
+
+            def _key(inv):
+                return inv.inviato_at or _epoch
+
+            # Costruisce mapping CRP univoco → miglior invito (da tutti i diari).
+            # Un CRP con N squadriglie ha l'invito su un solo diario: gli altri
+            # devono ereditarlo per mostrare lo stato corretto.
+            crp_invite_map: dict[int, object] = {}
             for d in diari:
-                from django.utils import timezone
-                inviti = sorted(
-                    d.inviti.all(),
-                    key=lambda x: x.inviato_at or timezone.datetime.min.replace(tzinfo=timezone.utc),
-                    reverse=True,
-                )
+                if d.crp:
+                    for inv in d.inviti.all():
+                        if inv.ruolo_target == Ruolo.CRP:
+                            pk = d.crp.pk
+                            existing = crp_invite_map.get(pk)
+                            if existing is None or _key(inv) > _key(existing):
+                                crp_invite_map[pk] = inv
+
+            # Assegna l'ultimo invito a ogni diario usando la prefetch per CSQ
+            # e il mapping condiviso per CRP.
+            for d in diari:
+                inviti = sorted(d.inviti.all(), key=_key, reverse=True)
                 d.ultimo_invito_csq = next(
                     (inv for inv in inviti if inv.ruolo_target == Ruolo.CSQ), None
                 )
-                d.ultimo_invito_crp = next(
-                    (inv for inv in inviti if inv.ruolo_target == Ruolo.CRP), None
-                )
+                d.ultimo_invito_crp = crp_invite_map.get(d.crp.pk) if d.crp else None
             ctx["diari"] = diari
             ctx["stato_inviti"] = _calcola_stato_inviti(diari)
             ctx["zone"] = sorted({d.squadriglia.reparto.gruppo.zona.nome for d in diari})
