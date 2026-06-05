@@ -288,12 +288,20 @@ valutazioni; permessi object-level rigorosi. Mai esporre esiti non pubblicati. V
 
 Il container `web` usa `deploy/entrypoint.sh` come `ENTRYPOINT`: esegue `manage.py migrate --noinput` prima di avviare gunicorn. Le migrazioni vengono quindi applicate automaticamente ad ogni riavvio/rebuild del container.
 
-Flusso deploy standard in produzione:
+Flusso deploy standard in produzione (dopo ogni `git pull` con modifiche al codice):
 ```bash
 git pull
-sudo systemctl restart plancia   # rebuild + migrate + gunicorn
+sudo systemctl reload plancia    # build nuova immagine + up -d + migrate automatico
 ```
-`systemctl reload plancia` esegue solo `docker compose build + restart` (senza migrate), da usare solo per reload di configurazione nginx/Celery.
+**Distinzione importante**:
+- `systemctl reload` → `docker compose build + up -d` → **ricostruisce l'immagine** con il nuovo codice e ricrea i container; le migrazioni girano nell'entrypoint. Usare per ogni deploy.
+- `systemctl restart` → `docker compose down + up -d` senza rebuild → riavvia i container con la **vecchia immagine**; utile solo per riavvii di emergenza senza modifiche al codice.
+
+Se il file `/etc/systemd/system/plancia.service` è ancora quello vecchio (con `restart` in ExecReload), aggiornarlo da `deploy/plancia.service.tpl` con:
+```bash
+sudo cp deploy/plancia.service /etc/systemd/system/plancia.service
+sudo systemctl daemon-reload
+```
 
 ## Backup
 `deploy/backup.sh` (cron) fa `pg_dump` dal container + gzip, tar di media/log, retention e notifica.
