@@ -123,6 +123,12 @@ docker compose --env-file .env.prod up -d web
 Le migrazioni vengono applicate automaticamente all'avvio del container (`deploy/entrypoint.sh`).
 `systemctl restart` riavvia i container **senza** rebuild: usare solo per riavvii di emergenza.
 
+**Variabili d'ambiente opzionali** da aggiungere a `.env.prod` per le integrazioni Google:
+```bash
+# Gmail SMTP OAuth2 (se si usa Gmail come backend SMTP)
+GOOGLE_GMAIL_SMTP_REDIRECT_URI=https://tuo-dominio.org/impostazioni/gmail-smtp/oauth/callback/
+```
+
 **Diagnostica:**
 ```bash
 tail -f logs/plancia.log                        # log Django (errori 500, warning)
