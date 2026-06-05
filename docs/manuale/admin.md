@@ -189,6 +189,47 @@ di prova da un diario completato e controllando che compaia nella cartella Drive
 
 ---
 
+## Configurazione email: dual-backend e Gmail OAuth2 SMTP
+
+Plancia supporta due backend email indipendenti: SMTP (anche Gmail via OAuth2) e provider
+transazionale (Brevo, Mailgun, ecc.). I due backend vengono usati automaticamente in base
+al tipo di invio, oppure puoi sceglierli manualmente prima di ogni invio bulk.
+
+Guida completa: **[`docs/guide/email_provider.md`](../guide/email_provider.md)**
+
+### Routing automatico
+
+| Tipo di invio | Backend predefinito |
+|---|---|
+| Email di sistema (password reset, MFA, notifiche) | SMTP |
+| Inviti bulk Capi Reparto / Capi Squadriglia | Provider transazionale |
+
+Modificabile in **Impostazioni → Posta elettronica** → campi *Backend email standard* e *Backend invii massivi*.
+
+### Gmail OAuth2 SMTP
+
+Se usi Gmail come SMTP, configura l'autenticazione OAuth2 invece di username e password.
+
+**Setup rapido:**
+
+1. Nelle credenziali OAuth del tuo progetto Google Cloud (stesse usate per il Drive),
+   aggiungi il redirect URI:
+   `https://plancia.agescicampania.org/impostazioni/gmail-smtp/oauth/callback/`
+
+2. In `.env.prod` aggiungi:
+   ```bash
+   GOOGLE_GMAIL_SMTP_REDIRECT_URI=https://plancia.agescicampania.org/impostazioni/gmail-smtp/oauth/callback/
+   ```
+
+3. In **Impostazioni → Posta elettronica → Backend SMTP** → clicca **Collega Gmail**
+   → autorizza l'account Google da cui vuoi inviare.
+
+Il token di accesso viene rinnovato automaticamente. Puoi scollegare l'account in qualsiasi momento.
+
+> Vedi la guida completa per i dettagli su Gmail API, verifica dell'app e revoca.
+
+---
+
 ## Archiviazione di un'edizione
 
 Al termine dell'edizione:

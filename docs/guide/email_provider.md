@@ -1,19 +1,41 @@
 # Configurazione provider email
 
-Plancia supporta due modalità di invio email, configurabili da **Impostazioni → Posta elettronica**:
+Plancia supporta **due backend email indipendenti** configurabili in **Impostazioni → Posta elettronica**:
 
-| Modalità | Provider | Tracking bounce/errori |
+| Backend | Uso consigliato | Tracking bounce |
 |---|---|---|
-| **SMTP tradizionale** | Qualsiasi server SMTP | No |
-| **Provider transazionale** | Brevo, Mailgun, MailerSend, Postmark, SendGrid, SparkPost, Amazon SES | Sì |
+| **SMTP** (normale o Gmail OAuth2) | Email di sistema, inviti singoli | No |
+| **Provider transazionale** (Brevo, Mailgun, ecc.) | Inviti bulk CRP/CSQ | Sì |
 
-La scelta del provider avviene in **Impostazioni → Posta elettronica → Provider email**.
+I due backend possono essere attivi contemporaneamente e vengono selezionati automaticamente
+in base al **tipo di invio** (vedi sezione Routing).
 
 ---
 
-## SMTP tradizionale
+## Routing per tipo di invio
 
-Seleziona **SMTP tradizionale** e compila i campi:
+In **Impostazioni → Posta elettronica** sono presenti due campi di routing:
+
+| Campo | Default | Quando viene usato |
+|---|---|---|
+| **Backend email standard** | SMTP | Reset password, MFA, inviti singoli, notifiche |
+| **Backend invii massivi** | Provider transazionale | Inviti bulk Capi Reparto e Capi Squadriglia |
+
+Nella pagina **Gestione Inviti**, prima di avviare un invio bulk, è possibile **sovrascrivere** il
+backend predefinito selezionando esplicitamente SMTP o il provider transazionale.
+
+> La **Modalità email** (Simulato / Mailpit / Invio reale) sovrascrive entrambi i backend:
+> - *Simulato* → tutti i messaggi vanno su file, nessuno viene inviato
+> - *Mailpit* → tutti i messaggi vengono intercettati da Mailpit
+> - *Invio reale* → usa i backend configurati con il routing
+
+---
+
+## Backend SMTP
+
+### SMTP classico (username + password)
+
+Seleziona **SMTP** come backend e compila i campi:
 
 | Campo | Descrizione |
 |---|---|
@@ -21,9 +43,60 @@ Seleziona **SMTP tradizionale** e compila i campi:
 | SMTP porta | Di solito `587` (STARTTLS) o `465` (SSL) |
 | SMTP utente | Username dell'account SMTP |
 | SMTP password | Password o App Password |
-| Usa TLS | Abilitato per STARTTLS, disabilitato per connessione plain |
+| Usa TLS | Abilitato per STARTTLS |
 
-Nessuna configurazione aggiuntiva sul server richiesta.
+### Gmail OAuth2 SMTP (consigliato per Gmail)
+
+Google richiede OAuth2 per l'accesso SMTP a Gmail senza App Password. Plancia supporta
+l'autenticazione **XOAUTH2** su `smtp.gmail.com:587`.
+
+#### Passo 1 — Abilita Gmail API in Google Cloud Console
+
+1. Vai su [console.cloud.google.com](https://console.cloud.google.com) → seleziona
+   il progetto già usato per il Drive OAuth.
+2. **API e servizi → Libreria** → cerca **Gmail API** → **Abilita**.
+
+#### Passo 2 — Aggiungi il redirect URI alle credenziali OAuth
+
+Nelle stesse credenziali OAuth usate per il Drive (`GOOGLE_OAUTH_CLIENT_ID`):
+
+1. **API e servizi → Credenziali** → clicca sull'ID client OAuth esistente.
+2. Aggiungi in **URI di reindirizzamento autorizzati**:
+   - Dev: `http://localhost:8000/impostazioni/gmail-smtp/oauth/callback/`
+   - Produzione: `https://plancia.agescicampania.org/impostazioni/gmail-smtp/oauth/callback/`
+3. Salva.
+
+#### Passo 3 — Aggiungi la variabile d'ambiente
+
+In `.env.prod` aggiungi:
+```bash
+GOOGLE_GMAIL_SMTP_REDIRECT_URI=https://plancia.agescicampania.org/impostazioni/gmail-smtp/oauth/callback/
+```
+
+In `.env.dev`:
+```bash
+GOOGLE_GMAIL_SMTP_REDIRECT_URI=http://localhost:8000/impostazioni/gmail-smtp/oauth/callback/
+```
+
+#### Passo 4 — Collega l'account Gmail
+
+1. Vai su **Impostazioni → Posta elettronica → Backend SMTP**.
+2. Clicca **Collega Gmail**.
+3. Accedi con l'account Gmail da cui vuoi inviare le email (es. `noreply@agescicampania.org`).
+4. Autorizza l'accesso — Plancia salva il refresh token e non richiede più la password.
+5. Il badge **Attivo: nome@gmail.com** conferma il collegamento.
+
+> **Rinnovo automatico del token**: il token di accesso dura circa 1 ora. Plancia lo rinnova
+> automaticamente prima dell'invio usando il refresh token. Non è necessaria nessuna azione manuale.
+
+> **Revoca**: se revochi l'accesso da [myaccount.google.com/permissions](https://myaccount.google.com/permissions),
+> clicca **Scollega** in Impostazioni e ripeti il collegamento.
+
+#### Nota sulle verifiche Google
+
+Se il progetto Google Cloud non è in produzione verificata, potresti vedere un avviso
+"App non verificata" durante il collegamento. Puoi procedere cliccando **Avanzate → Vai a Plancia**.
+Per rimuovere l'avviso, completa il processo di verifica dell'app in Google Cloud Console.
 
 ---
 
@@ -148,17 +221,15 @@ In caso di **Bounce** o **Errore**, il dettaglio è visibile passando il mouse s
 
 ## Modalità di invio (email_mode)
 
-Il campo **Modalità email** in Impostazioni è indipendente dal provider:
+Il campo **Modalità email** in Impostazioni è indipendente dal provider e sovrascrive
+il routing per tipo:
 
 | Modalità | Comportamento |
 |---|---|
 | Simulato | Non invia: scrive i messaggi in `logs/email/` (file `.eml`) |
-| Invio reale | Invia via provider configurato |
-| Simulato + invio reale | Fa entrambe le cose (utile per il debug) |
-| Mailpit (debug) | Invia a Mailpit locale, visibile su `/mailadmin/` (solo staff) |
-
-La modalità **Mailpit** è pensata per il debug in produzione: tutte le email vengono intercettate
-da Mailpit senza raggiungere i destinatari reali. Vedi la sezione successiva.
+| Invio reale | Usa i backend configurati con il routing per tipo |
+| Simulato + invio reale | Scrive su file E invia via backend configurato |
+| Mailpit (debug) | Intercetta tutto su Mailpit locale (`/mailadmin/`, solo staff) |
 
 ---
 
@@ -173,4 +244,4 @@ Per abilitarlo:
 3. Quando hai finito il debug, torna alla modalità **Invio reale**.
 
 > La web UI `/mailadmin/` è protetta dalla sessione Django: deve essere loggato un utente con
-> accesso staff (`is_staff=True`). Non è accessibile pubblicamente.
+> ruolo Admin, Segreteria o Incaricato EG. Non è accessibile pubblicamente.
