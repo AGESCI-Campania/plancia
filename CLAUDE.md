@@ -284,6 +284,17 @@ valutazioni; permessi object-level rigorosi. Mai esporre esiti non pubblicati. V
   **email**; le righe senza match vanno `da_riconciliare` e si correggono dalla **schermata di
   riconciliazione manuale** (accesso Admin/IABR/Segreteria) con autocompletamento Socio(capo).
 
+## Deploy e migrazioni
+
+Il container `web` usa `deploy/entrypoint.sh` come `ENTRYPOINT`: esegue `manage.py migrate --noinput` prima di avviare gunicorn. Le migrazioni vengono quindi applicate automaticamente ad ogni riavvio/rebuild del container.
+
+Flusso deploy standard in produzione:
+```bash
+git pull
+sudo systemctl restart plancia   # rebuild + migrate + gunicorn
+```
+`systemctl reload plancia` esegue solo `docker compose build + restart` (senza migrate), da usare solo per reload di configurazione nginx/Celery.
+
 ## Backup
 `deploy/backup.sh` (cron) fa `pg_dump` dal container + gzip, tar di media/log, retention e notifica.
 Pianificazione in `deploy/crontab.example`. Non reintrodurre la stessa logica in Celery se non
