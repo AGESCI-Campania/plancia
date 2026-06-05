@@ -1,16 +1,14 @@
 # apps/editions/views.py
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.exceptions import PermissionDenied
+from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DetailView, ListView, TemplateView, UpdateView, View
 
-from django.db.models import Count
-
 from apps.accounts.mixins import StaffPlanciaRequiredMixin
 from apps.editions.forms import DilazioneForm, EdizioneForm
-from apps.editions.models import Dilazione, Edizione, StatoEdizione
+from apps.editions.models import Edizione, StatoEdizione
 
 _STATO_COLORE = {
     "in_compilazione": "info",
@@ -58,11 +56,20 @@ class EdizioneDetailView(LoginRequiredMixin, DetailView):
         ctx = super().get_context_data(**kwargs)
         user = self.request.user
         edizione = self.object
-        ctx["diari"] = self._diari_visibili(edizione, user)
+        diari = list(self._diari_visibili(edizione, user))
+        ctx["diari"] = diari
         ctx["dilazione_form"] = DilazioneForm()
         ctx["puo_gestire"] = user.is_staff_plancia or user.is_superuser
         if user.is_staff_plancia or user.is_superuser:
             ctx["stats_diari"] = self._stats_diari(edizione)
+        # Valori unici per i filtri (solo per chi vede più di un diario)
+        ctx["zone"] = sorted({d.squadriglia.reparto.gruppo.zona.nome for d in diari})
+        ctx["gruppi"] = sorted({d.squadriglia.reparto.gruppo.nome for d in diari})
+        ctx["specialita_list"] = sorted({
+            d.anagrafica.specialita
+            for d in diari
+            if hasattr(d, "anagrafica") and d.anagrafica.specialita
+        })
         return ctx
 
     def _stats_diari(self, edizione):
@@ -82,7 +89,10 @@ class EdizioneDetailView(LoginRequiredMixin, DetailView):
         return {"per_stato": per_stato, "totale": totale}
 
     def _diari_visibili(self, edizione, user):
-        qs = edizione.diari.select_related("squadriglia", "csq", "crp")
+        qs = edizione.diari.select_related(
+            "squadriglia__reparto__gruppo__zona",
+            "csq", "crp", "anagrafica",
+        )
         if user.is_staff_plancia or user.is_superuser:
             return qs
         if user.ruolo == "pgv":

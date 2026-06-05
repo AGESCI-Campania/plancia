@@ -251,9 +251,10 @@ class GestioneInvitiView(RuoloRequiredMixin, View):
             )
             # Precalcola l'ultimo invito per ruolo su ogni diario (usa la prefetch).
             for d in diari:
+                from django.utils import timezone
                 inviti = sorted(
                     d.inviti.all(),
-                    key=lambda x: x.inviato_at,
+                    key=lambda x: x.inviato_at or timezone.datetime.min.replace(tzinfo=timezone.utc),
                     reverse=True,
                 )
                 d.ultimo_invito_csq = next(

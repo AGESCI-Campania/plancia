@@ -110,26 +110,95 @@
 {% endif %}
 
 <!-- Lista diari -->
-<h4 class="mb-3">Diari di bordo</h4>
+<h4 class="mb-2">Diari di bordo</h4>
+
+{# Barra filtri #}
+{% if diari %}
+<div class="row g-2 mb-3 align-items-end">
+  <div class="col-sm-4">
+    <label class="form-label small fw-semibold mb-1">Cerca Capo Reparto / Capo Squadriglia</label>
+    <div class="input-group input-group-sm">
+      {% bs_icon "search" size="13" %}
+      <input type="search" id="diari-search" class="form-control"
+             placeholder="Cognome o nome…" autocomplete="off">
+    </div>
+  </div>
+  <div class="col-sm-2">
+    <label class="form-label small fw-semibold mb-1">Zona</label>
+    <select id="diari-zona" class="form-select form-select-sm">
+      <option value="">— Tutte —</option>
+      {% for z in zone %}<option value="{{ z }}">{{ z }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-sm-2">
+    <label class="form-label small fw-semibold mb-1">Gruppo</label>
+    <select id="diari-gruppo" class="form-select form-select-sm">
+      <option value="">— Tutti —</option>
+      {% for g in gruppi %}<option value="{{ g }}">{{ g }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-sm-2">
+    <label class="form-label small fw-semibold mb-1">Specialità</label>
+    <select id="diari-specialita" class="form-select form-select-sm">
+      <option value="">— Tutte —</option>
+      {% for s in specialita_list %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-sm-2">
+    <button id="diari-reset" class="btn btn-outline-secondary btn-sm w-100">
+      {% bs_icon "x-circle" size="13" extra_classes="me-1" %}Reset
+    </button>
+  </div>
+</div>
+<div id="diari-nessun-risultato" class="alert alert-info d-none py-2">
+  Nessuna riga corrisponde ai filtri selezionati.
+</div>
+{% endif %}
+
 {% if diari %}
   <div class="table-responsive">
-    <table class="table table-hover align-middle">
+    <table id="diari-table" class="table table-hover align-middle">
       <thead class="table-light">
         <tr>
-          <th>Squadriglia</th>
-          <th>Reparto</th>
+          <th class="sortable" data-col="0" style="cursor:pointer;white-space:nowrap">
+            Squadriglia {% bs_icon "chevron-expand" size="12" extra_classes="text-muted ms-1" %}
+          </th>
+          <th class="sortable" data-col="1" style="cursor:pointer;white-space:nowrap">
+            Reparto {% bs_icon "chevron-expand" size="12" extra_classes="text-muted ms-1" %}
+          </th>
           <th>Tipo</th>
-          <th>Stato</th>
-          <th>Capo Squadriglia</th>
-          <th>Capo Reparto</th>
+          <th class="sortable" data-col="3" style="cursor:pointer;white-space:nowrap">
+            Stato {% bs_icon "chevron-expand" size="12" extra_classes="text-muted ms-1" %}
+          </th>
+          <th class="sortable" data-col="4" style="cursor:pointer;white-space:nowrap">
+            Capo Squadriglia {% bs_icon "chevron-expand" size="12" extra_classes="text-muted ms-1" %}
+          </th>
+          <th class="sortable" data-col="5" style="cursor:pointer;white-space:nowrap">
+            Capo Reparto {% bs_icon "chevron-expand" size="12" extra_classes="text-muted ms-1" %}
+          </th>
           <th></th>
         </tr>
       </thead>
       <tbody>
         {% for d in diari %}
-          <tr>
-            <td>{{ d.squadriglia.nome }}</td>
-            <td>{{ d.squadriglia.reparto }}</td>
+          <tr data-zona="{{ d.squadriglia.reparto.gruppo.zona.nome }}"
+              data-gruppo="{{ d.squadriglia.reparto.gruppo.nome }}"
+              data-specialita="{% if d.anagrafica.specialita %}{{ d.anagrafica.specialita }}{% endif %}"
+              data-crp="{% if d.crp %}{{ d.crp.cognome }} {{ d.crp.nome }}{% endif %}"
+              data-csq="{% if d.csq %}{{ d.csq.cognome }} {{ d.csq.nome }}{% endif %}">
+            <td>
+              {{ d.squadriglia.nome }}
+              {% if d.anagrafica.specialita %}
+                <br><small class="text-muted">{{ d.anagrafica.specialita }}</small>
+              {% endif %}
+            </td>
+            <td>
+              {{ d.squadriglia.reparto.nome }}
+              <br><small class="text-muted">
+                {{ d.squadriglia.reparto.gruppo.zona.nome }} ·
+                {{ d.squadriglia.reparto.gruppo.nome }}
+              </small>
+            </td>
             <td><span class="badge bg-light text-dark">{{ d.get_tipo_display }}</span></td>
             <td>
               <span class="badge
@@ -188,4 +257,69 @@
 {% else %}
   <div class="alert alert-info">Nessun diario visibile per questa edizione.</div>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+(function () {
+  var table = document.getElementById('diari-table');
+  if (!table) return;
+  var tbody       = table.querySelector('tbody');
+  var search      = document.getElementById('diari-search');
+  var selZona     = document.getElementById('diari-zona');
+  var selGruppo   = document.getElementById('diari-gruppo');
+  var selSpec     = document.getElementById('diari-specialita');
+  var btnReset    = document.getElementById('diari-reset');
+  var noResult    = document.getElementById('diari-nessun-risultato');
+
+  function applyFilters() {
+    var q       = search.value.trim().toLowerCase();
+    var zona    = selZona.value.toLowerCase();
+    var gruppo  = selGruppo.value.toLowerCase();
+    var spec    = selSpec.value.toLowerCase();
+    var visible = 0;
+    Array.from(tbody.querySelectorAll('tr')).forEach(function (tr) {
+      var match =
+        (!zona   || (tr.dataset.zona   || '').toLowerCase() === zona) &&
+        (!gruppo || (tr.dataset.gruppo || '').toLowerCase() === gruppo) &&
+        (!spec   || (tr.dataset.specialita || '').toLowerCase() === spec) &&
+        (!q      || (tr.dataset.crp || '').toLowerCase().includes(q) ||
+                    (tr.dataset.csq || '').toLowerCase().includes(q));
+      tr.style.display = match ? '' : 'none';
+      if (match) visible++;
+    });
+    noResult.classList.toggle('d-none', visible > 0);
+  }
+
+  search.addEventListener('input', applyFilters);
+  selZona.addEventListener('change', applyFilters);
+  selGruppo.addEventListener('change', applyFilters);
+  selSpec.addEventListener('change', applyFilters);
+  btnReset.addEventListener('click', function () {
+    search.value = ''; selZona.value = ''; selGruppo.value = ''; selSpec.value = '';
+    applyFilters();
+  });
+
+  // Ordinamento colonne
+  var sortCol = -1, sortAsc = true;
+  table.querySelectorAll('th.sortable').forEach(function (th) {
+    th.addEventListener('click', function () {
+      var col = parseInt(th.dataset.col);
+      sortAsc = sortCol === col ? !sortAsc : true;
+      sortCol = col;
+      table.querySelectorAll('th.sortable').forEach(function (h) {
+        h.querySelector('svg').style.opacity = h === th ? '1' : '0.3';
+      });
+      var rows = Array.from(tbody.querySelectorAll('tr'));
+      rows.sort(function (a, b) {
+        var aT = (a.cells[col] ? a.cells[col].textContent : '').trim().toLowerCase();
+        var bT = (b.cells[col] ? b.cells[col].textContent : '').trim().toLowerCase();
+        return sortAsc ? aT.localeCompare(bT, 'it') : bT.localeCompare(aT, 'it');
+      });
+      rows.forEach(function (r) { tbody.appendChild(r); });
+    });
+  });
+})();
+</script>
 {% endblock %}
