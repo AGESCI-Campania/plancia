@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}Errore di accesso — Plancia{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-sm-8 col-md-6 col-lg-5 mt-5">
+    <div class="alert alert-danger">
+      <h5 class="alert-heading">Accesso tramite account esterno non riuscito</h5>
+      <p class="mb-0">Si è verificato un errore durante il tentativo di accesso con l'account di terze parti. Riprova o usa le credenziali email e password.</p>
+    </div>
+    <a href="{% url 'account_login' %}" class="btn btn-outline-primary">Torna al login</a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}Accesso annullato — Plancia{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-sm-8 col-md-6 col-lg-5 mt-5">
+    <div class="alert alert-warning">
+      <h5 class="alert-heading">Accesso annullato</h5>
+      <p class="mb-0">Hai annullato l'accesso tramite account esterno.</p>
+    </div>
+    <a href="{% url 'account_login' %}" class="btn btn-outline-primary">Torna al login</a>
+  </div>
+</div>
+{% endblock %}
