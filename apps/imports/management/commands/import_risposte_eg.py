@@ -183,9 +183,8 @@ def _import_riga_eg(row: tuple, edizione, dry_run: bool, verbosity: int) -> str:
     if dry_run:
         return f"ok (dry-run): {diario}"
 
-    with transaction.atomic():
-        sp = transaction.savepoint()
-        try:
+    try:
+        with transaction.atomic():
             # --- Anagrafica ---
             ana, _ = Anagrafica.objects.get_or_create(diario=diario)
             ana.specialita    = _val(row, 7)
@@ -197,10 +196,7 @@ def _import_riga_eg(row: tuple, edizione, dry_run: bool, verbosity: int) -> str:
 
             # Tipo diario
             tipo_raw = _val(row, 8).lower()
-            if tipo_raw == "rinnovo":
-                diario.tipo = TipoDiario.RINNOVO
-            else:
-                diario.tipo = TipoDiario.NUOVO
+            diario.tipo = TipoDiario.RINNOVO if tipo_raw == "rinnovo" else TipoDiario.NUOVO
             diario.save(update_fields=["tipo"])
 
             # --- Presentazione ---
@@ -241,23 +237,20 @@ def _import_riga_eg(row: tuple, edizione, dry_run: bool, verbosity: int) -> str:
             # --- Missione (solo se c'è titolo) ---
             if _val(row, 43):
                 miss, _ = Missione.objects.get_or_create(diario=diario)
-                miss.titolo                 = _val(row, 43)
-                miss.data                   = _date(row, 44)
+                miss.titolo                  = _val(row, 43)[:200]
+                miss.data                    = _date(row, 44)
                 miss.descrizione_svolgimento = _val(row, 45)
                 miss.save()
                 PostoAzioneMissione.objects.filter(missione=miss).delete()
-                # La missione non ha una colonna "Posti d'azione" separata nell'Excel
 
             # --- Transizione stato ---
             if diario.stato == StatoDiario.IN_COMPILAZIONE:
                 diario.csq_invia()
 
-            transaction.savepoint_commit(sp)
-            return f"ok: {diario}"
+        return f"ok: {diario}"
 
-        except Exception as exc:
-            transaction.savepoint_rollback(sp)
-            return f"err:{exc}"
+    except Exception as exc:
+        return f"err:{exc}"
 
 
 def _import_impresa(diario, numero: int, row: tuple,
@@ -282,7 +275,7 @@ def _import_impresa(diario, numero: int, row: tuple,
     url_video = _primo_url(_val(row, col_video))
     if not url_video:
         url_video = _primo_url(_val(row, col_foto))
-    imp.link_esterno = url_video
+    imp.link_esterno = url_video[:199] if url_video else ""
     imp.save()
 
     # Posti d'azione
@@ -338,9 +331,8 @@ def _import_riga_staff(row: tuple, edizione, dry_run: bool, verbosity: int) -> s
     if dry_run:
         return f"ok (dry-run): {diario}"
 
-    with transaction.atomic():
-        sp = transaction.savepoint()
-        try:
+    try:
+        with transaction.atomic():
             rel, _ = RelazioneFinale.objects.get_or_create(diario=diario)
             rel.sintesi_impresa_1  = _val(row, 11)
             rel.sintesi_impresa_2  = _val(row, 12)
@@ -356,12 +348,10 @@ def _import_riga_staff(row: tuple, edizione, dry_run: bool, verbosity: int) -> s
             if diario.stato == StatoDiario.RELAZIONE_FINALE:
                 diario.invia()
 
-            transaction.savepoint_commit(sp)
-            return f"ok: {diario}"
+        return f"ok: {diario}"
 
-        except Exception as exc:
-            transaction.savepoint_rollback(sp)
-            return f"err:{exc}"
+    except Exception as exc:
+        return f"err:{exc}"
 
 
 # ---------------------------------------------------------------------------
