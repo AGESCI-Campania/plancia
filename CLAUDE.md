@@ -177,6 +177,7 @@ URL montati: `admin/`, `accounts/` (allauth), `utenti/` (accounts app — namesp
 `/` → `HomeView` (redirect edizione attiva o pagina "nessuna edizione"); `/__debug__/` (debug toolbar, solo `DEBUG=True`).
 
 Template allauth in `templates/account/` (tutti estendono `base.html`): login, logout, verification_sent, email_confirm, password_reset e varianti, **signup**, **signup_closed**, **password_change**, **password_set**, **email**, **account_inactive**, **reauthenticate**. Form Bootstrap via `ACCOUNT_FORMS` in settings (`apps.accounts.forms`): `PlanciaLoginForm`, `PlanciaSignupForm`, `PlanciaResetPasswordForm`, `PlanciaChangePasswordForm`, `PlanciaSetPasswordForm`, `PlanciaAddEmailForm`.
+Template socialaccount in `templates/socialaccount/` (tutti estendono `base.html`): `login.html`, `authentication_error.html`, `login_cancelled.html`. I bottoni social nella login page usano `<form method="post">` invece di `<a href>` per inviare POST direttamente al provider ed evitare la pagina di conferma intermedia di allauth.
 
 Template MFA in `templates/mfa/`: `authenticate.html`, `index.html`, `reauthenticate.html`; `totp/activate_form.html`, `totp/deactivate_form.html`; `recovery_codes/index.html`, `recovery_codes/generate.html`.
 
