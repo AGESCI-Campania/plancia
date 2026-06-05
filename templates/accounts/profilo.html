@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load i18n bootstrap_icons %}
 
 {% block title %}Il mio profilo — {{ block.super }}{% endblock %}
 
@@ -58,6 +58,39 @@
       </div>
     {% endif %}
   </div>
+
+  {# --- Account social collegati ------------------------------------------- #}
+  {% if social_accounts %}
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header fw-semibold">Account social collegati</div>
+      <ul class="list-group list-group-flush">
+        {% for sa in social_accounts %}
+        <li class="list-group-item d-flex align-items-center justify-content-between gap-3">
+          <div class="d-flex align-items-center gap-2">
+            {% if sa.provider == "google" %}{% bs_icon "google" size="18" extra_classes="text-danger" %}
+            {% elif sa.provider == "apple" %}{% bs_icon "apple" size="18" %}
+            {% elif sa.provider == "microsoft" %}{% bs_icon "microsoft" size="18" extra_classes="text-primary" %}
+            {% else %}{% bs_icon "person-circle" size="18" %}{% endif %}
+            <div>
+              <div class="fw-semibold">{{ sa.get_provider_account }}</div>
+              <div class="text-muted small">{{ sa.extra_data.email|default:sa.uid }}</div>
+            </div>
+          </div>
+          <form method="post" action="{% url 'socialaccount_connections' %}"
+                onsubmit="return confirm('Scollegare questo account social?')">
+            {% csrf_token %}
+            <input type="hidden" name="account" value="{{ sa.pk }}">
+            <button type="submit" class="btn btn-sm btn-outline-danger">
+              {% bs_icon "trash" size="13" extra_classes="me-1" %}Scollega
+            </button>
+          </form>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  {% endif %}
 
   {# --- Storico nomine ------------------------------------------------------ #}
   <div class="col-12 col-lg-7">

@@ -4,11 +4,12 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect
 from django.views import View
-from django.views.generic import DetailView, FormView, ListView, TemplateView
+from django.views.generic import DetailView, ListView, TemplateView
 
 from apps.accounts.mixins import StaffPlanciaRequiredMixin
 from apps.accounts.models import Ruolo, User
-from apps.accounts.roles import ROLE_CREATABLE_BY, nomina as service_nomina
+from apps.accounts.roles import ROLE_CREATABLE_BY
+from apps.accounts.roles import nomina as service_nomina
 
 
 class ProfiloView(LoginRequiredMixin, TemplateView):
@@ -24,6 +25,8 @@ class ProfiloView(LoginRequiredMixin, TemplateView):
         ctx["puo_modificare_email"] = (
             u.ruolo == Ruolo.CSQ and u.socio and u.socio.email_modificabile_dall_interessato
         )
+        from allauth.socialaccount.models import SocialAccount
+        ctx["social_accounts"] = SocialAccount.objects.filter(user=u)
         return ctx
 
     def post(self, request):
