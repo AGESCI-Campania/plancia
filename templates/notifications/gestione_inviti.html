@@ -124,14 +124,59 @@
     </div>
 
     {# --- Tabella diari --- #}
-    <h2 class="h5 mb-3">Dettaglio per squadriglia</h2>
+    <h2 class="h5 mb-2">Dettaglio per squadriglia</h2>
+
+    {# Barra filtri/ricerca #}
+    <div class="row g-2 mb-3 align-items-end">
+      <div class="col-sm-4">
+        <label class="form-label small fw-semibold mb-1">Cerca Capo Reparto / Capo Squadriglia</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text">{% bs_icon "search" size="13" %}</span>
+          <input type="search" id="inviti-search" class="form-control"
+                 placeholder="Cognome o nome…" autocomplete="off">
+        </div>
+      </div>
+      <div class="col-sm-3">
+        <label class="form-label small fw-semibold mb-1">Zona</label>
+        <select id="inviti-zona" class="form-select form-select-sm">
+          <option value="">— Tutte le zone —</option>
+          {% for zona in zone %}
+            <option value="{{ zona }}">{{ zona }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-sm-3">
+        <label class="form-label small fw-semibold mb-1">Gruppo</label>
+        <select id="inviti-gruppo" class="form-select form-select-sm">
+          <option value="">— Tutti i gruppi —</option>
+          {% for gruppo in gruppi %}
+            <option value="{{ gruppo }}">{{ gruppo }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-sm-2">
+        <button id="inviti-reset" class="btn btn-outline-secondary btn-sm w-100">
+          {% bs_icon "x-circle" size="13" extra_classes="me-1" %}Reset
+        </button>
+      </div>
+    </div>
+    <div id="inviti-nessun-risultato" class="alert alert-info d-none py-2">
+      Nessuna riga corrisponde ai filtri selezionati.
+    </div>
+
     <div class="table-responsive">
-      <table class="table table-sm table-hover align-middle">
+      <table id="inviti-table" class="table table-sm table-hover align-middle">
         <thead class="table-light">
           <tr>
-            <th>Squadriglia</th>
-            <th>Capo Squadriglia</th>
-            <th>Capo Reparto</th>
+            <th class="sortable" data-col="0" style="cursor:pointer;white-space:nowrap">
+              Squadriglia {% bs_icon "chevron-expand" size="12" extra_classes="text-muted ms-1" %}
+            </th>
+            <th class="sortable" data-col="1" style="cursor:pointer;white-space:nowrap">
+              Capo Squadriglia {% bs_icon "chevron-expand" size="12" extra_classes="text-muted ms-1" %}
+            </th>
+            <th class="sortable" data-col="2" style="cursor:pointer;white-space:nowrap">
+              Capo Reparto {% bs_icon "chevron-expand" size="12" extra_classes="text-muted ms-1" %}
+            </th>
             <th class="text-center">Invito CSQ</th>
             <th class="text-center">Invito Capo Reparto</th>
             <th></th>
@@ -139,10 +184,17 @@
         </thead>
         <tbody>
           {% for diario in diari %}
-            <tr>
+            <tr data-zona="{{ diario.squadriglia.reparto.gruppo.zona.nome }}"
+                data-gruppo="{{ diario.squadriglia.reparto.gruppo.nome }}"
+                data-crp="{% if diario.crp %}{{ diario.crp.cognome }} {{ diario.crp.nome }}{% endif %}"
+                data-csq="{% if diario.csq %}{{ diario.csq.cognome }} {{ diario.csq.nome }}{% endif %}">
               <td>
                 <span class="fw-semibold">{{ diario.squadriglia.nome }}</span>
-                <br><small class="text-muted">{{ diario.squadriglia.reparto }}</small>
+                <br><small class="text-muted">
+                  {{ diario.squadriglia.reparto.gruppo.zona.nome }} ·
+                  {{ diario.squadriglia.reparto.gruppo.nome }} ·
+                  {{ diario.squadriglia.reparto.nome }}
+                </small>
               </td>
               <td>
                 {% if diario.csq %}
@@ -226,4 +278,88 @@
 
   {% endif %}
 </div>
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+(function () {
+  const table   = document.getElementById('inviti-table');
+  if (!table) return;
+  const tbody   = table.querySelector('tbody');
+  const search  = document.getElementById('inviti-search');
+  const selZona = document.getElementById('inviti-zona');
+  const selGruppo = document.getElementById('inviti-gruppo');
+  const btnReset = document.getElementById('inviti-reset');
+  const noResult = document.getElementById('inviti-nessun-risultato');
+
+  // ── Filtro ──────────────────────────────────────────────────────────────
+  function applyFilters() {
+    const q     = search.value.trim().toLowerCase();
+    const zona  = selZona.value.toLowerCase();
+    const gruppo = selGruppo.value.toLowerCase();
+    let visible = 0;
+
+    Array.from(tbody.querySelectorAll('tr')).forEach(function (tr) {
+      const trZona   = (tr.dataset.zona   || '').toLowerCase();
+      const trGruppo = (tr.dataset.gruppo || '').toLowerCase();
+      const trCrp    = (tr.dataset.crp    || '').toLowerCase();
+      const trCsq    = (tr.dataset.csq    || '').toLowerCase();
+
+      const matchZona   = !zona   || trZona === zona;
+      const matchGruppo = !gruppo || trGruppo === gruppo;
+      const matchSearch = !q     || trCrp.includes(q) || trCsq.includes(q);
+
+      if (matchZona && matchGruppo && matchSearch) {
+        tr.style.display = '';
+        visible++;
+      } else {
+        tr.style.display = 'none';
+      }
+    });
+
+    noResult.classList.toggle('d-none', visible > 0);
+  }
+
+  search.addEventListener('input', applyFilters);
+  selZona.addEventListener('change', applyFilters);
+  selGruppo.addEventListener('change', applyFilters);
+
+  btnReset.addEventListener('click', function () {
+    search.value = '';
+    selZona.value = '';
+    selGruppo.value = '';
+    applyFilters();
+  });
+
+  // ── Ordinamento ─────────────────────────────────────────────────────────
+  let sortCol = -1;
+  let sortAsc = true;
+
+  table.querySelectorAll('th.sortable').forEach(function (th) {
+    th.addEventListener('click', function () {
+      const col = parseInt(th.dataset.col);
+      if (sortCol === col) {
+        sortAsc = !sortAsc;
+      } else {
+        sortCol = col;
+        sortAsc = true;
+      }
+
+      // Aggiorna icone
+      table.querySelectorAll('th.sortable').forEach(function (h) {
+        h.querySelector('svg').style.opacity = h === th ? '1' : '0.3';
+      });
+
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      rows.sort(function (a, b) {
+        const aText = (a.cells[col] ? a.cells[col].textContent : '').trim().toLowerCase();
+        const bText = (b.cells[col] ? b.cells[col].textContent : '').trim().toLowerCase();
+        return sortAsc ? aText.localeCompare(bText, 'it') : bText.localeCompare(aText, 'it');
+      });
+      rows.forEach(function (r) { tbody.appendChild(r); });
+    });
+  });
+})();
+</script>
 {% endblock %}
+

@@ -264,6 +264,8 @@ class GestioneInvitiView(RuoloRequiredMixin, View):
                 )
             ctx["diari"] = diari
             ctx["stato_inviti"] = _calcola_stato_inviti(diari)
+            ctx["zone"] = sorted({d.squadriglia.reparto.gruppo.zona.nome for d in diari})
+            ctx["gruppi"] = sorted({d.squadriglia.reparto.gruppo.nome for d in diari})
 
         from apps.siteconfig.models import BackendPosta, Impostazioni
         imp = Impostazioni.get()
