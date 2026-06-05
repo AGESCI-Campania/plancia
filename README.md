@@ -110,11 +110,18 @@ sudo systemctl enable --now plancia
 **Deploy aggiornamenti:**
 ```bash
 git pull
-docker compose --env-file .env.prod build
-docker compose --env-file .env.prod up -d
-docker compose --env-file .env.prod exec web uv run python manage.py migrate --noinput
-docker compose --env-file .env.prod exec web uv run python manage.py collectstatic --noinput
+sudo systemctl reload plancia   # rebuild immagine + ricrea container + migrate automatico
 ```
+
+Oppure senza systemd:
+```bash
+git pull
+docker compose --env-file .env.prod build web
+docker compose --env-file .env.prod up -d web
+```
+
+Le migrazioni vengono applicate automaticamente all'avvio del container (`deploy/entrypoint.sh`).
+`systemctl restart` riavvia i container **senza** rebuild: usare solo per riavvii di emergenza.
 
 **Diagnostica:**
 ```bash

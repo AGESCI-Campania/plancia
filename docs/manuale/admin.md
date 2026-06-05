@@ -130,8 +130,46 @@ account Google Drive diverso.
    con l'account Google che contiene le cartelle dell'edizione.
 4. Dopo il consenso torni alla pagina dell'edizione con l'email dell'account collegato.
 5. Usando il **folder picker** puoi selezionare (o creare) le cartelle:
-   - **Cartella allegati**: dove vengono caricate le foto delle imprese
-   - **Cartella output**: dove vengono depositati PDF e Excel al momento dell'archiviazione
+   - **Cartella allegati**: cartella principale dove vengono create le sottocartelle delle foto
+   - **Cartella output**: cartella principale dove vengono depositate le sottocartelle PDF/Excel
+6. Imposta il **formato del nome delle sottocartelle** per i diari (vedi sezione successiva).
+7. Clicca **Salva e blocca configurazione**.
+
+### Passo 3b — Formato delle sottocartelle per diario
+
+Per ogni diario viene creata automaticamente una sottocartella univoca dentro la cartella
+allegati e una dentro la cartella output. Il nome della sottocartella è calcolato dal formato
+configurato nell'edizione.
+
+**Variabili disponibili:**
+
+| Variabile | Contenuto | Obbligatoria |
+|---|---|---|
+| `{id_univoco}` | ID numerico del diario (5 cifre, es. `00042`) | ✅ Sì |
+| `{edizione}` | Anno dell'edizione (es. `2026`) | No |
+| `{nome_gruppo}` | Nome del gruppo scout | No |
+| `{nome_zona}` | Nome della zona | No |
+| `{nome_reparto}` | Nome del reparto | No |
+| `{nome_squadriglia}` | Nome della squadriglia | No |
+| `{specialita}` | Specialità di squadriglia (se compilata) | No |
+
+**Formato di default:**
+```
+{id_univoco}_{edizione}_{nome_gruppo}_{nome_reparto}_{nome_squadriglia}_{specialita}
+```
+
+Esempio di cartella generata: `00042_2026_Salerno1_Reparto1_Aquile_Campismo`
+
+I caratteri non validi (spazi, accenti, simboli) vengono sostituiti automaticamente
+con underscore al momento della creazione.
+
+> ⚠️ **Attenzione — configurazione irreversibile**: una volta salvate le due cartelle
+> principali e il formato, non è più possibile modificarli. Le sottocartelle vengono
+> create automaticamente la prima volta che viene caricata una foto o generato un PDF
+> per ciascun diario. Verifica attentamente i valori prima di salvare.
+
+La pagina mostra un'**anteprima live** del nome che verrebbe generato e, sotto ciascun
+ID cartella, il nome reale su Drive come link cliccabile.
 
 ### Passo 4 — Test dell'upload
 

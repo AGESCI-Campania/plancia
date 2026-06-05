@@ -145,6 +145,8 @@ App con modelli e UI completi:
   - `carica_allegato_drive(allegato)`: chiama `assicura_cartelle_diario`, carica il file locale nella sottocartella allegati del diario (fallback: cartella allegati dell'edizione), salva `drive_file_id`, imposta `stato_sync=CARICATO`, elimina il file locale.
   - `carica_pdf_diario(diario)`: chiama `assicura_cartelle_diario`, carica il PDF nella sottocartella output del diario (fallback: cartella output dell'edizione).
   **`storage_drive/tasks.py`**: `task_carica_allegato_drive(allegato_pk)` — task Celery idempotente (skip se già `CARICATO`; in caso di errore reimposta `LOCALE` per permettere retry).
+  **`DriveFolderInfoView`** (`GET /drive/cartella/info/?account=<email>&id=<folder_id>`): restituisce `{name, webViewLink}` di una cartella; usato dalla UI per mostrare nome+link sotto gli ID cartella.
+  **OAuth Drive PKCE**: `DriveOAuthInitView` genera esplicitamente `code_verifier` + `code_challenge` (SHA-256/base64url), li passa a `authorization_url` e salva `code_verifier` in sessione. `DriveOAuthCallbackView` lo recupera e lo passa a `fetch_token(code_verifier=...)`. Obbligatorio da ottobre 2024 per tutti i client Google OAuth.
 - **`helpdesk`** — `Ticket`, `RispostaTicket`; views CRUD + rispondi/chiudi/prendi. Namespace `helpdesk`.
 - **`stats`** — dashboard per zona (esiti, tempi, ticket); visibile a staff. Namespace `stats`.
 - **`siteconfig`** — `Impostazioni` singleton, middleware manutenzione, backend email custom; `forms.py` (`ImpostazioniForm` con widget Bootstrap, `MailTemplateForm` con TinyMCE). Namespace `siteconfig`.
