@@ -81,6 +81,7 @@
       </div>
       <div class="card-body">
 
+        {% if not object.cartelle_configurate %}
         <div class="mb-4">
           <a href="{% url 'storage_drive:oauth_init' %}?edizione={{ object.pk }}"
              class="btn btn-outline-primary btn-sm">
@@ -90,6 +91,7 @@
             <p class="text-muted small mt-2 mb-0">Connetti un account per scegliere le cartelle.</p>
           {% endif %}
         </div>
+        {% endif %}
 
         {% if object.drive_oauth_account %}
 
