@@ -2,7 +2,6 @@
 from django.db import models
 from django.utils import timezone
 
-
 # ---------------------------------------------------------------------------
 # Costanti ufficiali del regolamento metodologico E/G (Allegati 2, 3, 4)
 # ---------------------------------------------------------------------------
@@ -125,6 +124,14 @@ class Diario(models.Model):
     inviato_at = models.DateTimeField(null=True, blank=True)
     creato_at = models.DateTimeField(auto_now_add=True)
     aggiornato_at = models.DateTimeField(auto_now=True)
+
+    # Google Drive — sottocartelle univoche per questo diario (create da assicura_cartelle_diario)
+    drive_folder_allegati_id = models.CharField(
+        max_length=200, blank=True, verbose_name="ID cartella Drive allegati (diario)"
+    )
+    drive_folder_output_id = models.CharField(
+        max_length=200, blank=True, verbose_name="ID cartella Drive output (diario)"
+    )
 
     class Meta:
         unique_together = [("edizione", "squadriglia")]

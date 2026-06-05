@@ -68,6 +68,7 @@
     </form>
 
     {# ── Sezione Drive (solo in modifica) ───────────────────────────── #}
+    {% load bootstrap_icons %}
     {% if object %}
     <div class="card mb-4">
       <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
@@ -91,11 +92,57 @@
         </div>
 
         {% if object.drive_oauth_account %}
+
+        {% if object.cartelle_configurate %}
+        {# ── Configurazione BLOCCATA ─────────────────────────────────────── #}
+        <div class="alert alert-warning d-flex align-items-center gap-2 mb-3" role="alert">
+          {% bs_icon "lock-fill" size="16" extra_classes="flex-shrink-0" %}
+          <span>
+            <strong>Configurazione bloccata.</strong>
+            Le cartelle principali e il formato non possono essere modificati dopo la prima configurazione.
+          </span>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold text-muted">Cartella Allegati</label>
+          <div class="input-group">
+            <span class="input-group-text">{% bs_icon "folder2" size="14" %}</span>
+            <input type="text" class="form-control font-monospace" readonly
+                   value="{{ object.drive_folder_allegati_id }}">
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold text-muted">Cartella Output</label>
+          <div class="input-group">
+            <span class="input-group-text">{% bs_icon "folder2" size="14" %}</span>
+            <input type="text" class="form-control font-monospace" readonly
+                   value="{{ object.drive_folder_output_id }}">
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold text-muted">Formato nome cartella diario</label>
+          <input type="text" class="form-control font-monospace" readonly
+                 value="{{ object.cartella_diario_format }}">
+          <div class="form-text">
+            Esempio: <code id="folder_preview_locked"></code>
+          </div>
+        </div>
+
+        {% else %}
+        {# ── Configurazione EDITABILE ────────────────────────────────────── #}
+        <div class="alert alert-info small mb-3" role="alert">
+          {% bs_icon "info-circle" size="14" extra_classes="me-1" %}
+          Una volta salvate, le cartelle e il formato <strong>non potranno più essere modificati</strong>.
+          Verifica i valori prima di salvare.
+        </div>
+
         <form method="post" action="{% url 'storage_drive:edizione_folder_update' object.pk %}">
           {% csrf_token %}
 
           <div class="mb-3">
-            <label class="form-label fw-semibold">Cartella Allegati</label>
+            <label class="form-label fw-semibold">Cartella Allegati <span class="text-danger">*</span></label>
             <div class="input-group">
               <input type="text" name="drive_folder_allegati_id"
                      id="id_folder_allegati"
@@ -109,7 +156,7 @@
           </div>
 
           <div class="mb-3">
-            <label class="form-label fw-semibold">Cartella Output</label>
+            <label class="form-label fw-semibold">Cartella Output <span class="text-danger">*</span></label>
             <div class="input-group">
               <input type="text" name="drive_folder_output_id"
                      id="id_folder_output"
@@ -122,8 +169,33 @@
             <div id="folder_label_output" class="form-text text-success"></div>
           </div>
 
-          <button type="submit" class="btn btn-primary btn-sm">Salva cartelle</button>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Formato nome cartella diario <span class="text-danger">*</span></label>
+            <input type="text" name="cartella_diario_format"
+                   id="id_cartella_format"
+                   class="form-control font-monospace"
+                   value="{{ object.cartella_diario_format }}"
+                   placeholder="{{ object.cartella_diario_format }}">
+            <div class="form-text">
+              Variabili disponibili:
+              <code>{id_univoco}</code> (obbligatorio) &nbsp;
+              <code>{edizione}</code> &nbsp;
+              <code>{nome_gruppo}</code> &nbsp;
+              <code>{nome_zona}</code> &nbsp;
+              <code>{nome_reparto}</code> &nbsp;
+              <code>{nome_squadriglia}</code> &nbsp;
+              <code>{specialita}</code>
+              <br>
+              Anteprima: <code id="folder_name_preview" class="text-primary"></code>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-sm">
+            {% bs_icon "lock" size="13" extra_classes="me-1" %}Salva e blocca configurazione
+          </button>
         </form>
+        {% endif %}
+
         {% endif %}
       </div>
     </div>
@@ -311,6 +383,53 @@ document.getElementById('folderPickerModal')
   .addEventListener('shown.bs.modal', cercaCartelle);
 document.getElementById('folder_search')
   .addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); cercaCartelle(); } });
+
+// ── Anteprima formato nome cartella diario ────────────────────────────────
+{% if not object.cartelle_configurate %}
+const formatInput = document.getElementById('id_cartella_format');
+const previewEl   = document.getElementById('folder_name_preview');
+
+function aggiornaAnteprima() {
+  if (!formatInput || !previewEl) return;
+  let fmt = formatInput.value || formatInput.placeholder || '';
+  let preview = fmt
+    .replace('{id_univoco}',     '00001')
+    .replace('{edizione}',       '{{ object.anno }}')
+    .replace('{nome_gruppo}',    'Salerno1')
+    .replace('{nome_zona}',      'Salerno')
+    .replace('{nome_reparto}',   'Reparto1')
+    .replace('{nome_squadriglia}','Aquile')
+    .replace('{specialita}',     'Campismo');
+  // Sanificazione lato client (approssimativa — la vera è server-side)
+  preview = preview.replace(/[\s/\\]+/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+  previewEl.textContent = preview;
+}
+
+if (formatInput) {
+  formatInput.addEventListener('input', aggiornaAnteprima);
+  aggiornaAnteprima();
+}
+{% endif %}
+
+{% if object.cartelle_configurate %}
+// Preview in sola lettura
+(function() {
+  const el = document.getElementById('folder_preview_locked');
+  if (!el) return;
+  let fmt = "{{ object.cartella_diario_format|escapejs }}";
+  let preview = fmt
+    .replace('{id_univoco}',     '00001')
+    .replace('{edizione}',       '{{ object.anno }}')
+    .replace('{nome_gruppo}',    'Salerno1')
+    .replace('{nome_zona}',      'Salerno')
+    .replace('{nome_reparto}',   'Reparto1')
+    .replace('{nome_squadriglia}','Aquile')
+    .replace('{specialita}',     'Campismo');
+  preview = preview.replace(/[\s/\\]+/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+  el.textContent = preview;
+})();
+{% endif %}
+
 {% endif %}
 </script>
 {% endblock %}

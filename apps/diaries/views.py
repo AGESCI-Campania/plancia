@@ -522,6 +522,7 @@ class AllegatoUploadView(DiarioAccessMixin, View):
         if file.size > _MAX_BYTES:
             return JsonResponse({"error": "File troppo grande (max 20 MB)"}, status=400)
 
+        drive_configurato = bool(diario.edizione.drive_oauth_account)
         allegato = Allegato.objects.create(
             diario=diario,
             modulo=modulo,
@@ -530,8 +531,11 @@ class AllegatoUploadView(DiarioAccessMixin, View):
             dimensione=file.size,
             file=file,
             caricato_da=request.user,
-            stato_sync=StatoSync.LOCALE,
+            stato_sync=StatoSync.IN_CODA if drive_configurato else StatoSync.LOCALE,
         )
+        if drive_configurato:
+            from apps.storage_drive.tasks import task_carica_allegato_drive
+            task_carica_allegato_drive.delay(allegato.pk)
         return JsonResponse(_allegato_json(allegato), status=201)
 
 

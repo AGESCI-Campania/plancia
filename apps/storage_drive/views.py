@@ -175,20 +175,54 @@ class DriveCartellaCreaView(StaffPlanciaRequiredMixin, View):
 
 
 class DriveEdizioneFolderUpdateView(StaffPlanciaRequiredMixin, View):
-    """Aggiorna i folder ID Drive di un'edizione (POST dalla sezione Drive del form)."""
+    """Aggiorna cartelle Drive e formato nome per un'edizione.
+
+    Una volta che tutte e tre le impostazioni (cartella allegati, cartella output,
+    formato nome) sono salvate, la configurazione si blocca e non può più essere
+    modificata.
+    """
 
     def post(self, request, pk):
+        from apps.diaries.service import valida_formato_cartella
         from apps.editions.models import Edizione
 
         edizione = get_object_or_404(Edizione, pk=pk)
-        edizione.drive_folder_allegati_id = request.POST.get(
-            "drive_folder_allegati_id", ""
-        ).strip()
-        edizione.drive_folder_output_id = request.POST.get(
-            "drive_folder_output_id", ""
-        ).strip()
+
+        if edizione.cartelle_configurate:
+            messages.error(
+                request,
+                "Configurazione cartelle Drive bloccata: le cartelle e il formato "
+                "non possono essere modificati dopo la prima configurazione.",
+            )
+            return redirect("editions:update", pk=pk)
+
+        nuovo_allegati = request.POST.get("drive_folder_allegati_id", "").strip()
+        nuovo_output = request.POST.get("drive_folder_output_id", "").strip()
+        nuovo_formato = request.POST.get("cartella_diario_format", "").strip()
+
+        errore = valida_formato_cartella(nuovo_formato) if nuovo_formato else None
+        if errore:
+            messages.error(request, f"Formato non valido: {errore}")
+            return redirect("editions:update", pk=pk)
+
+        edizione.drive_folder_allegati_id = nuovo_allegati
+        edizione.drive_folder_output_id = nuovo_output
+        if nuovo_formato:
+            edizione.cartella_diario_format = nuovo_formato
         edizione.save(
-            update_fields=["drive_folder_allegati_id", "drive_folder_output_id"]
+            update_fields=[
+                "drive_folder_allegati_id",
+                "drive_folder_output_id",
+                "cartella_diario_format",
+            ]
         )
-        messages.success(request, "Cartelle Drive aggiornate.")
+
+        if edizione.cartelle_configurate:
+            messages.success(
+                request,
+                "Configurazione cartelle Drive salvata e bloccata. "
+                "Le sottocartelle per i diari saranno create automaticamente.",
+            )
+        else:
+            messages.success(request, "Cartelle Drive aggiornate.")
         return redirect("editions:update", pk=pk)

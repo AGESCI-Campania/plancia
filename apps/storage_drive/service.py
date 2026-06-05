@@ -13,19 +13,17 @@ if TYPE_CHECKING:
     from apps.storage_drive.models import DriveCredenziali
 
 
-def _build_drive_service(credenziali: "DriveCredenziali"):
+def _build_drive_service(credenziali: DriveCredenziali):
     """Costruisce il client Drive autenticato, rinfrescando il token se necessario."""
     try:
-        from google.oauth2.credentials import Credentials
         from google.auth.transport.requests import Request
+        from google.oauth2.credentials import Credentials
         from googleapiclient.discovery import build
     except ImportError as exc:
         raise ImportError(
             "google-auth e google-api-python-client sono necessari per Drive. "
             "Esegui: uv add google-auth google-api-python-client"
         ) from exc
-
-    from django.utils import timezone
 
     creds = Credentials(
         token=credenziali.access_token,
@@ -55,7 +53,7 @@ def _client_secret() -> str:
 
 
 def carica_file(
-    credenziali: "DriveCredenziali",
+    credenziali: DriveCredenziali,
     nome_file: str,
     contenuto: bytes,
     mime_type: str,
@@ -80,7 +78,7 @@ def carica_file(
 
 
 def crea_cartella(
-    credenziali: "DriveCredenziali",
+    credenziali: DriveCredenziali,
     nome: str,
     parent_id: str | None = None,
 ) -> str:
@@ -96,15 +94,53 @@ def crea_cartella(
     return folder["id"]
 
 
+def carica_allegato_drive(allegato) -> None:
+    """Carica un Allegato su Drive nella sottocartella del diario e aggiorna stato_sync.
+
+    La sottocartella viene creata automaticamente se non esiste ancora.
+    """
+    from apps.diaries.models import StatoSync
+
+    diario = allegato.diario
+    edizione = diario.edizione
+
+    if not edizione.drive_oauth_account:
+        return
+
+    assicura_cartelle_diario(diario)
+
+    # Leggi l'istanza aggiornata per avere il folder_id appena creato
+    diario.refresh_from_db(fields=["drive_folder_allegati_id"])
+    folder_id = diario.drive_folder_allegati_id or edizione.drive_folder_allegati_id or None
+
+    credenziali = _get_credenziali(edizione)
+
+    if not allegato.file:
+        return
+
+    contenuto = allegato.file.read()
+    mime = allegato.mime or "application/octet-stream"
+    meta = carica_file(credenziali, allegato.nome, contenuto, mime, folder_id)
+
+    allegato.drive_file_id = meta["id"]
+    allegato.stato_sync = StatoSync.CARICATO
+    allegato.file.delete(save=False)
+    allegato.file = None
+    allegato.save(update_fields=["drive_file_id", "stato_sync", "file"])
+
+
 def carica_pdf_diario(diario) -> None:
     """Genera il PDF del diario, lo carica su Drive e crea il DriveFile."""
     from apps.exports.service import genera_pdf_diario
     from apps.storage_drive.models import DriveFile, TipoFile
 
+    assicura_cartelle_diario(diario)
+
     pdf_bytes = genera_pdf_diario(diario)
     edizione = diario.edizione
     credenziali = _get_credenziali(edizione)
-    folder_id = edizione.drive_folder_output_id or None
+    # Usa la sottocartella del diario se disponibile, altrimenti la cartella dell'edizione
+    folder_id = diario.drive_folder_output_id or edizione.drive_folder_output_id or None
 
     nome = f"Diario_{diario.squadriglia}_{edizione.anno}.pdf"
     meta = carica_file(credenziali, nome, pdf_bytes, "application/pdf", folder_id)
@@ -149,7 +185,37 @@ def carica_excel_edizione(edizione) -> None:
     )
 
 
-def _get_credenziali(edizione) -> "DriveCredenziali":
+def assicura_cartelle_diario(diario) -> None:
+    """Crea su Drive (se mancanti) le sottocartelle per questo diario e salva gli ID.
+
+    Va chiamata prima di caricare allegati o esportare il PDF del diario.
+    Non fa nulla se le cartelle principali dell'edizione non sono configurate.
+    """
+    from apps.diaries.service import calcola_nome_cartella_diario
+
+    edizione = diario.edizione
+    if not edizione.drive_folder_allegati_id and not edizione.drive_folder_output_id:
+        return
+
+    credenziali = _get_credenziali(edizione)
+    nome_cartella = calcola_nome_cartella_diario(diario)
+    update_fields: list[str] = []
+
+    if edizione.drive_folder_allegati_id and not diario.drive_folder_allegati_id:
+        folder_id = crea_cartella(credenziali, nome_cartella, edizione.drive_folder_allegati_id)
+        diario.drive_folder_allegati_id = folder_id
+        update_fields.append("drive_folder_allegati_id")
+
+    if edizione.drive_folder_output_id and not diario.drive_folder_output_id:
+        folder_id = crea_cartella(credenziali, nome_cartella, edizione.drive_folder_output_id)
+        diario.drive_folder_output_id = folder_id
+        update_fields.append("drive_folder_output_id")
+
+    if update_fields:
+        diario.save(update_fields=update_fields)
+
+
+def _get_credenziali(edizione) -> DriveCredenziali:
     from apps.storage_drive.models import DriveCredenziali
 
     account = edizione.drive_oauth_account

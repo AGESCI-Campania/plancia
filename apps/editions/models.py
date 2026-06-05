@@ -2,6 +2,10 @@
 from django.db import models
 from django.utils import timezone
 
+CARTELLA_DIARIO_FORMAT_DEFAULT = (
+    "{id_univoco}_{edizione}_{nome_gruppo}_{nome_reparto}_{nome_squadriglia}_{specialita}"
+)
+
 
 class StatoEdizione(models.TextChoices):
     BOZZA = "bozza", "Bozza"
@@ -44,6 +48,17 @@ class Edizione(models.Model):
         max_length=200, blank=True, verbose_name="ID cartella Drive output"
     )
     drive_oauth_account = models.EmailField(blank=True, verbose_name="account OAuth Drive")
+    cartella_diario_format = models.CharField(
+        max_length=300,
+        blank=True,
+        default=CARTELLA_DIARIO_FORMAT_DEFAULT,
+        verbose_name="formato nome cartella diario",
+        help_text=(
+            "Variabili: {id_univoco} {edizione} {nome_gruppo} {nome_zona} "
+            "{nome_reparto} {nome_squadriglia} {specialita}. "
+            "{id_univoco} è obbligatorio."
+        ),
+    )
 
     creato_at = models.DateTimeField(auto_now_add=True)
     aggiornato_at = models.DateTimeField(auto_now=True)
@@ -55,6 +70,15 @@ class Edizione(models.Model):
 
     def __str__(self) -> str:
         return f"Edizione {self.anno}"
+
+    @property
+    def cartelle_configurate(self) -> bool:
+        """True quando le cartelle Drive e il formato sono tutti impostati (lock attivo)."""
+        return bool(
+            self.drive_folder_allegati_id
+            and self.drive_folder_output_id
+            and self.cartella_diario_format
+        )
 
     @property
     def scadenza_corrente(self) -> str:
