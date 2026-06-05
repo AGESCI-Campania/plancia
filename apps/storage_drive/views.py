@@ -196,6 +196,35 @@ class DriveCartellaCreaView(StaffPlanciaRequiredMixin, View):
             return JsonResponse({"error": str(exc)}, status=500)
 
 
+class DriveFolderInfoView(StaffPlanciaRequiredMixin, View):
+    """AJAX – restituisce nome e webViewLink di una singola cartella Drive."""
+
+    def get(self, request):
+        account_email = request.GET.get("account", "")
+        folder_id = request.GET.get("id", "").strip()
+
+        if not folder_id:
+            return JsonResponse({"error": "ID mancante"}, status=400)
+
+        try:
+            cred = DriveCredenziali.objects.get(account_email=account_email)
+        except DriveCredenziali.DoesNotExist:
+            return JsonResponse({"error": "Account non trovato"}, status=404)
+
+        from apps.storage_drive.service import _build_drive_service
+
+        try:
+            service = _build_drive_service(cred)
+            meta = (
+                service.files()
+                .get(fileId=folder_id, fields="id,name,webViewLink")
+                .execute()
+            )
+            return JsonResponse({"name": meta.get("name", ""), "url": meta.get("webViewLink", "")})
+        except Exception as exc:
+            return JsonResponse({"error": str(exc)}, status=500)
+
+
 class DriveEdizioneFolderUpdateView(StaffPlanciaRequiredMixin, View):
     """Aggiorna cartelle Drive e formato nome per un'edizione.
 

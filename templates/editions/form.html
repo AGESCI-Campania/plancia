@@ -110,6 +110,9 @@
             <input type="text" class="form-control font-monospace" readonly
                    value="{{ object.drive_folder_allegati_id }}">
           </div>
+          <div class="form-text" id="folder_info_allegati_locked">
+            <span class="text-muted small">Caricamento nome cartella…</span>
+          </div>
         </div>
 
         <div class="mb-3">
@@ -118,6 +121,9 @@
             <span class="input-group-text">{% bs_icon "folder2" size="14" %}</span>
             <input type="text" class="form-control font-monospace" readonly
                    value="{{ object.drive_folder_output_id }}">
+          </div>
+          <div class="form-text" id="folder_info_output_locked">
+            <span class="text-muted small">Caricamento nome cartella…</span>
           </div>
         </div>
 
@@ -153,6 +159,7 @@
                       onclick="apriFolderPicker('allegati')">Sfoglia</button>
             </div>
             <div id="folder_label_allegati" class="form-text text-success"></div>
+            <div id="folder_info_allegati" class="form-text"></div>
           </div>
 
           <div class="mb-3">
@@ -167,6 +174,7 @@
                       onclick="apriFolderPicker('output')">Sfoglia</button>
             </div>
             <div id="folder_label_output" class="form-text text-success"></div>
+            <div id="folder_info_output" class="form-text"></div>
           </div>
 
           <div class="mb-3">
@@ -383,6 +391,59 @@ document.getElementById('folderPickerModal')
   .addEventListener('shown.bs.modal', cercaCartelle);
 document.getElementById('folder_search')
   .addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); cercaCartelle(); } });
+
+// ── Info cartelle (nome + link) ───────────────────────────────────────────
+const FOLDER_INFO_URL = "{% url 'storage_drive:folder_info' %}";
+
+function renderFolderInfo(el, name, url) {
+  if (!el) return;
+  if (name && url) {
+    el.innerHTML = `📁 <a href="${url}" target="_blank" rel="noopener">${name}</a>`;
+  } else if (name) {
+    el.textContent = `📁 ${name}`;
+  } else {
+    el.innerHTML = '';
+  }
+}
+
+async function caricaInfoCartella(folderId, infoElId) {
+  const el = document.getElementById(infoElId);
+  if (!el || !folderId) { if (el) el.innerHTML = ''; return; }
+  try {
+    const url = `${FOLDER_INFO_URL}?account=${encodeURIComponent(DRIVE_ACCOUNT)}&id=${encodeURIComponent(folderId)}`;
+    const res  = await fetch(url);
+    const data = await res.json();
+    renderFolderInfo(el, data.name, data.url);
+  } catch {
+    if (el) el.innerHTML = '';
+  }
+}
+
+// Carica al caricamento pagina per le cartelle già salvate
+{% if object.cartelle_configurate %}
+caricaInfoCartella("{{ object.drive_folder_allegati_id }}", "folder_info_allegati_locked");
+caricaInfoCartella("{{ object.drive_folder_output_id }}", "folder_info_output_locked");
+{% else %}
+{% if object.drive_folder_allegati_id %}
+caricaInfoCartella("{{ object.drive_folder_allegati_id }}", "folder_info_allegati");
+{% endif %}
+{% if object.drive_folder_output_id %}
+caricaInfoCartella("{{ object.drive_folder_output_id }}", "folder_info_output");
+{% endif %}
+{% endif %}
+
+// Aggiorna info quando si seleziona una cartella dal picker
+const _origSelezionaCartella = selezionaCartella;
+selezionaCartella = function(id, nome) {
+  _origSelezionaCartella(id, nome);
+  if (_pickerTarget === 'allegati') {
+    renderFolderInfo(document.getElementById('folder_info_allegati'), nome,
+      `https://drive.google.com/drive/folders/${id}`);
+  } else {
+    renderFolderInfo(document.getElementById('folder_info_output'), nome,
+      `https://drive.google.com/drive/folders/${id}`);
+  }
+};
 
 // ── Anteprima formato nome cartella diario ────────────────────────────────
 {% if not object.cartelle_configurate %}
