@@ -33,9 +33,24 @@ class DriveOAuthInitView(StaffPlanciaRequiredMixin, View):
     """Avvia il flusso OAuth Google Drive e redirige a Google."""
 
     def get(self, request):
+        import base64
+        import hashlib
+        import secrets
+
         from google_auth_oauthlib.flow import Flow
 
         edizione_pk = request.GET.get("edizione", "")
+
+        # PKCE (richiesto da Google per tutti i client OAuth da ottobre 2024)
+        code_verifier = secrets.token_urlsafe(96)
+        code_challenge = (
+            base64.urlsafe_b64encode(
+                hashlib.sha256(code_verifier.encode()).digest()
+            )
+            .decode()
+            .rstrip("=")
+        )
+
         flow = Flow.from_client_config(
             _oauth_client_config(),
             scopes=DRIVE_SCOPES,
@@ -45,13 +60,12 @@ class DriveOAuthInitView(StaffPlanciaRequiredMixin, View):
             access_type="offline",
             include_granted_scopes="true",
             prompt="consent",
+            code_challenge=code_challenge,
+            code_challenge_method="S256",
         )
         request.session["drive_oauth_state"] = state
         request.session["drive_oauth_edizione"] = edizione_pk
-        # Salva il code_verifier PKCE generato automaticamente da google-auth-oauthlib ≥1.0
-        request.session["drive_oauth_code_verifier"] = getattr(
-            flow.oauth2session, "_code_verifier", None
-        )
+        request.session["drive_oauth_code_verifier"] = code_verifier
         return redirect(auth_url)
 
 
@@ -82,10 +96,10 @@ class DriveOAuthCallbackView(View):
             state=state,
             redirect_uri=settings.GOOGLE_OAUTH_REDIRECT_URI,
         )
-        # Ripristina il code_verifier PKCE salvato nell'init (richiesto da google-auth-oauthlib ≥1.0)
-        if code_verifier:
-            flow.oauth2session._code_verifier = code_verifier
-        flow.fetch_token(authorization_response=request.build_absolute_uri())
+        flow.fetch_token(
+            authorization_response=request.build_absolute_uri(),
+            code_verifier=code_verifier,
+        )
         creds = flow.credentials
 
         service = build("oauth2", "v2", credentials=creds)
