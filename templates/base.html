@@ -289,6 +289,10 @@
         <img src="{% static agesci_theme_logo_navbar %}" alt="{{ agesci_theme_nome }}" class="footer-emblema">
       </div>
       <div class="col-md-6 text-center small">
+        <div class="mb-2">
+          <a href="{% url 'pagina_privacy' %}" class="text-muted me-3">Privacy Policy</a>
+          <a href="{% url 'pagina_termini' %}" class="text-muted">Condizioni del Servizio</a>
+        </div>
         {% if impostazioni.footer_testo %}
           {{ impostazioni.footer_testo|safe }}
         {% else %}
@@ -318,4 +322,31 @@
     </div>
   </div>
 </footer>
+
+{# ── Cookie banner GDPR ───────────────────────────────────────────────── #}
+<div id="cookie-banner"
+     class="position-fixed bottom-0 start-0 end-0 bg-dark text-white py-3 px-4 d-flex
+            flex-column flex-sm-row align-items-center justify-content-between gap-3"
+     style="z-index:1060;display:none!important">
+  <p class="mb-0 small">
+    Questo sito utilizza solo cookie tecnici essenziali per il funzionamento della
+    piattaforma (sessione, sicurezza). Nessun cookie di profilazione o tracciamento.
+    <a href="{% url 'pagina_privacy' %}" class="text-white-50 ms-1">Privacy Policy</a>
+  </p>
+  <button id="cookie-accept" class="btn btn-sm btn-light text-nowrap flex-shrink-0">
+    Ho capito
+  </button>
+</div>
+<script>
+(function() {
+  if (!localStorage.getItem('cookieAccepted')) {
+    var b = document.getElementById('cookie-banner');
+    b.style.removeProperty('display');
+    document.getElementById('cookie-accept').addEventListener('click', function() {
+      localStorage.setItem('cookieAccepted', '1');
+      b.style.display = 'none';
+    });
+  }
+})();
+</script>
 {% endblock %}

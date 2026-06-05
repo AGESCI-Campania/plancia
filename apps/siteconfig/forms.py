@@ -3,7 +3,7 @@ from django.forms import inlineformset_factory
 from tinymce.widgets import TinyMCE
 
 from apps.notifications.models import MailTemplate
-from apps.siteconfig.models import EmailProvider, FooterLink, Impostazioni
+from apps.siteconfig.models import EmailProvider, FooterLink, Impostazioni, PaginaStatica
 
 _ctrl = {"class": "form-control"}
 _sel = {"class": "form-select"}
@@ -139,3 +139,23 @@ class MailTemplateForm(forms.ModelForm):
         if self._chiave_fissa:
             return self._chiave_fissa
         return self.cleaned_data["chiave"]
+
+
+class PaginaStaticaForm(forms.ModelForm):
+    class Meta:
+        model = PaginaStatica
+        fields = ["titolo", "contenuto"]
+        widgets = {
+            "titolo": forms.TextInput(attrs=_ctrl),
+            "contenuto": TinyMCE(
+                attrs={"rows": 30},
+                mce_attrs={
+                    "toolbar": (
+                        "bold italic underline | bullist numlist | "
+                        "link | h2 h3 | removeformat | code"
+                    ),
+                    "height": 500,
+                    "menubar": False,
+                },
+            ),
+        }

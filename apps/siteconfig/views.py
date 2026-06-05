@@ -17,8 +17,13 @@ from django.views.generic import UpdateView
 from apps.accounts.mixins import RuoloRequiredMixin
 from apps.accounts.models import Ruolo
 from apps.notifications.models import TAG_REGISTRY, MailTemplate
-from apps.siteconfig.forms import FooterLinkFormSet, ImpostazioniForm, MailTemplateForm
-from apps.siteconfig.models import Impostazioni
+from apps.siteconfig.forms import (
+    FooterLinkFormSet,
+    ImpostazioniForm,
+    MailTemplateForm,
+    PaginaStaticaForm,
+)
+from apps.siteconfig.models import Impostazioni, PaginaStatica, SlugPagina
 
 
 class ImpostazioniView(RuoloRequiredMixin, UpdateView):
@@ -259,6 +264,67 @@ class MailTemplateDeleteView(RuoloRequiredMixin, View):
         tpl.delete()
         messages.success(request, f"Template «{chiave}» eliminato — verrà usato il file di default.")
         return redirect("siteconfig:impostazioni")
+
+
+class PaginaStaticaPublicView(View):
+    """Pagina pubblica (privacy / termini). Non richiede autenticazione."""
+
+    def get(self, request, slug):
+        try:
+            SlugPagina(slug)
+        except ValueError:
+            from django.http import Http404
+            raise Http404 from None
+
+        pagina = PaginaStatica.objects.filter(slug=slug).first()
+        if not pagina:
+            # Mostra pagina vuota con titolo di default
+            pagina = PaginaStatica(
+                slug=slug,
+                titolo=SlugPagina(slug).label,
+                contenuto="<p>Contenuto non ancora disponibile.</p>",
+            )
+        return render(request, "siteconfig/pagina_statica.html", {"pagina": pagina})
+
+
+class PaginaStaticaEditView(RuoloRequiredMixin, View):
+    """Modifica del contenuto di una pagina statica. Solo Admin/Segreteria/IABR."""
+
+    ruoli_ammessi = (Ruolo.ADMIN, Ruolo.SEGRETERIA, Ruolo.INCARICATO_EG)
+
+    def _get_or_init(self, slug):
+        try:
+            SlugPagina(slug)
+        except ValueError:
+            from django.http import Http404
+            raise Http404 from None
+        pagina, _ = PaginaStatica.objects.get_or_create(
+            slug=slug,
+            defaults={"titolo": SlugPagina(slug).label, "contenuto": ""},
+        )
+        return pagina
+
+    def get(self, request, slug):
+        pagina = self._get_or_init(slug)
+        form = PaginaStaticaForm(instance=pagina)
+        return render(request, "siteconfig/pagina_statica_edit.html", {
+            "form": form,
+            "pagina": pagina,
+            "slug": slug,
+        })
+
+    def post(self, request, slug):
+        pagina = self._get_or_init(slug)
+        form = PaginaStaticaForm(request.POST, instance=pagina)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Pagina «{pagina.get_slug_display()}» aggiornata.")
+            return redirect("siteconfig:pagina_edit", slug=slug)
+        return render(request, "siteconfig/pagina_statica_edit.html", {
+            "form": form,
+            "pagina": pagina,
+            "slug": slug,
+        })
 
 
 class MailpitProxyView(View):

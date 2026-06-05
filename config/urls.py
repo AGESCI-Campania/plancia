@@ -5,7 +5,7 @@ from django.urls import include, path
 
 from apps.editions.views import HomeView
 from apps.notifications.webhooks import AnymailWebhookDispatchView
-from apps.siteconfig.views import MailpitProxyView
+from apps.siteconfig.views import MailpitProxyView, PaginaStaticaPublicView
 
 urlpatterns = [
     path("", HomeView.as_view(), name="home"),
@@ -25,6 +25,8 @@ urlpatterns = [
     path("api/soci/", include("apps.org.urls")),
     path("drive/", include("apps.storage_drive.urls", namespace="storage_drive")),
     path("anymail/webhook/", AnymailWebhookDispatchView.as_view(), name="anymail_webhook"),
+    path("privacy/", PaginaStaticaPublicView.as_view(), {"slug": "privacy"}, name="pagina_privacy"),
+    path("termini/", PaginaStaticaPublicView.as_view(), {"slug": "termini"}, name="pagina_termini"),
     path("mailadmin/", MailpitProxyView.as_view(), name="mailpit_proxy"),
     path("mailadmin/<path:path>", MailpitProxyView.as_view(), name="mailpit_proxy_path"),
 ]

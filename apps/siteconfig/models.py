@@ -101,6 +101,27 @@ class Impostazioni(models.Model):
         return obj
 
 
+class SlugPagina(models.TextChoices):
+    PRIVACY = "privacy", "Privacy Policy"
+    TERMINI = "termini", "Condizioni del Servizio"
+
+
+class PaginaStatica(models.Model):
+    """Pagina statica pubblica (privacy, termini). Contenuto modificabile da Admin/Segreteria/IABR."""
+
+    slug = models.CharField(max_length=20, choices=SlugPagina.choices, unique=True)
+    titolo = models.CharField(max_length=200)
+    contenuto = models.TextField(blank=True)
+    aggiornato_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Pagina statica"
+        verbose_name_plural = "Pagine statiche"
+
+    def __str__(self) -> str:
+        return self.get_slug_display()
+
+
 class FooterLink(models.Model):
     """Uno dei link (fino a 5) mostrati nella colonna destra del footer."""
 

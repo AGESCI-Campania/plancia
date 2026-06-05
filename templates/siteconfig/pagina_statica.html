@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}{{ pagina.titolo }} — Plancia{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <h2 class="mb-4">{{ pagina.titolo }}</h2>
+    <div class="prose">
+      {{ pagina.contenuto|safe }}
+    </div>
+  </div>
+</div>
+{% endblock %}
