@@ -48,6 +48,10 @@ class DriveOAuthInitView(StaffPlanciaRequiredMixin, View):
         )
         request.session["drive_oauth_state"] = state
         request.session["drive_oauth_edizione"] = edizione_pk
+        # Salva il code_verifier PKCE generato automaticamente da google-auth-oauthlib ≥1.0
+        request.session["drive_oauth_code_verifier"] = getattr(
+            flow.oauth2session, "_code_verifier", None
+        )
         return redirect(auth_url)
 
 
@@ -63,6 +67,7 @@ class DriveOAuthCallbackView(View):
 
         state = request.session.pop("drive_oauth_state", None)
         edizione_pk = request.session.pop("drive_oauth_edizione", None)
+        code_verifier = request.session.pop("drive_oauth_code_verifier", None)
 
         if not state or state != request.GET.get("state"):
             messages.error(request, "Sessione OAuth non valida. Riprova.")
@@ -77,6 +82,9 @@ class DriveOAuthCallbackView(View):
             state=state,
             redirect_uri=settings.GOOGLE_OAUTH_REDIRECT_URI,
         )
+        # Ripristina il code_verifier PKCE salvato nell'init (richiesto da google-auth-oauthlib ≥1.0)
+        if code_verifier:
+            flow.oauth2session._code_verifier = code_verifier
         flow.fetch_token(authorization_response=request.build_absolute_uri())
         creds = flow.credentials
 
