@@ -269,9 +269,12 @@ class MailpitProxyView(View):
     """
 
     def dispatch(self, request, *args, **kwargs):
-        if not request.user.is_authenticated or not request.user.is_staff:
+        if not request.user.is_authenticated:
             from django.contrib.auth.views import redirect_to_login
             return redirect_to_login(request.get_full_path())
+        if not (request.user.is_staff_plancia or request.user.is_superuser):
+            from django.http import HttpResponseForbidden
+            return HttpResponseForbidden("Accesso riservato agli amministratori.")
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, path=""):
