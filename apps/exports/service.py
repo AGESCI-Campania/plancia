@@ -6,8 +6,6 @@ import io
 from pathlib import Path
 
 from django.conf import settings
-from django.template.loader import render_to_string
-
 
 # ---------------------------------------------------------------------------
 # PDF
@@ -25,21 +23,69 @@ def _get_pdf_template_html() -> str:
         return path.read_text(encoding="utf-8")
 
 
+def _fetch_foto_drive(allegati, max_count: int = 12) -> list[dict]:
+    """Scarica le immagini da Drive e restituisce lista di {nome, src} con data URI base64."""
+    import base64
+    import io
+
+    foto = []
+    for a in allegati[:max_count]:
+        if not a.drive_file_id or not a.mime.startswith("image/"):
+            continue
+        try:
+            from googleapiclient.http import MediaIoBaseDownload
+
+            from apps.storage_drive.service import _build_drive_service, _get_credenziali
+
+            cred = _get_credenziali(a.diario.edizione)
+            service = _build_drive_service(cred)
+            req = service.files().get_media(fileId=a.drive_file_id)
+            buf = io.BytesIO()
+            dl = MediaIoBaseDownload(buf, req, chunksize=4 * 1024 * 1024)
+            done = False
+            while not done:
+                _, done = dl.next_chunk()
+            b64 = base64.b64encode(buf.getvalue()).decode()
+            foto.append({"nome": a.nome, "src": f"data:{a.mime};base64,{b64}"})
+        except Exception:
+            pass  # immagine non disponibile: la saltiamo nel PDF
+    return foto
+
+
 def genera_pdf_diario(diario) -> bytes:
     """Genera il PDF del diario. Il template non include Relazione né Valutazione (docs §15)."""
     import weasyprint
 
+    from apps.diaries.models import Allegato
     from apps.siteconfig.models import Impostazioni
 
     imp = Impostazioni.get()
+
+    # Prepara lista imprese con allegati fotografici pre-caricati
+    imprese = list(diario.imprese.prefetch_related("posti_azione", "esiti_specialita"))
+    all_foto = list(Allegato.objects.filter(
+        diario=diario, mime__startswith="image/"
+    ).only("pk", "diario_id", "modulo", "drive_file_id", "mime", "nome"))
+
+    for imp_obj in imprese:
+        modulo_key = f"impresa_{imp_obj.numero}"
+        imp_obj.pdf_foto = _fetch_foto_drive(
+            [a for a in all_foto if a.modulo == modulo_key]
+        )
+
+    missione = getattr(diario, "missione", None)
+    missione_foto = _fetch_foto_drive(
+        [a for a in all_foto if a.modulo == "missione"]
+    ) if missione else []
 
     # Raccolta dati moduli (mai relazione/valutazione nel PDF del CSQ — docs sez. 15)
     context = {
         "diario": diario,
         "anagrafica": getattr(diario, "anagrafica", None),
         "presentazione": getattr(diario, "presentazione", None),
-        "imprese": diario.imprese.prefetch_related("posti_azione", "esiti_specialita"),
-        "missione": getattr(diario, "missione", None),
+        "imprese": imprese,
+        "missione": missione,
+        "missione_foto": missione_foto,
         # relazione e valutazione deliberatamente escluse
         "titolo_piattaforma": imp.titolo,
         "sottotitolo_piattaforma": imp.sottotitolo,
@@ -47,7 +93,6 @@ def genera_pdf_diario(diario) -> bytes:
 
     template_html = _get_pdf_template_html()
 
-    # Sostituisce il template con render_to_string se è un path relativo
     from django.template import Context, Template
     rendered = Template(template_html).render(Context(context))
 
@@ -76,7 +121,6 @@ def genera_excel_edizione(edizione) -> bytes:
     ]
     ws_riepilogo.append(header)
     # Stile intestazione
-    bold = Font(bold=True)
     fill = PatternFill("solid", fgColor="5AA02C")
     for i, _ in enumerate(header, 1):
         cell = ws_riepilogo.cell(row=1, column=i)

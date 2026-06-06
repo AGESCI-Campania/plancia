@@ -7,18 +7,21 @@
   <title>Diario di Bordo — {{ diario.squadriglia }}</title>
   <style>
     @page { size: A4; margin: 1.8cm; }
-    body { font-family: "DejaVu Sans", sans-serif; color: #1a2b1a; font-size: 11pt; line-height:1.5; }
+    body { font-family: "DejaVu Sans", sans-serif; color: #1a2b1a; font-size: 11pt; line-height: 1.5; }
     h1 { color: #2E6B1A; font-size: 18pt; margin-bottom: 4pt; }
     h2 { color: #5AA02C; font-size: 13pt; border-bottom: 1.5pt solid #cfe3c2; padding-bottom: 2pt; margin-top: 18pt; }
-    h3 { color: #3a7a1a; font-size: 11pt; margin-top: 10pt; }
-    .meta { color: #5a7a5a; font-size: 9pt; margin-bottom: 12pt; }
+    h3 { color: #3a7a1a; font-size: 11pt; margin-top: 10pt; margin-bottom: 4pt; }
+    .meta  { color: #5a7a5a; font-size: 9pt; margin-bottom: 12pt; }
     .label { font-weight: bold; }
-    .sezione { margin-bottom: 10pt; }
+    .sezione { margin-bottom: 8pt; }
     dl.inline dt { display: inline; font-weight: bold; }
     dl.inline dd { display: inline; margin-left: 4pt; margin-right: 12pt; }
-    table.impresa { width: 100%; border-collapse: collapse; margin-top: 6pt; }
-    table.impresa th, table.impresa td { border: 0.5pt solid #cfe3c2; padding: 4pt 6pt; font-size: 10pt; }
-    table.impresa th { background: #eaf5e0; }
+    table.griglia { width: 100%; border-collapse: collapse; margin-top: 4pt; font-size: 10pt; }
+    table.griglia th, table.griglia td { border: 0.5pt solid #cfe3c2; padding: 4pt 6pt; }
+    table.griglia th { background: #eaf5e0; font-weight: bold; }
+    .badge-conquistata   { color: #155724; }
+    .badge-in_cammino    { color: #856404; }
+    .badge-non_conquistata { color: #842029; }
     .page-break { page-break-before: always; }
     .footer { margin-top: 24pt; font-size: 8pt; color: #888; text-align: center; }
   </style>
@@ -31,89 +34,144 @@
   · {{ diario.edizione }}
 </p>
 
-<!-- Intestazione -->
+{# ── Dati generali ─────────────────────────────────────────────────────────── #}
 <h2>Dati generali</h2>
 <dl class="inline">
-  <dt>Squadriglia:</dt><dd>{{ diario.squadriglia }}</dd>
-  <dt>Reparto:</dt><dd>{{ diario.squadriglia.reparto }}</dd>
-  <dt>Gruppo:</dt><dd>{{ diario.squadriglia.reparto.gruppo }}</dd>
-  <dt>Zona:</dt><dd>{{ diario.squadriglia.reparto.gruppo.zona }}</dd>
+  <dt>Squadriglia:</dt><dd>{{ diario.squadriglia.nome }}</dd>
+  <dt>Reparto:</dt><dd>{{ diario.squadriglia.reparto.nome }}</dd>
+  <dt>Gruppo:</dt><dd>{{ diario.squadriglia.reparto.gruppo.nome }}</dd>
+  <dt>Zona:</dt><dd>{{ diario.squadriglia.reparto.gruppo.zona.nome }}</dd>
   <dt>Tipo:</dt><dd>{{ diario.get_tipo_display }}</dd>
 </dl>
 {% if anagrafica %}
-<div class="sezione">
-  <span class="label">Specialità proposta:</span> {{ anagrafica.specialita|default:"—" }}<br>
-  {% if anagrafica.anni_squadriglia %}<span class="label">Anni in squadriglia:</span> {{ anagrafica.anni_squadriglia }}{% endif %}
+<div class="sezione" style="margin-top:6pt">
+  <span class="label">Specialità proposta:</span> {{ anagrafica.specialita|default:"—" }}
 </div>
 {% endif %}
 {% if diario.csq %}
   <div class="sezione"><span class="label">Capo Squadriglia:</span> {{ diario.csq.cognome }} {{ diario.csq.nome }}</div>
 {% endif %}
+{% if anagrafica and anagrafica.crp_nome %}
+  <div class="sezione"><span class="label">Capo Reparto:</span> {{ anagrafica.crp_cognome }} {{ anagrafica.crp_nome }}</div>
+{% endif %}
 
-<!-- Presentazione squadriglia -->
+{# ── Presentazione ─────────────────────────────────────────────────────────── #}
 {% if presentazione %}
 <h2>Presentazione della squadriglia</h2>
-<div class="sezione">{{ presentazione.testo|linebreaksbr }}</div>
-{% if presentazione.membrisquadriglia.all %}
+{% if presentazione.cosa_sappiamo_fare %}
+  <div class="sezione">{{ presentazione.cosa_sappiamo_fare }}</div>
+{% endif %}
+{% if presentazione.membri.all %}
   <h3>Composizione</h3>
-  <table class="impresa">
-    <tr><th>Cognome</th><th>Nome</th><th>Anni</th><th>Ruolo</th></tr>
-    {% for m in presentazione.membrisquadriglia.all %}
+  <table class="griglia">
+    <tr><th>Cognome</th><th>Nome</th><th>Ruolo</th><th>Sentiero</th></tr>
+    {% for m in presentazione.membri.all %}
       <tr>
-        <td>{{ m.cognome }}</td><td>{{ m.nome }}</td>
-        <td>{{ m.anni_scout|default:"—" }}</td><td>{{ m.ruolo|default:"—" }}</td>
+        <td>{{ m.cognome }}</td>
+        <td>{{ m.nome }}</td>
+        <td>{{ m.get_ruolo_display|default:"—" }}</td>
+        <td>{{ m.get_sentiero_display|default:"—" }}</td>
       </tr>
     {% endfor %}
   </table>
 {% endif %}
 {% endif %}
 
-<!-- Imprese -->
+{# ── Imprese ───────────────────────────────────────────────────────────────── #}
 {% for impresa in imprese %}
   <div class="page-break"></div>
-  <h2>Impresa: {{ impresa.titolo }}</h2>
-  <div class="sezione">
-    {% if impresa.obiettivo %}<p><span class="label">Obiettivo:</span> {{ impresa.obiettivo }}</p>{% endif %}
-    {% if impresa.descrizione %}<p>{{ impresa.descrizione|linebreaksbr }}</p>{% endif %}
-  </div>
+  <h2>Impresa: {{ impresa.titolo|default:"(senza titolo)" }}</h2>
+
+  {% if impresa.data_inizio %}
+    <div class="sezione">
+      <span class="label">Periodo:</span>
+      {{ impresa.data_inizio }}{% if impresa.data_fine %} – {{ impresa.data_fine }}{% endif %}
+    </div>
+  {% endif %}
+
+  {% if impresa.perche %}
+    <div class="sezione"><span class="label">Perché:</span> {{ impresa.perche }}</div>
+  {% endif %}
+  {% if impresa.come %}
+    <div class="sezione"><span class="label">Come:</span> {{ impresa.come }}</div>
+  {% endif %}
+  {% if impresa.cosa %}
+    <div class="sezione"><span class="label">Cosa abbiamo fatto:</span> {{ impresa.cosa }}</div>
+  {% endif %}
+  {% if impresa.link_esterno %}
+    <div class="sezione"><span class="label">Link:</span> {{ impresa.link_esterno }}</div>
+  {% endif %}
 
   {% if impresa.posti_azione.all %}
     <h3>Posti d'azione</h3>
-    <table class="impresa">
-      <tr><th>Descrizione</th><th>Data</th><th>Responsabile</th></tr>
+    <table class="griglia">
+      <tr><th>Descrizione</th></tr>
       {% for pa in impresa.posti_azione.all %}
-        <tr>
-          <td>{{ pa.descrizione }}</td>
-          <td>{{ pa.data|default:"—" }}</td>
-          <td>{{ pa.responsabile|default:"—" }}</td>
-        </tr>
+        <tr><td>{{ pa.descrizione }}</td></tr>
       {% endfor %}
     </table>
   {% endif %}
 
   {% if impresa.esiti_specialita.all %}
-    <h3>Esiti specialità</h3>
-    {% for esito in impresa.esiti_specialita.all %}
-      <div class="sezione">
-        <span class="label">{{ esito.specialita }}:</span> {{ esito.descrizione }}
-      </div>
-    {% endfor %}
+    <h3>Specialità e brevetti</h3>
+    <table class="griglia">
+      <tr><th>Tipo</th><th>Nome</th><th>Stato</th></tr>
+      {% for esito in impresa.esiti_specialita.all %}
+        <tr>
+          <td>{{ esito.get_tipo_display }}</td>
+          <td>{{ esito.nome }}</td>
+          <td class="badge-{{ esito.stato }}">{{ esito.get_stato_display }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% endif %}
+
+  {% if impresa.pdf_foto %}
+    <h3>Foto</h3>
+    <div style="display:flex;flex-wrap:wrap;gap:6pt;margin-top:4pt">
+      {% for foto in impresa.pdf_foto %}
+        <img src="{{ foto.src }}"
+             style="width:120pt;height:90pt;object-fit:cover;border:0.5pt solid #cfe3c2"
+             alt="{{ foto.nome }}">
+      {% endfor %}
+    </div>
   {% endif %}
 {% endfor %}
 
-<!-- Missione (solo NUOVO) -->
+{# ── Missione ──────────────────────────────────────────────────────────────── #}
 {% if missione %}
   <div class="page-break"></div>
   <h2>Missione della squadriglia</h2>
-  <div class="sezione">{{ missione.testo|linebreaksbr }}</div>
-  {% if missione.posti_azione_missione.all %}
-    <h3>Posti d'azione della missione</h3>
-    <table class="impresa">
-      <tr><th>Descrizione</th><th>Data</th></tr>
-      {% for pa in missione.posti_azione_missione.all %}
-        <tr><td>{{ pa.descrizione }}</td><td>{{ pa.data|default:"—" }}</td></tr>
+
+  {% if missione.titolo %}
+    <div class="sezione"><span class="label">Titolo:</span> {{ missione.titolo }}</div>
+  {% endif %}
+  {% if missione.data %}
+    <div class="sezione"><span class="label">Data:</span> {{ missione.data }}</div>
+  {% endif %}
+  {% if missione.descrizione_svolgimento %}
+    <div class="sezione">{{ missione.descrizione_svolgimento }}</div>
+  {% endif %}
+
+  {% if missione.posti_azione.all %}
+    <h3>Posti d'azione</h3>
+    <table class="griglia">
+      <tr><th>Descrizione</th></tr>
+      {% for pa in missione.posti_azione.all %}
+        <tr><td>{{ pa.descrizione }}</td></tr>
       {% endfor %}
     </table>
+  {% endif %}
+
+  {% if missione_foto %}
+    <h3>Foto</h3>
+    <div style="display:flex;flex-wrap:wrap;gap:6pt;margin-top:4pt">
+      {% for foto in missione_foto %}
+        <img src="{{ foto.src }}"
+             style="width:120pt;height:90pt;object-fit:cover;border:0.5pt solid #cfe3c2"
+             alt="{{ foto.nome }}">
+      {% endfor %}
+    </div>
   {% endif %}
 {% endif %}
 
