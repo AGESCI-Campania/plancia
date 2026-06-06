@@ -36,7 +36,12 @@ def _build_drive_service(credenziali: DriveCredenziali):
     if credenziali.scaduto:
         creds.refresh(Request())
         credenziali.access_token = creds.token
-        credenziali.expires_at = creds.expiry
+        expiry = creds.expiry
+        if expiry is not None:
+            from django.utils import timezone as tz
+            if tz.is_naive(expiry):
+                expiry = tz.make_aware(expiry)
+        credenziali.expires_at = expiry
         credenziali.save(update_fields=["access_token", "expires_at", "aggiornato_at"])
 
     return build("drive", "v3", credentials=creds)

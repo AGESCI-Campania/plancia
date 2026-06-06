@@ -30,7 +30,12 @@ class DriveCredenziali(models.Model):
     @property
     def scaduto(self) -> bool:
         from django.utils import timezone
-        return bool(self.expires_at and timezone.now() >= self.expires_at)
+        if not self.expires_at:
+            return False
+        expires = self.expires_at
+        if timezone.is_naive(expires):
+            expires = timezone.make_aware(expires)
+        return timezone.now() >= expires
 
 
 class DriveFile(models.Model):
