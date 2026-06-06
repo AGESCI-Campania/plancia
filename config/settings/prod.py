@@ -28,6 +28,16 @@ SECURE_CSP = {
     "style-src": ["'self'", "'unsafe-inline'"],
 }
 
+# Cache Redis condivisa tra tutti i worker gunicorn (evita la LocMemCache per-processo)
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": env.str("REDIS_CACHE_URL", "redis://redis:6379/2"),
+        "KEY_PREFIX": "plancia",
+        "TIMEOUT": 300,
+    }
+}
+
 # axes per primo in produzione
 AUTHENTICATION_BACKENDS = ["axes.backends.AxesStandaloneBackend", *AUTHENTICATION_BACKENDS]
 
