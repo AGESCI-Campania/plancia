@@ -31,14 +31,19 @@ def task_genera_pdf_diario(diario_pk: int, utente_pk: int | None = None) -> dict
             return {"ok": True, "drive": False, "drive_error": str(exc)}
 
     if utente_pk and drive_ok:
-        _notifica_pdf_pronto(diario, utente_pk)
+        _invia_mail_pdf("diario_pdf_pronto", utente_pk, diario)
 
     return {"ok": True, "drive": drive_ok}
 
 
-def _notifica_pdf_pronto(diario, utente_pk: int) -> None:
-    """Invia email all'utente con il link per scaricare il PDF."""
+def _invia_mail_pdf(chiave: str, utente_pk: int, diario, link_pdf: str = "") -> None:
+    """Invia email all'utente relativa alla generazione del PDF.
+
+    chiave: 'diario_pdf_in_generazione' oppure 'diario_pdf_pronto'.
+    Se link_pdf è vuoto viene costruito da BASE_URL.
+    """
     try:
+        from django.conf import settings
         from django.core.mail import EmailMultiAlternatives
         from django.urls import reverse
 
@@ -52,11 +57,12 @@ def _notifica_pdf_pronto(diario, utente_pk: int) -> None:
             return
 
         imp = Impostazioni.get()
-        from django.conf import settings
-        base_url = getattr(settings, "BASE_URL", "https://plancia.agescicampania.org").rstrip("/")
-        link_pdf = f"{base_url}{reverse('diaries:pdf', args=[diario.pk])}"
 
-        oggetto, corpo = render_mail("diario_pdf_pronto", {
+        if not link_pdf and chiave == "diario_pdf_pronto":
+            base_url = getattr(settings, "BASE_URL", "https://plancia.agescicampania.org").rstrip("/")
+            link_pdf = f"{base_url}{reverse('diaries:pdf', args=[diario.pk])}"
+
+        oggetto, corpo = render_mail(chiave, {
             "nome": utente.first_name or utente.email,
             "cognome": utente.last_name or "",
             "titolo_piattaforma": imp.titolo or "Plancia",
@@ -64,8 +70,12 @@ def _notifica_pdf_pronto(diario, utente_pk: int) -> None:
             "link_pdf": link_pdf,
         })
 
+        soggetti_default = {
+            "diario_pdf_in_generazione": f"PDF in generazione — {diario.squadriglia}",
+            "diario_pdf_pronto": f"PDF pronto — {diario.squadriglia}",
+        }
         msg = EmailMultiAlternatives(
-            subject=oggetto or f"PDF diario {diario.squadriglia} pronto",
+            subject=oggetto or soggetti_default.get(chiave, "Notifica PDF"),
             body=corpo,
             from_email=imp.from_email,
             to=[utente.email],
@@ -74,7 +84,7 @@ def _notifica_pdf_pronto(diario, utente_pk: int) -> None:
         msg.attach_alternative(corpo, "text/html")
         msg.send()
     except Exception:
-        pass  # la notifica non è critica: il PDF è già caricato su Drive
+        pass  # la notifica non è critica
 
 
 @shared_task

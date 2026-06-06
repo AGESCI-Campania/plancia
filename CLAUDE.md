@@ -160,6 +160,15 @@ Ogni deploy: `git pull && sudo systemctl reload plancia` (rebuild immagine + mig
 `systemctl restart` riavvia senza rebuild — solo per emergenze senza modifiche al codice.
 Backup: `deploy/backup.sh` via cron (`deploy/crontab.example`).
 
+## Funzionalità da sviluppare (non ancora implementate)
+
+- **Generazione massiva PDF diari**: task Celery che genera i PDF di tutti i diari
+  di un'edizione in batch. Flusso previsto:
+  1. Email di avvio al richiedente
+  2. Email di progresso ogni 10 diari con i link ai PDF già generati
+  3. Email finale con tutti i link
+  Vedi `apps/exports/tasks.py` (`task_genera_pdf_diario`) come base.
+
 ## Cosa NON fare
 - Non cambiare `AUTH_USER_MODEL` né l'app label dopo le prime migrazioni.
 - Non rendere visibili valutazioni/relazioni oltre i ruoli previsti.

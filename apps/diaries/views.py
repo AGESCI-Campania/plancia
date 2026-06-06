@@ -577,7 +577,8 @@ class DiarioPdfView(DiarioAccessMixin, View):
                 return redirect("diaries:detail", pk=pk)
 
         # 3. Drive configurato ma nessuna cache: avvia task Celery asincrono
-        from apps.exports.tasks import task_genera_pdf_diario
+        from apps.exports.tasks import _invia_mail_pdf, task_genera_pdf_diario
+        _invia_mail_pdf("diario_pdf_in_generazione", request.user.pk, diario)
         task_genera_pdf_diario.delay(diario.pk, request.user.pk)
         messages.info(
             request,
