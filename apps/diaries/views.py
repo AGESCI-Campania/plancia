@@ -531,20 +531,60 @@ def _allegato_json(a: Allegato) -> dict:
 
 
 class DiarioPdfView(DiarioAccessMixin, View):
-    """GET /diari/<pk>/pdf/ — genera e scarica il PDF del diario."""
+    """GET /diari/<pk>/pdf/ — serve il PDF dalla cache Drive o avvia la generazione async."""
 
     def get(self, request, pk):
+        import io
+
         diario = self._get_diario(pk)
-        try:
-            from apps.exports.service import genera_pdf_diario
-            pdf = genera_pdf_diario(diario)
-        except Exception as exc:
-            messages.error(request, f"Errore nella generazione del PDF: {exc}")
-            return redirect("diaries:detail", pk=pk)
-        nome = f"Diario_{diario.squadriglia.nome}_{diario.edizione.anno}.pdf"
-        response = HttpResponse(pdf, content_type="application/pdf")
-        response["Content-Disposition"] = f'attachment; filename="{nome}"'
-        return response
+
+        # 1. Controlla se esiste già un PDF in cache (DriveFile tipo=PDF)
+        from apps.storage_drive.models import DriveFile, TipoFile
+        cache = DriveFile.objects.filter(diario=diario, tipo=TipoFile.PDF).first()
+        if cache and cache.drive_file_id:
+            try:
+                from googleapiclient.http import MediaIoBaseDownload
+
+                from apps.storage_drive.service import _build_drive_service, _get_credenziali
+                cred = _get_credenziali(diario.edizione)
+                service = _build_drive_service(cred)
+                req = service.files().get_media(fileId=cache.drive_file_id)
+                buf = io.BytesIO()
+                dl = MediaIoBaseDownload(buf, req, chunksize=4 * 1024 * 1024)
+                done = False
+                while not done:
+                    _, done = dl.next_chunk()
+                buf.seek(0)
+                nome = cache.nome or f"Diario_{diario.squadriglia.nome}_{diario.edizione.anno}.pdf"
+                response = HttpResponse(buf.read(), content_type="application/pdf")
+                response["Content-Disposition"] = f'attachment; filename="{nome}"'
+                return response
+            except Exception:
+                # Cache corrotta o file rimosso da Drive: rigenera
+                cache.delete()
+
+        # 2. Se Drive non configurato: genera sincrono (senza foto, veloce)
+        if not diario.edizione.drive_oauth_account:
+            try:
+                from apps.exports.service import genera_pdf_diario
+                pdf = genera_pdf_diario(diario)
+                nome = f"Diario_{diario.squadriglia.nome}_{diario.edizione.anno}.pdf"
+                response = HttpResponse(pdf, content_type="application/pdf")
+                response["Content-Disposition"] = f'attachment; filename="{nome}"'
+                return response
+            except Exception as exc:
+                messages.error(request, f"Errore nella generazione del PDF: {exc}")
+                return redirect("diaries:detail", pk=pk)
+
+        # 3. Drive configurato ma nessuna cache: avvia task Celery asincrono
+        from apps.exports.tasks import task_genera_pdf_diario
+        task_genera_pdf_diario.delay(diario.pk, request.user.pk)
+        messages.info(
+            request,
+            "Il PDF è in fase di generazione. "
+            f"Riceverai una mail all'indirizzo {request.user.email} quando sarà pronto.",
+        )
+        return redirect("diaries:detail", pk=pk)
 
 
 class AllegatoPreviewView(DiarioAccessMixin, View):
