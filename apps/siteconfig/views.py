@@ -469,11 +469,14 @@ class PaginaStaticaEditView(RuoloRequiredMixin, View):
         })
 
 
+@method_decorator(csrf_exempt, name="dispatch")
 class MailpitProxyView(View):
     """Proxy verso Mailpit per il debug delle email in produzione.
 
     Accessibile su /mailadmin/ solo per utenti staff. Richiede che Mailpit sia
     avviato con --ui-web-path /mailadmin e raggiungibile all'URL MAILPIT_INTERNAL_URL.
+    csrf_exempt: l'autenticazione è gestita da dispatch(); le richieste Mailpit
+    (PUT/PATCH per mark-as-read, DELETE, ecc.) non portano il token Django.
     """
 
     def dispatch(self, request, *args, **kwargs):
@@ -489,6 +492,12 @@ class MailpitProxyView(View):
         return self._proxy(request, path)
 
     def post(self, request, path=""):
+        return self._proxy(request, path)
+
+    def put(self, request, path=""):
+        return self._proxy(request, path)
+
+    def patch(self, request, path=""):
         return self._proxy(request, path)
 
     def delete(self, request, path=""):
