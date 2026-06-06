@@ -588,8 +588,19 @@ class Command(BaseCommand):
 
             files = self._lista_file(service, cartella["id"])
             importati = 0
+            # Traccia i filename già processati in questa run per evitare duplicati
+            # da sottocartelle multiple di JotForm (una per ogni re-submission).
+            visti_in_run: set[str] = set()
             for f in files:
                 filename = f["name"]
+
+                # Salta se già visto in questa run (stessa cartella, submission multipla)
+                if filename in visti_in_run:
+                    if verbosity >= 2:
+                        self.stdout.write(f"    {filename}: già processato in questa run, salto.")
+                    continue
+                visti_in_run.add(filename)
+
                 modulo = modulo_map.get(filename)
                 if not modulo:
                     for k, v in modulo_map.items():
@@ -605,10 +616,10 @@ class Command(BaseCommand):
                         self.stdout.write(f"    {filename} → {modulo} (dry-run)")
                     continue
 
-                # Idempotenza: salta se già presente per questo diario
+                # Idempotenza: salta se già presente in DB per questo diario
                 if Allegato.objects.filter(diario=diario, nome=filename).exists():
                     if verbosity >= 2:
-                        self.stdout.write(f"    {filename}: già presente, salto.")
+                        self.stdout.write(f"    {filename}: già presente in DB, salto.")
                     continue
 
                 if not dest_folder_id:
