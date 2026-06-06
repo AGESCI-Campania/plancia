@@ -97,6 +97,15 @@ class Impostazioni(models.Model):
         help_text="Testo centrale del footer. Se vuoto usa il default.",
     )
 
+    # Sicurezza — MFA
+    # Se True: MFA obbligatoria per Admin, Segreteria e Incaricati EG.
+    # Se False: obbligatoria solo per Admin (Segreteria e IABR possono accedere senza MFA).
+    mfa_obbligatoria_ruoli_estesi = models.BooleanField(
+        default=True,
+        verbose_name="MFA obbligatoria per Segreteria e Incaricati EG",
+        help_text="Se disattivato, la MFA resta obbligatoria solo per gli Admin.",
+    )
+
     # Stato piattaforma / diagnostica
     manutenzione = models.BooleanField(default=False)
     debug_diagnostico = models.BooleanField(default=False)  # logging verboso (NON ribalta settings.DEBUG)

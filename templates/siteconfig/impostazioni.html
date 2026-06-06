@@ -190,6 +190,7 @@
     </div>
     <div class="card-body">
       <div class="row g-3 row-cols-1 row-cols-md-3">
+        {% include "siteconfig/_switch.html" with field=form.mfa_obbligatoria_ruoli_estesi badge="primary" desc="Se disattivato, solo gli Admin sono obbligati ad attivare la MFA. Segreteria e Incaricati EG possono accedere senza." %}
         {% include "siteconfig/_switch.html" with field=form.manutenzione badge="danger" desc="Mostra una pagina di cortesia a tutti gli utenti non-Admin." %}
         {% include "siteconfig/_switch.html" with field=form.debug_toolbar badge="warning" desc="Mostra la debug-toolbar Django ai soli Admin (non ribalta DEBUG)." %}
         {% include "siteconfig/_switch.html" with field=form.debug_diagnostico badge="warning" desc="Alza il livello di logging a DEBUG per facilitare la diagnosi." %}

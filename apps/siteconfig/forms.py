@@ -34,6 +34,7 @@ class ImpostazioniForm(forms.ModelForm):
             "email_backend_standard", "email_backend_massivo",
             "smtp_host", "smtp_port", "smtp_user", "smtp_password", "smtp_use_tls",
             "email_provider", "email_provider_api_key", "email_provider_webhook_secret",
+            "mfa_obbligatoria_ruoli_estesi",
             "manutenzione", "debug_toolbar", "debug_diagnostico",
         ]
         widgets = {
@@ -58,6 +59,7 @@ class ImpostazioniForm(forms.ModelForm):
                 render_value=True,
                 attrs={**_ctrl, "autocomplete": "off"},
             ),
+            "mfa_obbligatoria_ruoli_estesi": forms.CheckboxInput(attrs=_sw),
             "manutenzione": forms.CheckboxInput(attrs=_sw),
             "debug_toolbar": forms.CheckboxInput(attrs=_sw),
             "debug_diagnostico": forms.CheckboxInput(attrs=_sw),

@@ -5,17 +5,30 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
-# Ruoli per cui la MFA è obbligatoria (docs sez. 2 e 12).
-RUOLI_MFA_OBBLIGATORIA = {"admin", "segreteria", "incaricato_eg"}
+# Ruoli sempre soggetti a MFA, indipendentemente dalle impostazioni.
+RUOLI_MFA_SEMPRE = {"admin"}
+# Ruoli soggetti a MFA solo se l'impostazione mfa_obbligatoria_ruoli_estesi è True.
+RUOLI_MFA_ESTESI = {"segreteria", "incaricato_eg"}
 
 
 def ruolo_richiede_mfa(user) -> bool:
-    """Restituisce True se il ruolo o il flag personale impongono la MFA."""
-    return (
-        getattr(user, "ruolo", None) in RUOLI_MFA_OBBLIGATORIA
-        or getattr(user, "mfa_obbligatoria", False)
-        or getattr(user, "is_superuser", False)
-    )
+    """Restituisce True se il ruolo impone la MFA.
+
+    Admin: sempre obbligatoria.
+    Segreteria e Incaricati EG: obbligatoria solo se Impostazioni.mfa_obbligatoria_ruoli_estesi=True.
+    """
+    ruolo = getattr(user, "ruolo", None)
+    if ruolo in RUOLI_MFA_SEMPRE or getattr(user, "is_superuser", False):
+        return True
+    if getattr(user, "mfa_obbligatoria", False):
+        return True
+    if ruolo in RUOLI_MFA_ESTESI:
+        try:
+            from apps.siteconfig.models import Impostazioni
+            return Impostazioni.get().mfa_obbligatoria_ruoli_estesi
+        except Exception:
+            return True  # fallback sicuro
+    return False
 
 
 class PlanciaAccountAdapter(DefaultAccountAdapter):

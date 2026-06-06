@@ -125,6 +125,7 @@ Context processor `impostazioni` inietta `Impostazioni` (singleton) in ogni temp
   Webhook: `/anymail/webhook/`.
 - **Dev**: Mailpit su `localhost:8025`. `ACCOUNT_EMAIL_VERIFICATION = "none"` in `dev.py`.
 - **Dev MFA**: middleware disabilitato quando `DEBUG=True`. Bypass TOTP: `000000`.
+- **MFA selettiva**: `Impostazioni.mfa_obbligatoria_ruoli_estesi` (default True). Se False, MFA obbligatoria solo per Admin; Segreteria e Incaricati EG possono accedere senza. `ruolo_richiede_mfa()` in `adapters.py` legge questa impostazione.
 
 ## Regole di dominio
 - **Visibilità**: Relazione finale e Valutazione mai visibili al Capo Squadriglia; Valutazione non
