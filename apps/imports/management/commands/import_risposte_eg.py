@@ -665,9 +665,19 @@ class Command(BaseCommand):
         return risultati
 
     @staticmethod
-    def _lista_file(service, folder_id: str) -> list[dict]:
-        """Lista i file (non cartelle) in una cartella Drive."""
-        risultati = []
+    def _lista_file(service, folder_id: str, _depth: int = 0) -> list[dict]:
+        """Lista ricorsivamente i file (non cartelle) in una cartella Drive.
+
+        JotForm può creare sottocartelle per ogni domanda del form, quindi
+        occorre scendere nei livelli interni per trovare i file effettivi.
+        Limite di profondità: 5 livelli.
+        """
+        if _depth > 5:
+            return []
+
+        risultati: list[dict] = []
+
+        # File diretti nella cartella
         page_token = None
         while True:
             kwargs: dict = {
@@ -677,7 +687,7 @@ class Command(BaseCommand):
                     "and trashed=false"
                 ),
                 "pageSize": 200,
-                "fields": "nextPageToken, files(id, name, size, mimeType, webViewLink)",
+                "fields": "nextPageToken, files(id, name, size, mimeType)",
             }
             if page_token:
                 kwargs["pageToken"] = page_token
@@ -686,4 +696,28 @@ class Command(BaseCommand):
             page_token = resp.get("nextPageToken")
             if not page_token:
                 break
+
+        # Sottocartelle (ricorsione)
+        page_token = None
+        while True:
+            kwargs = {
+                "q": (
+                    f"'{folder_id}' in parents "
+                    "and mimeType='application/vnd.google-apps.folder' "
+                    "and trashed=false"
+                ),
+                "pageSize": 100,
+                "fields": "nextPageToken, files(id, name)",
+            }
+            if page_token:
+                kwargs["pageToken"] = page_token
+            resp = service.files().list(**kwargs).execute()
+            for sub in resp.get("files", []):
+                risultati.extend(
+                    Command._lista_file(service, sub["id"], _depth + 1)
+                )
+            page_token = resp.get("nextPageToken")
+            if not page_token:
+                break
+
         return risultati
