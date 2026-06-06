@@ -23,13 +23,22 @@ def _get_pdf_template_html() -> str:
         return path.read_text(encoding="utf-8")
 
 
-def _fetch_foto_drive(allegati, max_count: int = 12) -> list[dict]:
-    """Scarica le immagini da Drive e restituisce lista di {nome, src} con data URI base64."""
+def _fetch_foto_drive(allegati, max_count: int = 6, budget_sec: float = 18.0) -> list[dict]:
+    """Scarica le immagini da Drive e restituisce lista di {nome, src} con data URI base64.
+
+    Limita il numero di immagini (max_count) e il tempo totale (budget_sec) per non
+    eccedere il timeout del worker gunicorn (30s).
+    """
     import base64
     import io
+    import time
 
     foto = []
+    deadline = time.monotonic() + budget_sec
+
     for a in allegati[:max_count]:
+        if time.monotonic() >= deadline:
+            break  # budget esaurito: le immagini rimanenti vengono saltate
         if not a.drive_file_id or not a.mime.startswith("image/"):
             continue
         try:
@@ -41,12 +50,15 @@ def _fetch_foto_drive(allegati, max_count: int = 12) -> list[dict]:
             service = _build_drive_service(cred)
             req = service.files().get_media(fileId=a.drive_file_id)
             buf = io.BytesIO()
-            dl = MediaIoBaseDownload(buf, req, chunksize=4 * 1024 * 1024)
+            dl = MediaIoBaseDownload(buf, req, chunksize=2 * 1024 * 1024)
             done = False
             while not done:
+                if time.monotonic() >= deadline:
+                    break
                 _, done = dl.next_chunk()
-            b64 = base64.b64encode(buf.getvalue()).decode()
-            foto.append({"nome": a.nome, "src": f"data:{a.mime};base64,{b64}"})
+            else:
+                b64 = base64.b64encode(buf.getvalue()).decode()
+                foto.append({"nome": a.nome, "src": f"data:{a.mime};base64,{b64}"})
         except Exception:
             pass  # immagine non disponibile: la saltiamo nel PDF
     return foto
