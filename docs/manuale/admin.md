@@ -39,6 +39,17 @@ gestire i dispositivi TOTP e rigenerare i codici di recupero.
 
 ![Impostazione MFA](screenshots/30_mfa_impostazione.png)
 
+### Obbligo MFA per Segreteria e Incaricati EG
+
+Per impostazione predefinita la MFA è obbligatoria anche per **Segreteria** e
+**Incaricati EG**. Un Admin può renderla facoltativa per questi ruoli in
+**Impostazioni → Stato e diagnostica → MFA obbligatoria per Segreteria e Incaricati EG**.
+
+- **Attivato** (default): Segreteria e Incaricati EG devono configurare la MFA al primo accesso.
+- **Disattivato**: Segreteria e Incaricati EG possono accedere senza MFA. Per gli Admin resta sempre obbligatoria.
+
+![Opzione MFA Segreteria/IABR](screenshots/31_mfa_impostazioni.png)
+
 
 ---
 
