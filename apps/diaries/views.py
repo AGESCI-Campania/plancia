@@ -34,7 +34,7 @@ from apps.diaries.models import (
 )
 
 # Stati in cui il diario non è ancora stato inviato allo staff
-_STATI_PRIMA_INVIO = (StatoDiario.IN_COMPILAZIONE, StatoDiario.RELAZIONE_FINALE)
+_STATI_PRIMA_INVIO = (StatoDiario.NON_INIZIATO, StatoDiario.IN_COMPILAZIONE, StatoDiario.RELAZIONE_FINALE)
 
 
 # ---------------------------------------------------------------------------
@@ -67,7 +67,12 @@ class DiarioAccessMixin(LoginRequiredMixin):
         user = self.request.user
         if user.is_superuser or user.is_staff_plancia:
             return True
-        return diario.stato == StatoDiario.IN_COMPILAZIONE and user.ruolo == Ruolo.CSQ
+        return diario.stato in (StatoDiario.NON_INIZIATO, StatoDiario.IN_COMPILAZIONE) and user.ruolo == Ruolo.CSQ
+
+    def _inizia_se_necessario(self, diario: Diario) -> None:
+        """Transita NON_INIZIATO → IN_COMPILAZIONE al primo salvataggio del CSQ."""
+        if diario.stato == StatoDiario.NON_INIZIATO:
+            diario.inizia()
 
     def _puo_editare_relazione(self, diario: Diario) -> bool:
         """True se il Capo Reparto può compilare la relazione finale (modulo 6)."""
@@ -154,9 +159,9 @@ class DiarioDetailView(DiarioAccessMixin, DetailView):
             user.ruolo == Ruolo.CRP or user.is_superuser or user.is_staff_plancia
         )
         ctx["puo_riapire"] = diario.puo_essere_riaperto() and user.is_staff_plancia
-        # Cambio CSQ: CRP quando IN_COMPILAZIONE; admin/seg/iabr prima dell'invio
+        # Cambio CSQ: CRP quando NON_INIZIATO/IN_COMPILAZIONE; admin/seg/iabr prima dell'invio
         ctx["puo_cambiare_csq"] = (
-            diario.stato == StatoDiario.IN_COMPILAZIONE
+            diario.stato in (StatoDiario.NON_INIZIATO, StatoDiario.IN_COMPILAZIONE)
             and user.ruolo == Ruolo.CRP
             and user.socio is not None
             and diario.crp == user.socio
@@ -194,6 +199,7 @@ class AnagraficaUpdateView(DiarioAccessMixin, View):
         from django.shortcuts import render
 
         diario, anagrafica = self._setup(pk)
+        self._inizia_se_necessario(diario)
         form = AnagraficaForm(request.POST, instance=anagrafica, utente=request.user)
         if form.is_valid():
             form.save()
@@ -231,6 +237,7 @@ class PresentazioneUpdateView(DiarioAccessMixin, View):
         from django.shortcuts import render
 
         diario, presentazione = self._setup(pk)
+        self._inizia_se_necessario(diario)
         form = PresentazioneForm(request.POST, instance=presentazione)
         formset = MembroSqFormSet(request.POST, instance=presentazione)
         if form.is_valid() and formset.is_valid():
@@ -306,6 +313,7 @@ class ImpresaUpdateView(DiarioAccessMixin, View):
             queryset=impresa.esiti_specialita.filter(tipo=TipoEsito.BREVETTO),
             prefix="brevetti",
         )
+        self._inizia_se_necessario(diario)
         if (
             form.is_valid()
             and posti_fs.is_valid()
@@ -361,6 +369,7 @@ class MissioneUpdateView(DiarioAccessMixin, View):
         from django.shortcuts import render
 
         diario, missione = self._setup(pk)
+        self._inizia_se_necessario(diario)
         form = MissioneForm(request.POST, instance=missione)
         posti_fs = PostoAzioneMissioneFormSet(request.POST, instance=missione)
         if form.is_valid() and posti_fs.is_valid():
@@ -508,6 +517,7 @@ class AllegatoUploadView(DiarioAccessMixin, View):
         diario = self._get_diario(pk)
         if not self._puo_editare(diario):
             return JsonResponse({"error": "Non autorizzato"}, status=403)
+        self._inizia_se_necessario(diario)
 
         modulo = request.POST.get("modulo", "")
         if modulo not in MODULI_FOTO:

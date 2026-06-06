@@ -39,6 +39,7 @@ BREVETTI_COMPETENZA = [
 
 
 class StatoDiario(models.TextChoices):
+    NON_INIZIATO = "non_iniziato", "Non iniziato"
     IN_COMPILAZIONE = "in_compilazione", "In compilazione"
     RELAZIONE_FINALE = "relazione_finale", "Relazione finale"
     INVIATO = "inviato", "Inviato"
@@ -61,6 +62,7 @@ class ScadenzaRiferimento(models.TextChoices):
 
 # Transizioni ammesse per la FSM del Diario (docs sez. 6).
 _TRANSIZIONI: dict[str, list[str]] = {
+    StatoDiario.NON_INIZIATO: [StatoDiario.IN_COMPILAZIONE],
     StatoDiario.IN_COMPILAZIONE: [StatoDiario.RELAZIONE_FINALE],
     StatoDiario.RELAZIONE_FINALE: [StatoDiario.INVIATO],
     StatoDiario.INVIATO: [StatoDiario.IN_VALUTAZIONE],
@@ -112,7 +114,7 @@ class Diario(models.Model):
         max_length=10, choices=TipoDiario.choices, default=TipoDiario.NUOVO
     )
     stato = models.CharField(
-        max_length=20, choices=StatoDiario.choices, default=StatoDiario.IN_COMPILAZIONE, db_index=True
+        max_length=20, choices=StatoDiario.choices, default=StatoDiario.NON_INIZIATO, db_index=True
     )
     scadenza_riferimento = models.CharField(
         max_length=10,
@@ -198,6 +200,11 @@ class Diario(models.Model):
             )
         self.stato = nuovo_stato
         self.save()
+
+    def inizia(self) -> None:
+        """NON_INIZIATO → IN_COMPILAZIONE: il CSQ ha avviato la compilazione."""
+        self._transita(StatoDiario.IN_COMPILAZIONE)
+        self.save(update_fields=["stato"])
 
     def csq_invia(self) -> None:
         """IN_COMPILAZIONE → RELAZIONE_FINALE (CSQ completa la propria parte)."""

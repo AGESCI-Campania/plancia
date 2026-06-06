@@ -39,6 +39,31 @@ def diario(db, edizione, squadriglia):
 
 
 class TestTransizioni:
+    def test_stato_iniziale_non_iniziato(self, edizione, squadriglia):
+        """Il default dello stato è NON_INIZIATO."""
+        d = Diario.objects.create(
+            edizione=edizione,
+            squadriglia=squadriglia,
+            tipo=TipoDiario.NUOVO,
+            scadenza_riferimento=ScadenzaRiferimento.PRIMA,
+        )
+        assert d.stato == StatoDiario.NON_INIZIATO
+
+    def test_inizia_da_non_iniziato(self, diario):
+        """NON_INIZIATO → IN_COMPILAZIONE via inizia()."""
+        diario.stato = StatoDiario.NON_INIZIATO
+        diario.save()
+        diario.inizia()
+        diario.refresh_from_db()
+        assert diario.stato == StatoDiario.IN_COMPILAZIONE
+
+    def test_csq_invia_non_ammesso_da_non_iniziato(self, diario):
+        """csq_invia() da NON_INIZIATO solleva ValueError (serve inizia() prima)."""
+        diario.stato = StatoDiario.NON_INIZIATO
+        diario.save()
+        with pytest.raises(ValueError):
+            diario.csq_invia()
+
     def test_csq_invia_da_in_compilazione(self, diario):
         """IN_COMPILAZIONE → RELAZIONE_FINALE via csq_invia()."""
         diario.csq_invia()

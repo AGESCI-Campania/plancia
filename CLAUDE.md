@@ -101,14 +101,15 @@ Context processor `impostazioni` inietta `Impostazioni` (singleton) in ogni temp
 - **`crea_o_ottieni_utente_per_socio`**: per CSQ senza email usa placeholder
   `noemail.{codice_socio}@noemail.internal`.
 
-### FSM Diario (8 stati)
-`in_compilazione` → `relazione_finale` → `inviato` → `in_valutazione` →
+### FSM Diario (9 stati)
+`non_iniziato` → `in_compilazione` → `relazione_finale` → `inviato` → `in_valutazione` →
 `in_revisione`/`approvato`/`non_approvato`/`maggiori_info` → `in_compilazione`.
-- Moduli 1–5: editabili solo in `IN_COMPILAZIONE` (Capo Squadriglia).
+- Default creazione: `NON_INIZIATO`. Auto-transita a `IN_COMPILAZIONE` al primo salvataggio
+  di un modulo CSQ (`_inizia_se_necessario` nei POST dei moduli e upload allegati).
+- Moduli 1–5: editabili in `NON_INIZIATO` e `IN_COMPILAZIONE` (Capo Squadriglia).
 - Modulo 6: solo in `RELAZIONE_FINALE` (Capo Reparto).
 - **Non** usare `moduli_csq_completi` come guardia — usare `stato == RELAZIONE_FINALE`.
-- Cambio referenti: `CambiaCsqView`/`CambiaCrpView` rispettano
-  `_STATI_PRIMA_INVIO = (IN_COMPILAZIONE, RELAZIONE_FINALE)`.
+- Cambio referenti: `_STATI_PRIMA_INVIO = (NON_INIZIATO, IN_COMPILAZIONE, RELAZIONE_FINALE)`.
 
 ### Drive e OAuth
 - **PKCE obbligatorio** (da ottobre 2024): `DriveOAuthInitView` genera `code_verifier/challenge`,

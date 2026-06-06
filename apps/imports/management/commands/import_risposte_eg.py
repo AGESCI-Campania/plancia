@@ -245,6 +245,8 @@ def _import_riga_eg(row: tuple, edizione, dry_run: bool, verbosity: int) -> str:
                 PostoAzioneMissione.objects.filter(missione=miss).delete()
 
             # --- Transizione stato ---
+            if diario.stato == StatoDiario.NON_INIZIATO:
+                diario.inizia()
             if diario.stato == StatoDiario.IN_COMPILAZIONE:
                 diario.csq_invia()
 
