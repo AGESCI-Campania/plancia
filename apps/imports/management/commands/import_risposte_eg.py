@@ -601,6 +601,13 @@ class Command(BaseCommand):
                     continue
                 visti_in_run.add(filename)
 
+                # Importa solo immagini (no PDF, no documenti)
+                mime = f.get("mimeType", "")
+                if not mime.startswith("image/"):
+                    if verbosity >= 2:
+                        self.stdout.write(f"    {filename}: ignorato ({mime})")
+                    continue
+
                 modulo = modulo_map.get(filename)
                 if not modulo:
                     for k, v in modulo_map.items():
