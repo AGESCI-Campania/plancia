@@ -11,6 +11,7 @@ from apps.editions.forms import DilazioneForm, EdizioneForm
 from apps.editions.models import Edizione, StatoEdizione
 
 _STATO_COLORE = {
+    "non_iniziato": "secondary",
     "in_compilazione": "info",
     "relazione_finale": "warning",
     "inviato": "primary",

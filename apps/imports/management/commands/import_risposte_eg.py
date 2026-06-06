@@ -160,8 +160,8 @@ def _trova_diario(nome_sq: str, reparto: str, gruppo: str, zona: str, edizione):
 # Import Risposte EG
 # ---------------------------------------------------------------------------
 
-def _import_riga_eg(row: tuple, edizione, dry_run: bool, verbosity: int) -> str:
-    """Processa una riga del foglio Risposte EG. Restituisce 'ok'/'skip'/'err:msg'."""
+def _import_riga_eg(row: tuple, edizione, dry_run: bool, verbosity: int) -> tuple[str, int | None]:
+    """Processa una riga del foglio Risposte EG. Restituisce (esito, diario_pk|None)."""
     from apps.diaries.models import (
         Anagrafica,
         MembroSq,
@@ -179,10 +179,10 @@ def _import_riga_eg(row: tuple, edizione, dry_run: bool, verbosity: int) -> str:
 
     diario = _trova_diario(nome_sq, reparto, gruppo, zona, edizione)
     if not diario:
-        return f"err:diario non trovato ({zona} / {gruppo} / {reparto} / {nome_sq})"
+        return f"err:diario non trovato ({zona} / {gruppo} / {reparto} / {nome_sq})", None
 
     if dry_run:
-        return f"ok (dry-run): {diario}"
+        return f"ok (dry-run): {diario}", diario.pk
 
     try:
         with transaction.atomic():
@@ -250,10 +250,10 @@ def _import_riga_eg(row: tuple, edizione, dry_run: bool, verbosity: int) -> str:
             if diario.stato == StatoDiario.IN_COMPILAZIONE:
                 diario.csq_invia()
 
-        return f"ok: {diario}"
+        return f"ok: {diario}", diario.pk
 
     except Exception as exc:
-        return f"err:{exc}"
+        return f"err:{exc}", None
 
 
 def _import_impresa(diario, numero: int, row: tuple,
@@ -435,6 +435,7 @@ class Command(BaseCommand):
         solo_eg    = options["solo_eg"]
 
         # --- Foglio Risposte EG ---
+        matched_pks: set[int] = set()
         if not solo_staff:
             ws = wb["Risposte EG"]
             rows = list(ws.iter_rows(min_row=2, values_only=True))
@@ -443,9 +444,11 @@ class Command(BaseCommand):
             for i, row in enumerate(rows, 2):
                 if not row[1]:  # Squadriglia vuota → riga vuota
                     continue
-                risultato = _import_riga_eg(row, edizione, dry_run, verbosity)
+                risultato, diario_pk = _import_riga_eg(row, edizione, dry_run, verbosity)
                 if risultato.startswith("ok"):
                     ok += 1
+                    if diario_pk:
+                        matched_pks.add(diario_pk)
                     if verbosity >= 2:
                         self.stdout.write(f"  riga {i}: {risultato}")
                 elif risultato.startswith("skip"):
@@ -458,6 +461,32 @@ class Command(BaseCommand):
             self.stdout.write(
                 self.style.SUCCESS(f"  Risposte EG: {ok} importate, {skip} saltate, {err} errori.")
             )
+
+            # Diari non presenti nel file → torna a NON_INIZIATO se erano IN_COMPILAZIONE
+            if not dry_run:
+                from apps.diaries.models import Diario, StatoDiario
+                resettati = (
+                    Diario.objects
+                    .filter(edizione=edizione, stato=StatoDiario.IN_COMPILAZIONE)
+                    .exclude(pk__in=matched_pks)
+                    .update(stato=StatoDiario.NON_INIZIATO)
+                )
+                if resettati:
+                    self.stdout.write(self.style.WARNING(
+                        f"  {resettati} diari senza risposta nel file reimpostati a 'Non iniziato'."
+                    ))
+            elif verbosity >= 1:
+                from apps.diaries.models import Diario, StatoDiario
+                da_resettare = (
+                    Diario.objects
+                    .filter(edizione=edizione, stato=StatoDiario.IN_COMPILAZIONE)
+                    .exclude(pk__in=matched_pks)
+                    .count()
+                )
+                if da_resettare:
+                    self.stdout.write(self.style.WARNING(
+                        f"  (dry-run) {da_resettare} diari verrebbero reimpostati a 'Non iniziato'."
+                    ))
 
         # --- Foglio Risposte staff ---
         if not solo_eg:
