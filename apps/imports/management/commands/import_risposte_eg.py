@@ -7,9 +7,10 @@ Fogli:
   Risposte staff → RelazioneFinale; stato → INVIATO
 
 Opzione --importa-foto:
-  Legge le sottocartelle Drive (una per diario, formato
-  'Zona X_Gruppo_Reparto_NomeSquadriglia'), abbina i file ai moduli
-  usando i filename presenti negli URL dell'Excel, crea record Allegato.
+  Legge le sottocartelle Drive sorgente (una per diario, formato
+  'Zona X_Gruppo_Reparto_NomeSquadriglia'), **copia** i file nella cartella
+  allegati del diario su Drive (files.copy API) e crea record Allegato.
+  La cartella allegati del diario viene creata automaticamente se non esiste.
 
 Uso:
   uv run python manage.py import_risposte_eg /percorso/file.xlsx
@@ -497,14 +498,14 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("\nImport completato."))
 
     # ------------------------------------------------------------------
-    # Import foto da Google Drive
+    # Import foto da Google Drive (copia sorgente → cartella allegati diario)
     # ------------------------------------------------------------------
 
     def _importa_foto(self, wb, edizione, folder_id, account_email,
                       dry_run, verbosity):
         from apps.diaries.models import Allegato, StatoSync
         from apps.storage_drive.models import DriveCredenziali
-        from apps.storage_drive.service import _build_drive_service
+        from apps.storage_drive.service import _build_drive_service, assicura_cartelle_diario
 
         try:
             cred = DriveCredenziali.objects.get(account_email=account_email)
@@ -515,14 +516,11 @@ class Command(BaseCommand):
             ) from None
 
         service = _build_drive_service(cred)
-
-        # 1. Costruisce la mappa filename → modulo dall'Excel
         modulo_map = self._build_filename_modulo_map(wb)
         self.stdout.write(
-            f"\n→ Foto Drive (cartella: {folder_id}, account: {account_email})…"
+            f"\n→ Foto Drive (sorgente: {folder_id}, account: {account_email})…"
         )
 
-        # 2. Lista tutte le sottocartelle nel folder padre
         sottocartelle = self._lista_sottocartelle(service, folder_id)
         self.stdout.write(f"  {len(sottocartelle)} sottocartelle trovate.")
 
@@ -532,7 +530,9 @@ class Command(BaseCommand):
             parsed = _parse_drive_folder_name(nome_cartella)
             if not parsed:
                 self.stdout.write(
-                    self.style.WARNING(f"  Cartella ignorata (formato non riconosciuto): {nome_cartella}")
+                    self.style.WARNING(
+                        f"  Cartella ignorata (formato non riconosciuto): {nome_cartella}"
+                    )
                 )
                 continue
 
@@ -540,20 +540,27 @@ class Command(BaseCommand):
             diario = _trova_diario(nome_sq, reparto, gruppo, zona_core, edizione)
             if not diario:
                 err += 1
-                if verbosity >= 2:
-                    self.stdout.write(
-                        self.style.ERROR(f"  Diario non trovato per: {nome_cartella}")
-                    )
+                self.stdout.write(
+                    self.style.ERROR(f"  Diario non trovato per: {nome_cartella}")
+                )
                 continue
 
-            # 3. Lista i file nella sottocartella
+            # Assicura che la sottocartella allegati del diario esista su Drive
+            if not dry_run:
+                assicura_cartelle_diario(diario)
+                diario.refresh_from_db(fields=["drive_folder_allegati_id"])
+            dest_folder_id = (
+                diario.drive_folder_allegati_id
+                or edizione.drive_folder_allegati_id
+                or None
+            )
+
             files = self._lista_file(service, cartella["id"])
             importati = 0
             for f in files:
                 filename = f["name"]
                 modulo = modulo_map.get(filename)
                 if not modulo:
-                    # Cerca per corrispondenza parziale (Jotform aggiunge prefissi)
                     for k, v in modulo_map.items():
                         if filename in k or k in filename:
                             modulo = v
@@ -563,32 +570,55 @@ class Command(BaseCommand):
 
                 if dry_run:
                     importati += 1
+                    if verbosity >= 2:
+                        self.stdout.write(f"    {filename} → {modulo} (dry-run)")
                     continue
 
-                _, created = Allegato.objects.get_or_create(
+                # Idempotenza: salta se già presente per questo diario
+                if Allegato.objects.filter(diario=diario, nome=filename).exists():
+                    if verbosity >= 2:
+                        self.stdout.write(f"    {filename}: già presente, salto.")
+                    continue
+
+                if not dest_folder_id:
+                    self.stdout.write(
+                        self.style.WARNING(
+                            f"    {filename}: nessuna cartella allegati configurata, salto."
+                        )
+                    )
+                    continue
+
+                # Copia il file nella dest. Il file sorgente NON viene mai modificato/spostato/eliminato.
+                try:
+                    copied = service.files().copy(
+                        fileId=f["id"],
+                        body={"name": filename, "parents": [dest_folder_id]},
+                        fields="id,name,size,mimeType",
+                    ).execute()
+                except Exception as exc:
+                    self.stdout.write(self.style.ERROR(f"    Errore copia {filename}: {exc}"))
+                    continue
+
+                Allegato.objects.create(
                     diario=diario,
-                    drive_file_id=f["id"],
-                    defaults={
-                        "modulo": modulo,
-                        "nome": filename,
-                        "mime": f.get("mimeType", ""),
-                        "dimensione": int(f.get("size", 0) or 0),
-                        "stato_sync": StatoSync.CARICATO,
-                        "caricato_da": None,
-                    },
+                    modulo=modulo,
+                    nome=copied.get("name", filename),
+                    mime=copied.get("mimeType", ""),
+                    dimensione=int(copied.get("size", 0) or 0),
+                    drive_file_id=copied["id"],
+                    stato_sync=StatoSync.CARICATO,
+                    caricato_da=None,
                 )
-                if created:
-                    importati += 1
+                importati += 1
+                if verbosity >= 2:
+                    self.stdout.write(f"    {filename} → {modulo} (copiato: {copied['id']})")
 
             ok += 1
-            if verbosity >= 2:
-                dr = " (dry-run)" if dry_run else ""
-                self.stdout.write(f"  {nome_cartella}: {importati} file{dr}")
+            dr = " (dry-run)" if dry_run else ""
+            self.stdout.write(f"  {nome_cartella}: {importati} file{dr}")
 
         self.stdout.write(
-            self.style.SUCCESS(
-                f"  Foto: {ok} cartelle elaborate, {err} non trovate."
-            )
+            self.style.SUCCESS(f"  Foto: {ok} cartelle elaborate, {err} non trovate.")
         )
 
     def _build_filename_modulo_map(self, wb) -> dict[str, str]:
