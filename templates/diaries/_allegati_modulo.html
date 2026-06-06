@@ -1,0 +1,29 @@
+{% load bootstrap_icons %}
+{# Incluso con {% with allegati=<lista> %}...{% endwith %} #}
+{% if allegati %}
+<hr class="my-3">
+<p class="text-muted mb-2" style="font-size:.85rem">
+  {% bs_icon "paperclip" size="13" extra_classes="me-1" %}
+  <strong>{{ allegati|length }} allegat{{ allegati|length|pluralize:"o,i" }}</strong>
+</p>
+<div class="d-flex flex-wrap gap-2">
+  {% for a in allegati %}
+    {% if a.mime|slice:":6" == "image/" %}
+      <a href="{% url 'diaries:allegati_preview' diario.pk a.pk %}"
+         target="_blank" rel="noopener" title="{{ a.nome }}">
+        <img src="{% url 'diaries:allegati_preview' diario.pk a.pk %}"
+             loading="lazy"
+             style="width:90px;height:90px;object-fit:cover;border-radius:6px;border:1px solid #dee2e6"
+             alt="{{ a.nome }}">
+      </a>
+    {% else %}
+      <a href="#" title="{{ a.nome }}"
+         class="d-flex flex-column align-items-center justify-content-center text-center text-muted text-decoration-none"
+         style="width:90px;height:90px;border-radius:6px;border:1px solid #dee2e6;background:#f8f9fa;font-size:.65rem;padding:6px;word-break:break-all">
+        {% bs_icon "file-earmark" size="22" extra_classes="mb-1 text-secondary" %}
+        {{ a.nome|slice:":22" }}
+      </a>
+    {% endif %}
+  {% endfor %}
+</div>
+{% endif %}

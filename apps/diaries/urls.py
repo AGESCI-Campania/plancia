@@ -4,6 +4,7 @@ from django.urls import path
 from apps.diaries.views import (
     AllegatoDeleteView,
     AllegatoListView,
+    AllegatoPreviewView,
     AllegatoUploadView,
     AnagraficaUpdateView,
     CambiaCrpRepartoView,
@@ -45,5 +46,10 @@ urlpatterns = [
         "<int:pk>/allegati/<int:allegato_pk>/elimina/",
         AllegatoDeleteView.as_view(),
         name="allegati_delete",
+    ),
+    path(
+        "<int:pk>/allegati/<int:allegato_pk>/preview/",
+        AllegatoPreviewView.as_view(),
+        name="allegati_preview",
     ),
 ]

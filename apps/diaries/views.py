@@ -2,7 +2,7 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
-from django.http import JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import DetailView, ListView, View
 
@@ -170,6 +170,12 @@ class DiarioDetailView(DiarioAccessMixin, DetailView):
         ctx["puo_cambiare_crp"] = (
             user.is_superuser or user.is_staff_plancia
         ) and diario.stato in _STATI_PRIMA_INVIO
+        # Allegati per modulo (conteggio + anteprime foto nel detail)
+        allegati_all = list(diario.allegati.all())
+        ctx["allegati_impresa_1"] = [a for a in allegati_all if a.modulo == "impresa_1"]
+        ctx["allegati_impresa_2"] = [a for a in allegati_all if a.modulo == "impresa_2"]
+        ctx["allegati_missione"] = [a for a in allegati_all if a.modulo == "missione"]
+        ctx["puo_editare_relazione"] = self._puo_editare_relazione(diario)
         return ctx
 
 
@@ -496,6 +502,39 @@ def _allegato_json(a: Allegato) -> dict:
         "stato_sync": a.stato_sync,
         "url": a.file.url if a.file else None,
     }
+
+
+class AllegatoPreviewView(DiarioAccessMixin, View):
+    """GET /diari/<pk>/allegati/<allegato_pk>/preview/ → immagine dal Drive (proxy)."""
+
+    def get(self, request, pk, allegato_pk):
+        import io
+
+        diario = self._get_diario(pk)
+        allegato = get_object_or_404(Allegato, pk=allegato_pk, diario=diario)
+
+        if not allegato.drive_file_id or not allegato.mime.startswith("image/"):
+            raise Http404
+
+        try:
+            from googleapiclient.http import MediaIoBaseDownload
+
+            from apps.storage_drive.service import _build_drive_service, _get_credenziali
+
+            cred = _get_credenziali(diario.edizione)
+            service = _build_drive_service(cred)
+            req = service.files().get_media(fileId=allegato.drive_file_id)
+            buf = io.BytesIO()
+            dl = MediaIoBaseDownload(buf, req, chunksize=4 * 1024 * 1024)
+            done = False
+            while not done:
+                _, done = dl.next_chunk()
+            buf.seek(0)
+            response = HttpResponse(buf.read(), content_type=allegato.mime)
+            response["Cache-Control"] = "private, max-age=86400"
+            return response
+        except Exception:
+            raise Http404 from None
 
 
 class AllegatoListView(DiarioAccessMixin, View):

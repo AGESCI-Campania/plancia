@@ -1,39 +1,39 @@
 {% extends "base.html" %}
+{% load bootstrap_icons %}
 {% block title %}{{ diario }} — Plancia{% endblock %}
 
+{# Macro: griglia allegati (count + thumbnails) #}
 {% block content %}
+
 <div class="d-flex justify-content-between align-items-start mb-2">
   <div>
     <h2 class="mb-0">{{ diario.squadriglia.nome }}</h2>
     <p class="text-muted mb-1">{{ diario.edizione }} &mdash; {{ diario.squadriglia.reparto }}</p>
     <span class="badge
-      {% if diario.stato == 'in_compilazione' %}bg-info text-dark
+      {% if diario.stato == 'non_iniziato' %}bg-secondary
+      {% elif diario.stato == 'in_compilazione' %}bg-info text-dark
       {% elif diario.stato == 'relazione_finale' %}bg-warning text-dark
       {% elif diario.stato == 'inviato' %}bg-primary
       {% elif diario.stato == 'in_valutazione' or diario.stato == 'in_revisione' %}bg-warning text-dark
       {% elif diario.stato == 'approvato' %}bg-success
       {% elif diario.stato == 'non_approvato' %}bg-danger
       {% else %}bg-secondary{% endif %}
-      fs-6">{{ diario.get_stato_display }}
-    </span>
+      fs-6">{{ diario.get_stato_display }}</span>
     <span class="badge bg-light text-dark ms-1">{{ diario.get_tipo_display }}</span>
   </div>
-  <div class="d-flex gap-2">
+  <div class="d-flex gap-2 flex-wrap justify-content-end">
     {% if puo_inviare_csq %}
-      <form method="post" action="{% url 'diaries:invia' diario.pk %}">
-        {% csrf_token %}
+      <form method="post" action="{% url 'diaries:invia' diario.pk %}">{% csrf_token %}
         <button class="btn btn-primary">Invia al Capo Reparto</button>
       </form>
     {% endif %}
     {% if puo_inviare %}
-      <form method="post" action="{% url 'diaries:invia' diario.pk %}">
-        {% csrf_token %}
+      <form method="post" action="{% url 'diaries:invia' diario.pk %}">{% csrf_token %}
         <button class="btn btn-success">Invia diario allo staff</button>
       </form>
     {% endif %}
     {% if puo_riapire %}
-      <form method="post" action="{% url 'diaries:riapri' diario.pk %}">
-        {% csrf_token %}
+      <form method="post" action="{% url 'diaries:riapri' diario.pk %}">{% csrf_token %}
         <button class="btn btn-warning btn-sm">Riapri per integrazioni</button>
       </form>
     {% endif %}
@@ -46,177 +46,266 @@
   </div>
 </div>
 
-<!-- Avanzamento compilazione -->
-{% if diario.stato == 'in_compilazione' %}
-  <div class="card mb-4 mt-3">
-    <div class="card-body">
-      <h6 class="card-title">Stato compilazione</h6>
-      <div class="row g-2 text-center">
-        {% include "diaries/_modulo_stato.html" with ok=has_anagrafica label="Anagrafica" url_name="diaries:anagrafica" pk=diario.pk %}
-        {% include "diaries/_modulo_stato.html" with ok=has_presentazione label="Presentazione" url_name="diaries:presentazione" pk=diario.pk %}
-        {% with imp1=imprese|first %}
-          {% include "diaries/_modulo_stato.html" with ok=imp1 label="1ª Impresa" url_name="diaries:impresa" pk=diario.pk extra_arg=1 %}
-        {% endwith %}
-        {% if diario.tipo == 'nuovo' %}
-          {% include "diaries/_modulo_stato.html" with ok=has_imp2 label="2ª Impresa" url_name="diaries:impresa" pk=diario.pk extra_arg=2 %}
-          {% include "diaries/_modulo_stato.html" with ok=has_missione label="Missione" url_name="diaries:missione" pk=diario.pk %}
-        {% else %}
-          <div class="col">
-            <a href="{% url 'diaries:impresa' diario.pk 2 %}" class="text-decoration-none">
-              <div class="p-2 rounded bg-light border border-dashed text-muted small">
-                2ª Impresa (opz.)
-              </div>
-            </a>
-          </div>
-          <div class="col">
-            <a href="{% url 'diaries:missione' diario.pk %}" class="text-decoration-none">
-              <div class="p-2 rounded bg-light border border-dashed text-muted small">
-                Missione (opz.)
-              </div>
-            </a>
-          </div>
-        {% endif %}
-        {% if not is_csq %}
-          {% if diario.stato == 'relazione_finale' or has_relazione %}
-            {% include "diaries/_modulo_stato.html" with ok=has_relazione label="Relazione Capo Reparto" url_name="diaries:relazione" pk=diario.pk %}
-          {% else %}
-            {% include "diaries/_modulo_stato.html" with ok=has_relazione label="Relazione Capo Reparto" url_name="diaries:relazione" pk=diario.pk disabled=True %}
-          {% endif %}
-        {% endif %}
-      </div>
-    </div>
-  </div>
-{% endif %}
-
-<!-- Scheda riepilogativa moduli -->
-<div class="row g-3">
-
-  <!-- Modulo 1: Anagrafica -->
-  <div class="col-12">
-    <div class="card">
-      <div class="card-header d-flex justify-content-between">
-        <span><strong>Modulo 1</strong> — Anagrafica squadriglia</span>
-        {% if puo_editare %}
-          <a href="{% url 'diaries:anagrafica' diario.pk %}" class="btn btn-sm btn-outline-primary">Compila</a>
-        {% endif %}
-      </div>
-      {% if has_anagrafica %}
-        <div class="card-body row g-2 small">
-          <div class="col-sm-4"><strong>Capo Reparto:</strong> {{ diario.anagrafica.crp_cognome }} {{ diario.anagrafica.crp_nome }}</div>
-          <div class="col-sm-4"><strong>Email Capo Reparto:</strong> {{ diario.anagrafica.crp_email|default:"—" }}</div>
-          <div class="col-sm-4"><strong>Specialità:</strong> {{ diario.anagrafica.specialita|default:"—" }}</div>
-          <div class="col-sm-4"><strong>Partecipa evento:</strong> {{ diario.anagrafica.partecipa_evento|yesno:"Sì,No" }}</div>
-        </div>
+{# Avanzamento compilazione #}
+{% if diario.stato == 'in_compilazione' or diario.stato == 'non_iniziato' %}
+<div class="card mb-4 mt-3">
+  <div class="card-body">
+    <h6 class="card-title">Stato compilazione</h6>
+    <div class="row g-2 text-center">
+      {% include "diaries/_modulo_stato.html" with ok=has_anagrafica label="Anagrafica" url_name="diaries:anagrafica" pk=diario.pk %}
+      {% include "diaries/_modulo_stato.html" with ok=has_presentazione label="Presentazione" url_name="diaries:presentazione" pk=diario.pk %}
+      {% with imp1=imprese|first %}
+        {% include "diaries/_modulo_stato.html" with ok=imp1 label="1ª Impresa" url_name="diaries:impresa" pk=diario.pk extra_arg=1 %}
+      {% endwith %}
+      {% if diario.tipo == 'nuovo' %}
+        {% include "diaries/_modulo_stato.html" with ok=has_imp2 label="2ª Impresa" url_name="diaries:impresa" pk=diario.pk extra_arg=2 %}
+        {% include "diaries/_modulo_stato.html" with ok=has_missione label="Missione" url_name="diaries:missione" pk=diario.pk %}
       {% else %}
-        <div class="card-body text-muted fst-italic">Non ancora compilato.</div>
+        <div class="col"><a href="{% url 'diaries:impresa' diario.pk 2 %}" class="text-decoration-none">
+          <div class="p-2 rounded bg-light border text-muted small">2ª Impresa (opz.)</div></a></div>
+        <div class="col"><a href="{% url 'diaries:missione' diario.pk %}" class="text-decoration-none">
+          <div class="p-2 rounded bg-light border text-muted small">Missione (opz.)</div></a></div>
+      {% endif %}
+      {% if not is_csq %}
+        {% if diario.stato == 'relazione_finale' or has_relazione %}
+          {% include "diaries/_modulo_stato.html" with ok=has_relazione label="Relazione Capo Reparto" url_name="diaries:relazione" pk=diario.pk %}
+        {% else %}
+          {% include "diaries/_modulo_stato.html" with ok=has_relazione label="Relazione Capo Reparto" url_name="diaries:relazione" pk=diario.pk disabled=True %}
+        {% endif %}
       {% endif %}
     </div>
   </div>
+</div>
+{% endif %}
 
-  <!-- Modulo 2: Presentazione -->
-  <div class="col-12">
-    <div class="card">
-      <div class="card-header d-flex justify-content-between">
-        <span><strong>Modulo 2</strong> — Presentazione squadriglia</span>
-        {% if puo_editare %}
-          <a href="{% url 'diaries:presentazione' diario.pk %}" class="btn btn-sm btn-outline-primary">Compila</a>
-        {% endif %}
+<div class="row g-3">
+
+{# ── Modulo 1: Anagrafica ──────────────────────────────────────────────────── #}
+<div class="col-12">
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <strong>Modulo 1</strong> — Anagrafica squadriglia
+      {% if puo_editare %}<a href="{% url 'diaries:anagrafica' diario.pk %}" class="btn btn-sm btn-outline-primary">Compila</a>{% endif %}
+    </div>
+    {% if has_anagrafica %}
+    <div class="card-body row g-2 small">
+      <div class="col-sm-4"><strong>Capo Reparto:</strong> {{ diario.anagrafica.crp_cognome }} {{ diario.anagrafica.crp_nome }}</div>
+      <div class="col-sm-4"><strong>Email:</strong> {{ diario.anagrafica.crp_email|default:"—" }}</div>
+      <div class="col-sm-4"><strong>Specialità:</strong> {{ diario.anagrafica.specialita|default:"—" }}</div>
+      <div class="col-sm-4"><strong>Partecipa evento:</strong> {{ diario.anagrafica.partecipa_evento|yesno:"Sì,No" }}</div>
+    </div>
+    {% else %}
+    <div class="card-body text-muted fst-italic">Non ancora compilato.</div>
+    {% endif %}
+  </div>
+</div>
+
+{# ── Modulo 2: Presentazione ───────────────────────────────────────────────── #}
+<div class="col-12">
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <strong>Modulo 2</strong> — Presentazione squadriglia
+      {% if puo_editare %}<a href="{% url 'diaries:presentazione' diario.pk %}" class="btn btn-sm btn-outline-primary">Compila</a>{% endif %}
+    </div>
+    {% if has_presentazione %}
+    <div class="card-body small">
+      <p class="mb-2">{{ diario.presentazione.cosa_sappiamo_fare|linebreaksbr }}</p>
+      <p class="fw-semibold mb-1">Membri ({{ diario.presentazione.membri.count }}):</p>
+      <div class="d-flex flex-wrap gap-1">
+        {% for m in diario.presentazione.membri.all %}
+          <span class="badge bg-light text-dark border">{{ m.cognome }} {{ m.nome }} — {{ m.get_ruolo_display }} — {{ m.get_sentiero_display }}</span>
+        {% endfor %}
       </div>
-      {% if has_presentazione %}
-        <div class="card-body">
-          <div class="small mb-2">{{ diario.presentazione.cosa_sappiamo_fare|linebreaksbr }}</div>
-          <strong class="small">Membri ({{ diario.presentazione.membri.count }}):</strong>
-          <ul class="list-inline mb-0 small">
-            {% for m in diario.presentazione.membri.all %}
-              <li class="list-inline-item badge bg-light text-dark">{{ m }}</li>
+    </div>
+    {% else %}
+    <div class="card-body text-muted fst-italic">Non ancora compilato.</div>
+    {% endif %}
+  </div>
+</div>
+
+{# ── Moduli 3/4: Imprese ───────────────────────────────────────────────────── #}
+{% for imp in imprese %}
+<div class="col-12">
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span><strong>Modulo {{ imp.numero|add:2 }}</strong> — {{ imp.get_numero_display }}</span>
+      {% if puo_editare %}<a href="{% url 'diaries:impresa' diario.pk imp.numero %}" class="btn btn-sm btn-outline-primary">Compila</a>{% endif %}
+    </div>
+    <div class="card-body small">
+      <h6 class="fw-semibold mb-1">{{ imp.titolo|default:"(senza titolo)" }}</h6>
+      {% if imp.data_inizio %}
+        <p class="text-muted mb-2">{{ imp.data_inizio|date:"d/m/Y" }}{% if imp.data_fine %} – {{ imp.data_fine|date:"d/m/Y" }}{% endif %}</p>
+      {% endif %}
+
+      <div class="row g-3 mb-0">
+        {% if imp.perche %}
+        <div class="col-md-4">
+          <p class="text-muted mb-1 fw-semibold" style="font-size:.72rem;text-transform:uppercase">Perché</p>
+          {{ imp.perche|linebreaksbr }}
+        </div>
+        {% endif %}
+        {% if imp.come %}
+        <div class="col-md-4">
+          <p class="text-muted mb-1 fw-semibold" style="font-size:.72rem;text-transform:uppercase">Come</p>
+          {{ imp.come|linebreaksbr }}
+        </div>
+        {% endif %}
+        {% if imp.cosa %}
+        <div class="col-md-4">
+          <p class="text-muted mb-1 fw-semibold" style="font-size:.72rem;text-transform:uppercase">Cosa abbiamo fatto</p>
+          {{ imp.cosa|linebreaksbr }}
+        </div>
+        {% endif %}
+
+        {% if imp.posti_azione.all %}
+        <div class="col-md-6">
+          <p class="text-muted mb-1 fw-semibold" style="font-size:.72rem;text-transform:uppercase">Posti d'azione</p>
+          <ul class="list-unstyled mb-0">
+            {% for p in imp.posti_azione.all %}
+              <li>{% bs_icon "geo-alt" size="13" extra_classes="text-primary me-1" %}{{ p.descrizione }}</li>
             {% endfor %}
           </ul>
         </div>
-      {% else %}
-        <div class="card-body text-muted fst-italic">Non ancora compilato.</div>
+        {% endif %}
+
+        {% if imp.esiti_specialita.all %}
+        <div class="col-md-6">
+          <p class="text-muted mb-1 fw-semibold" style="font-size:.72rem;text-transform:uppercase">Specialità e brevetti</p>
+          <ul class="list-unstyled mb-0">
+            {% for e in imp.esiti_specialita.all %}
+              <li class="mb-1">
+                <span class="badge me-1
+                  {% if e.stato == 'conquistata' %}bg-success
+                  {% elif e.stato == 'non_conquistata' %}bg-danger
+                  {% else %}bg-warning text-dark{% endif %}">{{ e.get_stato_display }}</span>
+                {% if e.tipo == 'brevetto' %}{% bs_icon "award" size="13" extra_classes="text-warning me-1" %}{% endif %}
+                {{ e.nome }}
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+
+        {% if imp.link_esterno %}
+        <div class="col-12">
+          <a href="{{ imp.link_esterno }}" target="_blank" rel="noopener">
+            {% bs_icon "link-45deg" size="14" extra_classes="me-1" %}Link esterno
+          </a>
+        </div>
+        {% endif %}
+      </div>{# /row #}
+
+      {# Allegati #}
+      {% if imp.numero == 1 %}{% with allegati=allegati_impresa_1 %}{% include "diaries/_allegati_modulo.html" %}{% endwith %}
+      {% else %}{% with allegati=allegati_impresa_2 %}{% include "diaries/_allegati_modulo.html" %}{% endwith %}
       {% endif %}
     </div>
   </div>
-
-  <!-- Moduli 3/4: Imprese -->
-  {% for imp in imprese %}
-    <div class="col-md-6">
-      <div class="card h-100">
-        <div class="card-header d-flex justify-content-between">
-          <span><strong>Modulo {{ imp.numero|add:2 }}</strong> — {{ imp.get_numero_display }}</span>
-          {% if puo_editare %}
-            <a href="{% url 'diaries:impresa' diario.pk imp.numero %}" class="btn btn-sm btn-outline-primary">Compila</a>
-          {% endif %}
-        </div>
-        <div class="card-body small">
-          <p class="fw-semibold mb-1">{{ imp.titolo|default:"(senza titolo)" }}</p>
-          {% if imp.data_inizio %}<span class="text-muted">{{ imp.data_inizio|date:"d/m/Y" }} – {{ imp.data_fine|date:"d/m/Y"|default:"?" }}</span>{% endif %}
-          {% if imp.link_esterno %}
-            <div class="mt-1"><a href="{{ imp.link_esterno }}" target="_blank" rel="noopener">🔗 Link esterno</a></div>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-  {% endfor %}
-  {% if not imprese %}
-    <div class="col-md-6">
-      <div class="card border-dashed h-100">
-        <div class="card-body text-muted fst-italic">
-          1ª Impresa non compilata.
-          {% if puo_editare %}
-            <a href="{% url 'diaries:impresa' diario.pk 1 %}">Compila</a>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-  {% endif %}
-
-  <!-- Modulo 5: Missione -->
-  <div class="col-md-6">
-    <div class="card h-100">
-      <div class="card-header d-flex justify-content-between">
-        <span><strong>Modulo 5</strong> — Missione{% if diario.tipo == 'rinnovo' %} <span class="badge bg-light text-dark small">opzionale</span>{% endif %}</span>
-        {% if puo_editare %}
-          <a href="{% url 'diaries:missione' diario.pk %}" class="btn btn-sm btn-outline-primary">Compila</a>
-        {% endif %}
-      </div>
-      {% if has_missione %}
-        <div class="card-body small">
-          <p class="fw-semibold mb-1">{{ diario.missione.titolo|default:"(senza titolo)" }}</p>
-          {% if diario.missione.data %}<span class="text-muted">{{ diario.missione.data|date:"d/m/Y" }}</span>{% endif %}
-        </div>
-      {% else %}
-        <div class="card-body text-muted fst-italic">Non ancora compilato.</div>
-      {% endif %}
-    </div>
-  </div>
-
-  <!-- Modulo 6: Relazione finale (mai al CSQ) -->
-  {% if mostra_relazione %}
-    <div class="col-12">
-      <div class="card {% if diario.stato == 'in_compilazione' %}border-secondary{% endif %}">
-        <div class="card-header d-flex justify-content-between">
-          <span><strong>Modulo 6</strong> — Relazione finale Capo Reparto</span>
-          {% if diario.stato == 'relazione_finale' or has_relazione %}
-            <a href="{% url 'diaries:relazione' diario.pk %}" class="btn btn-sm btn-outline-primary">Compila</a>
-          {% endif %}
-        </div>
-        {% if has_relazione %}
-          <div class="card-body small">
-            <p class="mb-1"><strong>Specialità conquistata:</strong>
-              {{ diario.relazione_finale.specialita_conquistata|yesno:"Sì,No,Non indicato" }}
-            </p>
-          </div>
-        {% elif diario.stato == 'in_compilazione' %}
-          <div class="card-body text-muted fst-italic">
-            Disponibile dopo che il Capo Squadriglia ha inviato la propria parte.
-          </div>
-        {% else %}
-          <div class="card-body text-muted fst-italic">Non ancora compilato.</div>
-        {% endif %}
-      </div>
-    </div>
-  {% endif %}
-
 </div>
+{% endfor %}
+{% if not imprese %}
+<div class="col-12">
+  <div class="card border-dashed">
+    <div class="card-body text-muted fst-italic">
+      1ª Impresa non compilata.{% if puo_editare %} <a href="{% url 'diaries:impresa' diario.pk 1 %}">Compila</a>{% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{# ── Modulo 5: Missione ────────────────────────────────────────────────────── #}
+<div class="col-12">
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span><strong>Modulo 5</strong> — Missione{% if diario.tipo == 'rinnovo' %} <span class="badge bg-light text-dark small">opzionale</span>{% endif %}</span>
+      {% if puo_editare %}<a href="{% url 'diaries:missione' diario.pk %}" class="btn btn-sm btn-outline-primary">Compila</a>{% endif %}
+    </div>
+    {% if has_missione %}
+    <div class="card-body small">
+      <h6 class="fw-semibold mb-1">{{ diario.missione.titolo|default:"(senza titolo)" }}</h6>
+      {% if diario.missione.data %}<p class="text-muted mb-2">{{ diario.missione.data|date:"d/m/Y" }}</p>{% endif %}
+
+      {% if diario.missione.descrizione_svolgimento %}
+      <div class="mb-3">
+        <p class="text-muted mb-1 fw-semibold" style="font-size:.72rem;text-transform:uppercase">Svolgimento</p>
+        {{ diario.missione.descrizione_svolgimento|linebreaksbr }}
+      </div>
+      {% endif %}
+
+      {% if diario.missione.posti_azione.all %}
+      <div class="mb-2">
+        <p class="text-muted mb-1 fw-semibold" style="font-size:.72rem;text-transform:uppercase">Posti d'azione</p>
+        <ul class="list-unstyled mb-0">
+          {% for p in diario.missione.posti_azione.all %}
+            <li>{% bs_icon "geo-alt" size="13" extra_classes="text-primary me-1" %}{{ p.descrizione }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
+      {% with allegati=allegati_missione %}{% include "diaries/_allegati_modulo.html" %}{% endwith %}
+    </div>
+    {% else %}
+    <div class="card-body text-muted fst-italic">Non ancora compilato.</div>
+    {% endif %}
+  </div>
+</div>
+
+{# ── Modulo 6: Relazione finale (mai al CSQ) ──────────────────────────────── #}
+{% if mostra_relazione %}
+<div class="col-12">
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span><strong>Modulo 6</strong> — Relazione finale Capo Reparto</span>
+      {% if puo_editare_relazione %}
+        <a href="{% url 'diaries:relazione' diario.pk %}" class="btn btn-sm btn-outline-primary">Compila</a>
+      {% elif has_relazione %}
+        <a href="{% url 'diaries:relazione' diario.pk %}" class="btn btn-sm btn-outline-secondary">Visualizza</a>
+      {% endif %}
+    </div>
+    {% if has_relazione %}
+    <div class="card-body small">
+      <div class="row g-3">
+        <div class="col-sm-6">
+          <p class="text-muted mb-1 fw-semibold" style="font-size:.72rem;text-transform:uppercase">Specialità conquistata</p>
+          <p class="mb-0">{{ diario.relazione_finale.specialita_conquistata|yesno:"Sì,No,Non indicato" }}</p>
+        </div>
+        {% if diario.relazione_finale.sintesi_impresa_1 %}
+        <div class="col-sm-6">
+          <p class="text-muted mb-1 fw-semibold" style="font-size:.72rem;text-transform:uppercase">Sintesi 1ª impresa</p>
+          <p class="mb-0">{{ diario.relazione_finale.sintesi_impresa_1|linebreaksbr }}</p>
+        </div>
+        {% endif %}
+        {% if diario.relazione_finale.sintesi_impresa_2 %}
+        <div class="col-sm-6">
+          <p class="text-muted mb-1 fw-semibold" style="font-size:.72rem;text-transform:uppercase">Sintesi 2ª impresa</p>
+          <p class="mb-0">{{ diario.relazione_finale.sintesi_impresa_2|linebreaksbr }}</p>
+        </div>
+        {% endif %}
+        {% if diario.relazione_finale.sintesi_missione %}
+        <div class="col-sm-6">
+          <p class="text-muted mb-1 fw-semibold" style="font-size:.72rem;text-transform:uppercase">Sintesi missione</p>
+          <p class="mb-0">{{ diario.relazione_finale.sintesi_missione|linebreaksbr }}</p>
+        </div>
+        {% endif %}
+        {% if diario.relazione_finale.considerazioni %}
+        <div class="col-12">
+          <p class="text-muted mb-1 fw-semibold" style="font-size:.72rem;text-transform:uppercase">Considerazioni finali</p>
+          <p class="mb-0">{{ diario.relazione_finale.considerazioni|linebreaksbr }}</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% elif diario.stato == 'in_compilazione' or diario.stato == 'non_iniziato' %}
+    <div class="card-body text-muted fst-italic">
+      Disponibile dopo che il Capo Squadriglia ha inviato la propria parte.
+    </div>
+    {% else %}
+    <div class="card-body text-muted fst-italic">Non ancora compilato.</div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+</div>{# /row g-3 #}
 {% endblock %}
