@@ -125,7 +125,9 @@ class Impostazioni(models.Model):
     def save(self, *args, **kwargs):
         self.pk = 1  # forza il singleton
         super().save(*args, **kwargs)
-        cache.delete(self.CACHE_KEY)
+        # Aggiorna la cache con l'istanza appena salvata (non solo cancella)
+        # per evitare che un altro worker la riscriva subito con dati obsoleti.
+        cache.set(self.CACHE_KEY, self, 300)
 
     @classmethod
     def get(cls) -> Impostazioni:

@@ -58,12 +58,16 @@ class ImpostazioniView(RuoloRequiredMixin, UpdateView):
         return ctx
 
     def post(self, request, *args, **kwargs):
-        self.object = self.get_object()
+        # Bypassa la cache per il POST: legge sempre da DB per avere dati freschi.
+        self.object = Impostazioni.objects.get_or_create(pk=1)[0]
         form = self.get_form()
         link_formset = FooterLinkFormSet(request.POST, instance=self.object)
         if form.is_valid() and link_formset.is_valid():
-            form.save()
+            saved = form.save()
             link_formset.save()
+            # Aggiorna la cache con il valore appena salvato (evita stale cache)
+            from django.core.cache import cache
+            cache.set(Impostazioni.CACHE_KEY, saved, 300)
             messages.success(request, "Impostazioni salvate.")
             return redirect(self.get_success_url())
         return self.render_to_response(
