@@ -46,7 +46,8 @@ class Impostazioni(models.Model):
 
     # Mail — provider e modalità
     email_mode = models.CharField(
-        max_length=20, choices=EmailMode.choices, default=EmailMode.SIMULATO
+        max_length=20, choices=EmailMode.choices, default=EmailMode.SIMULATO,
+        verbose_name="Modalità invio mail",
     )
     email_provider = models.CharField(
         max_length=20, choices=EmailProvider.choices, default=EmailProvider.SMTP,

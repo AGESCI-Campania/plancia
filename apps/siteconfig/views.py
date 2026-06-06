@@ -62,14 +62,27 @@ class ImpostazioniView(RuoloRequiredMixin, UpdateView):
         self.object = Impostazioni.objects.get_or_create(pk=1)[0]
         form = self.get_form()
         link_formset = FooterLinkFormSet(request.POST, instance=self.object)
-        if form.is_valid() and link_formset.is_valid():
+
+        form_ok = form.is_valid()
+        formset_ok = link_formset.is_valid()
+
+        if form_ok:
             saved = form.save()
-            link_formset.save()
             # Aggiorna la cache con il valore appena salvato (evita stale cache)
             from django.core.cache import cache
             cache.set(Impostazioni.CACHE_KEY, saved, 300)
-            messages.success(request, "Impostazioni salvate.")
+            if formset_ok:
+                link_formset.save()
+                messages.success(request, "Impostazioni salvate.")
+            else:
+                messages.warning(
+                    request,
+                    "Impostazioni salvate. Errore nei link footer: " +
+                    str(link_formset.non_form_errors() or link_formset.errors),
+                )
             return redirect(self.get_success_url())
+
+        # Il form principale non è valido
         return self.render_to_response(
             self.get_context_data(form=form, link_formset=link_formset)
         )
