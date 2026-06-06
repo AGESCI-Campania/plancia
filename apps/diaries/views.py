@@ -30,11 +30,18 @@ from apps.diaries.models import (
     RelazioneFinale,
     StatoDiario,
     StatoSync,
+    TipoDiario,
     TipoEsito,
 )
 
 # Stati in cui il diario non è ancora stato inviato allo staff
 _STATI_PRIMA_INVIO = (StatoDiario.NON_INIZIATO, StatoDiario.IN_COMPILAZIONE, StatoDiario.RELAZIONE_FINALE)
+
+# Stati in cui ha senso generare il PDF (CSQ ha inviato la propria parte)
+_STATI_PDF = (
+    StatoDiario.INVIATO, StatoDiario.IN_VALUTAZIONE, StatoDiario.IN_REVISIONE,
+    StatoDiario.APPROVATO, StatoDiario.NON_APPROVATO, StatoDiario.MAGGIORI_INFO,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -93,7 +100,11 @@ class DiarioListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         user = self.request.user
-        qs = Diario.objects.select_related("edizione", "squadriglia", "csq", "crp")
+        qs = Diario.objects.select_related(
+            "edizione",
+            "squadriglia__reparto__gruppo__zona",
+            "csq", "crp", "anagrafica",
+        )
         if user.is_superuser or user.is_staff_plancia:
             return qs
         if user.ruolo == Ruolo.CSQ and user.socio:
@@ -119,6 +130,16 @@ class DiarioListView(LoginRequiredMixin, ListView):
         if edizione_pk:
             ctx["diari"] = ctx["diari"].filter(edizione_id=edizione_pk)
             ctx["edizione_sel"] = edizione_pk
+        diari = list(ctx["diari"])
+        ctx["zone"] = sorted({d.squadriglia.reparto.gruppo.zona.nome for d in diari})
+        ctx["gruppi"] = sorted({d.squadriglia.reparto.gruppo.nome for d in diari})
+        ctx["specialita_list"] = sorted({
+            d.anagrafica.specialita
+            for d in diari
+            if hasattr(d, "anagrafica") and d.anagrafica.specialita
+        })
+        ctx["stati_choices"] = StatoDiario.choices
+        ctx["tipi_choices"] = TipoDiario.choices
         return ctx
 
 
@@ -170,6 +191,11 @@ class DiarioDetailView(DiarioAccessMixin, DetailView):
         ctx["puo_cambiare_crp"] = (
             user.is_superuser or user.is_staff_plancia
         ) and diario.stato in _STATI_PRIMA_INVIO
+        # Dilazione (solo staff)
+        if user.is_staff_plancia or user.is_superuser:
+            from apps.editions.forms import DilazioneForm
+            ctx["dilazione_form"] = DilazioneForm()
+        ctx["puo_pdf"] = diario.stato in _STATI_PDF
         # Allegati per modulo (conteggio + anteprime foto nel detail)
         allegati_all = list(diario.allegati.all())
         ctx["allegati_impresa_1"] = [a for a in allegati_all if a.modulo == "impresa_1"]
@@ -502,6 +528,23 @@ def _allegato_json(a: Allegato) -> dict:
         "stato_sync": a.stato_sync,
         "url": a.file.url if a.file else None,
     }
+
+
+class DiarioPdfView(DiarioAccessMixin, View):
+    """GET /diari/<pk>/pdf/ — genera e scarica il PDF del diario."""
+
+    def get(self, request, pk):
+        diario = self._get_diario(pk)
+        try:
+            from apps.exports.service import genera_pdf_diario
+            pdf = genera_pdf_diario(diario)
+        except Exception as exc:
+            messages.error(request, f"Errore nella generazione del PDF: {exc}")
+            return redirect("diaries:detail", pk=pk)
+        nome = f"Diario_{diario.squadriglia.nome}_{diario.edizione.anno}.pdf"
+        response = HttpResponse(pdf, content_type="application/pdf")
+        response["Content-Disposition"] = f'attachment; filename="{nome}"'
+        return response
 
 
 class AllegatoPreviewView(DiarioAccessMixin, View):

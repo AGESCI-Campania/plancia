@@ -32,6 +32,17 @@
         <button class="btn btn-success">Invia diario allo staff</button>
       </form>
     {% endif %}
+    {% if puo_pdf %}
+      <a href="{% url 'diaries:pdf' diario.pk %}" class="btn btn-outline-secondary btn-sm">
+        {% bs_icon "file-earmark-pdf" size="14" extra_classes="me-1" %}Scarica PDF
+      </a>
+    {% endif %}
+    {% if dilazione_form %}
+      <button type="button" class="btn btn-outline-warning btn-sm"
+              data-bs-toggle="modal" data-bs-target="#modal-dilazione">
+        {% bs_icon "clock-history" size="14" extra_classes="me-1" %}Dilazione
+      </button>
+    {% endif %}
     {% if puo_riapire %}
       <form method="post" action="{% url 'diaries:riapri' diario.pk %}">{% csrf_token %}
         <button class="btn btn-warning btn-sm">Riapri per integrazioni</button>
@@ -308,4 +319,27 @@
 {% endif %}
 
 </div>{# /row g-3 #}
+
+{# Modale Dilazione (solo staff) #}
+{% if dilazione_form %}
+<div class="modal fade" id="modal-dilazione" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        {% bs_icon "clock-history" size="18" extra_classes="text-warning me-2" %}
+        <h5 class="modal-title">Dilazione — {{ diario.squadriglia }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'editions:dilazione' diario.pk %}">
+        {% csrf_token %}
+        <div class="modal-body">{{ dilazione_form.as_div }}</div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+          <button type="submit" class="btn btn-primary">Concedi dilazione</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
 {% endblock %}

@@ -71,6 +71,9 @@ class EdizioneDetailView(LoginRequiredMixin, DetailView):
             for d in diari
             if hasattr(d, "anagrafica") and d.anagrafica.specialita
         })
+        from apps.diaries.models import StatoDiario, TipoDiario
+        ctx["stati_diari_choices"] = StatoDiario.choices
+        ctx["tipi_diari_choices"] = TipoDiario.choices
         return ctx
 
     def _stats_diari(self, edizione):

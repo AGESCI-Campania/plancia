@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load bootstrap_icons %}
 {% block title %}Diari — Plancia{% endblock %}
 
 {% block content %}
@@ -6,12 +7,10 @@
   <h2>Diari di bordo</h2>
   {% if edizioni %}
     <form class="d-flex gap-2" method="get">
-      <select name="edizione" class="form-select form-select-sm" onchange="this.form.submit()">
+      <select name="edizione" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
         <option value="">Tutte le edizioni</option>
         {% for e in edizioni %}
-          <option value="{{ e.pk }}" {% if edizione_sel == e.pk|stringformat:"s" %}selected{% endif %}>
-            {{ e }}
-          </option>
+          <option value="{{ e.pk }}" {% if edizione_sel == e.pk|stringformat:"s" %}selected{% endif %}>{{ e }}</option>
         {% endfor %}
       </select>
     </form>
@@ -19,60 +18,227 @@
 </div>
 
 {% if diari %}
-  <div class="table-responsive">
-    <table class="table table-hover align-middle">
-      <thead class="table-light">
-        <tr>
-          <th>Squadriglia</th>
-          <th>Edizione</th>
-          <th>Tipo</th>
-          <th>Stato</th>
-          <th>Scadenza</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for d in diari %}
-          <tr>
-            <td>
-              <strong>{{ d.squadriglia.nome }}</strong>
-              <div class="small text-muted">{{ d.squadriglia.reparto }}</div>
-            </td>
-            <td>{{ d.edizione }}</td>
-            <td>{{ d.get_tipo_display }}</td>
-            <td>
-              <span class="badge
-                {% if d.stato == 'in_compilazione' %}bg-info text-dark
-                {% elif d.stato == 'inviato' %}bg-primary
-                {% elif d.stato == 'in_valutazione' or d.stato == 'in_revisione' %}bg-warning text-dark
-                {% elif d.stato == 'approvato' %}bg-success
-                {% elif d.stato == 'non_approvato' %}bg-danger
-                {% else %}bg-secondary{% endif %}
-              ">{{ d.get_stato_display }}</span>
-            </td>
-            <td class="small">
-              {% with scad=d.scadenza_effettiva %}
-                {% if scad %}{{ scad|date:"d/m/Y" }}{% else %}—{% endif %}
-              {% endwith %}
-            </td>
-            <td class="d-flex gap-1">
-              <a href="{% url 'diaries:detail' d.pk %}" class="btn btn-sm btn-outline-primary">
-                Apri
-              </a>
-              {% if request.user.is_staff_plancia or request.user.is_superuser %}
-                <a href="{% url 'diaries:cambia_crp_reparto' d.squadriglia.reparto_id %}"
-                   class="btn btn-sm btn-outline-secondary"
-                   title="Cambia Capo Reparto per tutto il reparto {{ d.squadriglia.reparto }}">
-                  Cambia Capo Reparto reparto
-                </a>
-              {% endif %}
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+{# ── Barra filtri ──────────────────────────────────────────────────────────── #}
+<div class="row g-2 mb-3 align-items-end">
+  <div class="col-sm-4 col-md-3">
+    <label class="form-label small fw-semibold mb-1">Cerca Capo Reparto / Capo Squadriglia</label>
+    <input type="search" id="d-search" class="form-control form-control-sm"
+           placeholder="Cognome o nome…" autocomplete="off">
   </div>
+  <div class="col-sm-3 col-md-2">
+    <label class="form-label small fw-semibold mb-1">Zona</label>
+    <select id="d-zona" class="form-select form-select-sm">
+      <option value="">— Tutte —</option>
+      {% for z in zone %}<option>{{ z }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-sm-3 col-md-2">
+    <label class="form-label small fw-semibold mb-1">Gruppo</label>
+    <select id="d-gruppo" class="form-select form-select-sm">
+      <option value="">— Tutti —</option>
+      {% for g in gruppi %}<option>{{ g }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-sm-3 col-md-2">
+    <label class="form-label small fw-semibold mb-1">Specialità</label>
+    <select id="d-specialita" class="form-select form-select-sm">
+      <option value="">— Tutte —</option>
+      {% for s in specialita_list %}<option>{{ s }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-sm-3 col-md-1">
+    <label class="form-label small fw-semibold mb-1">Stato</label>
+    <select id="d-stato" class="form-select form-select-sm">
+      <option value="">— Tutti —</option>
+      {% for val, label in stati_choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-sm-3 col-md-1">
+    <label class="form-label small fw-semibold mb-1">Tipo</label>
+    <select id="d-tipo" class="form-select form-select-sm">
+      <option value="">— Tutti —</option>
+      {% for val, label in tipi_choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-sm-2 col-md-1">
+    <button id="d-reset" class="btn btn-outline-secondary btn-sm w-100">
+      {% bs_icon "x-circle" size="13" extra_classes="me-1" %}Reset
+    </button>
+  </div>
+</div>
+<div id="d-no-result" class="alert alert-info d-none py-2">
+  Nessuna riga corrisponde ai filtri.
+</div>
+
+{# ── Tabella ───────────────────────────────────────────────────────────────── #}
+<div class="table-responsive">
+  <table id="d-table" class="table table-hover align-middle">
+    <thead class="table-light">
+      <tr>
+        <th class="sortable" data-col="0" style="cursor:pointer;white-space:nowrap">
+          Squadriglia {% bs_icon "chevron-expand" size="12" extra_classes="text-muted ms-1" %}
+        </th>
+        <th class="sortable" data-col="1" style="cursor:pointer;white-space:nowrap">
+          Reparto {% bs_icon "chevron-expand" size="12" extra_classes="text-muted ms-1" %}
+        </th>
+        <th class="sortable" data-col="2" style="cursor:pointer;white-space:nowrap">
+          Tipo {% bs_icon "chevron-expand" size="12" extra_classes="text-muted ms-1" %}
+        </th>
+        <th class="sortable" data-col="3" style="cursor:pointer;white-space:nowrap">
+          Stato {% bs_icon "chevron-expand" size="12" extra_classes="text-muted ms-1" %}
+        </th>
+        <th class="sortable" data-col="4" style="cursor:pointer;white-space:nowrap">
+          Capo Squadriglia {% bs_icon "chevron-expand" size="12" extra_classes="text-muted ms-1" %}
+        </th>
+        <th class="sortable" data-col="5" style="cursor:pointer;white-space:nowrap">
+          Capo Reparto {% bs_icon "chevron-expand" size="12" extra_classes="text-muted ms-1" %}
+        </th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for d in diari %}
+        <tr class="cursor-pointer"
+            data-href="{% url 'diaries:detail' d.pk %}"
+            data-zona="{{ d.squadriglia.reparto.gruppo.zona.nome }}"
+            data-gruppo="{{ d.squadriglia.reparto.gruppo.nome }}"
+            data-specialita="{% if d.anagrafica.specialita %}{{ d.anagrafica.specialita }}{% endif %}"
+            data-stato="{{ d.stato }}"
+            data-tipo="{{ d.tipo }}"
+            data-crp="{% if d.crp %}{{ d.crp.cognome }} {{ d.crp.nome }}{% endif %}"
+            data-csq="{% if d.csq %}{{ d.csq.cognome }} {{ d.csq.nome }}{% endif %}">
+          <td>
+            <strong>{{ d.squadriglia.nome }}</strong>
+            {% if d.anagrafica.specialita %}
+              <br><small class="text-muted">{{ d.anagrafica.specialita }}</small>
+            {% endif %}
+          </td>
+          <td>
+            {{ d.squadriglia.reparto.nome }}
+            <br><small class="text-muted">
+              {{ d.squadriglia.reparto.gruppo.zona.nome }} · {{ d.squadriglia.reparto.gruppo.nome }}
+            </small>
+          </td>
+          <td><span class="badge bg-light text-dark">{{ d.get_tipo_display }}</span></td>
+          <td>
+            <span class="badge
+              {% if d.stato == 'non_iniziato' %}bg-secondary
+              {% elif d.stato == 'in_compilazione' %}bg-info text-dark
+              {% elif d.stato == 'relazione_finale' %}bg-warning text-dark
+              {% elif d.stato == 'inviato' %}bg-primary
+              {% elif d.stato == 'in_valutazione' or d.stato == 'in_revisione' %}bg-warning text-dark
+              {% elif d.stato == 'approvato' %}bg-success
+              {% elif d.stato == 'non_approvato' %}bg-danger
+              {% else %}bg-secondary{% endif %}
+            ">{{ d.get_stato_display }}</span>
+          </td>
+          <td class="small">{% if d.csq %}{{ d.csq.cognome }} {{ d.csq.nome }}{% else %}—{% endif %}</td>
+          <td class="small">{% if d.crp %}{{ d.crp.cognome }} {{ d.crp.nome }}{% else %}—{% endif %}</td>
+          <td class="text-end" style="white-space:nowrap">
+            <a href="{% url 'diaries:detail' d.pk %}"
+               class="btn btn-sm btn-outline-primary"
+               title="Apri diario"
+               data-bs-toggle="tooltip"
+               onclick="event.stopPropagation()">
+              {% bs_icon "folder2-open" size="14" %}
+            </a>
+            {% if d.stato == 'inviato' or d.stato == 'in_valutazione' or d.stato == 'in_revisione' or d.stato == 'approvato' or d.stato == 'non_approvato' or d.stato == 'maggiori_info' %}
+              <a href="{% url 'diaries:pdf' d.pk %}"
+                 class="btn btn-sm btn-outline-secondary ms-1"
+                 title="Scarica PDF"
+                 data-bs-toggle="tooltip"
+                 onclick="event.stopPropagation()">
+                {% bs_icon "file-earmark-pdf" size="14" %}
+              </a>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% else %}
   <div class="alert alert-info">Nessun diario disponibile.</div>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+(function () {
+  var table   = document.getElementById('d-table');
+  if (!table) return;
+  var tbody   = table.querySelector('tbody');
+  var search  = document.getElementById('d-search');
+  var selZona = document.getElementById('d-zona');
+  var selGrp  = document.getElementById('d-gruppo');
+  var selSpec = document.getElementById('d-specialita');
+  var selStat = document.getElementById('d-stato');
+  var selTipo = document.getElementById('d-tipo');
+  var btnRst  = document.getElementById('d-reset');
+  var noRes   = document.getElementById('d-no-result');
+
+  function applyFilters() {
+    var q    = search.value.trim().toLowerCase();
+    var zona = selZona.value.toLowerCase();
+    var grp  = selGrp.value.toLowerCase();
+    var spec = selSpec.value.toLowerCase();
+    var stat = selStat.value.toLowerCase();
+    var tipo = selTipo.value.toLowerCase();
+    var vis  = 0;
+    Array.from(tbody.querySelectorAll('tr')).forEach(function (tr) {
+      var ok =
+        (!zona || (tr.dataset.zona  || '').toLowerCase() === zona) &&
+        (!grp  || (tr.dataset.gruppo|| '').toLowerCase() === grp)  &&
+        (!spec || (tr.dataset.specialita || '').toLowerCase() === spec) &&
+        (!stat || (tr.dataset.stato || '').toLowerCase() === stat) &&
+        (!tipo || (tr.dataset.tipo  || '').toLowerCase() === tipo) &&
+        (!q    || (tr.dataset.crp   || '').toLowerCase().includes(q) ||
+                  (tr.dataset.csq   || '').toLowerCase().includes(q));
+      tr.style.display = ok ? '' : 'none';
+      if (ok) vis++;
+    });
+    noRes.classList.toggle('d-none', vis > 0);
+  }
+
+  [search, selZona, selGrp, selSpec, selStat, selTipo].forEach(function (el) {
+    el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', applyFilters);
+  });
+  btnRst.addEventListener('click', function () {
+    search.value = ''; selZona.value = ''; selGrp.value = '';
+    selSpec.value = ''; selStat.value = ''; selTipo.value = '';
+    applyFilters();
+  });
+
+  // Ordinamento colonne
+  var sortCol = -1, sortAsc = true;
+  table.querySelectorAll('th.sortable').forEach(function (th) {
+    th.addEventListener('click', function () {
+      var col = parseInt(th.dataset.col);
+      sortAsc = sortCol === col ? !sortAsc : true;
+      sortCol = col;
+      table.querySelectorAll('th.sortable').forEach(function (h) {
+        h.querySelector('svg').style.opacity = h === th ? '1' : '0.3';
+      });
+      Array.from(tbody.querySelectorAll('tr'))
+        .sort(function (a, b) {
+          var aT = (a.cells[col] ? a.cells[col].textContent : '').trim().toLowerCase();
+          var bT = (b.cells[col] ? b.cells[col].textContent : '').trim().toLowerCase();
+          return sortAsc ? aT.localeCompare(bT, 'it') : bT.localeCompare(aT, 'it');
+        })
+        .forEach(function (r) { tbody.appendChild(r); });
+    });
+  });
+
+  // Riga cliccabile
+  tbody.querySelectorAll('tr[data-href]').forEach(function (tr) {
+    tr.addEventListener('click', function () { window.location = tr.dataset.href; });
+  });
+
+  // Tooltip Bootstrap
+  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+    new bootstrap.Tooltip(el);
+  });
+})();
+</script>
 {% endblock %}

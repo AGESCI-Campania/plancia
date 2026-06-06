@@ -145,6 +145,20 @@
     </select>
   </div>
   <div class="col-sm-2">
+    <label class="form-label small fw-semibold mb-1">Stato</label>
+    <select id="diari-stato" class="form-select form-select-sm">
+      <option value="">— Tutti —</option>
+      {% for val, label in stati_diari_choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-sm-2">
+    <label class="form-label small fw-semibold mb-1">Tipo</label>
+    <select id="diari-tipo" class="form-select form-select-sm">
+      <option value="">— Tutti —</option>
+      {% for val, label in tipi_diari_choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-sm-2">
     <button id="diari-reset" class="btn btn-outline-secondary btn-sm w-100">
       {% bs_icon "x-circle" size="13" extra_classes="me-1" %}Reset
     </button>
@@ -181,9 +195,13 @@
       </thead>
       <tbody>
         {% for d in diari %}
-          <tr data-zona="{{ d.squadriglia.reparto.gruppo.zona.nome }}"
+          <tr class="cursor-pointer"
+              data-href="{% url 'diaries:detail' d.pk %}"
+              data-zona="{{ d.squadriglia.reparto.gruppo.zona.nome }}"
               data-gruppo="{{ d.squadriglia.reparto.gruppo.nome }}"
               data-specialita="{% if d.anagrafica.specialita %}{{ d.anagrafica.specialita }}{% endif %}"
+              data-stato="{{ d.stato }}"
+              data-tipo="{{ d.tipo }}"
               data-crp="{% if d.crp %}{{ d.crp.cognome }} {{ d.crp.nome }}{% endif %}"
               data-csq="{% if d.csq %}{{ d.csq.cognome }} {{ d.csq.nome }}{% endif %}">
             <td>
@@ -214,13 +232,20 @@
             </td>
             <td>{% if d.csq %}{{ d.csq.cognome }} {{ d.csq.nome }}{% else %}—{% endif %}</td>
             <td>{% if d.crp %}{{ d.crp.cognome }} {{ d.crp.nome }}{% else %}—{% endif %}</td>
-            <td>
-              <a href="{% url 'diaries:detail' d.pk %}" class="btn btn-sm btn-outline-primary">Apri</a>
-              {% if puo_gestire %}
-                <button type="button" class="btn btn-sm btn-outline-secondary ms-1"
-                        data-bs-toggle="modal" data-bs-target="#modal-dilazione-{{ d.pk }}">
-                  Dilazione
-                </button>
+            <td class="text-end" style="white-space:nowrap">
+              <a href="{% url 'diaries:detail' d.pk %}"
+                 class="btn btn-sm btn-outline-primary"
+                 title="Apri diario" data-bs-toggle="tooltip"
+                 onclick="event.stopPropagation()">
+                {% bs_icon "folder2-open" size="14" %}
+              </a>
+              {% if d.stato == 'inviato' or d.stato == 'in_valutazione' or d.stato == 'in_revisione' or d.stato == 'approvato' or d.stato == 'non_approvato' or d.stato == 'maggiori_info' %}
+                <a href="{% url 'diaries:pdf' d.pk %}"
+                   class="btn btn-sm btn-outline-secondary ms-1"
+                   title="Scarica PDF" data-bs-toggle="tooltip"
+                   onclick="event.stopPropagation()">
+                  {% bs_icon "file-earmark-pdf" size="14" %}
+                </a>
               {% endif %}
             </td>
           </tr>
@@ -229,31 +254,7 @@
     </table>
   </div>
 
-  <!-- Modali dilazione -->
-  {% if puo_gestire %}
-    {% for d in diari %}
-      <div class="modal fade" id="modal-dilazione-{{ d.pk }}" tabindex="-1">
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title">Dilazione — {{ d.squadriglia }}</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form method="post" action="{% url 'editions:dilazione' d.pk %}">
-              {% csrf_token %}
-              <div class="modal-body">
-                {{ dilazione_form.as_div }}
-              </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
-                <button type="submit" class="btn btn-primary">Concedi dilazione</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-    {% endfor %}
-  {% endif %}
+{# Dilazione gestita nel dettaglio diario #}
 {% else %}
   <div class="alert alert-info">Nessun diario visibile per questa edizione.</div>
 {% endif %}
@@ -263,41 +264,49 @@
 {{ block.super }}
 <script>
 (function () {
-  var table = document.getElementById('diari-table');
+  var table   = document.getElementById('diari-table');
   if (!table) return;
-  var tbody       = table.querySelector('tbody');
-  var search      = document.getElementById('diari-search');
-  var selZona     = document.getElementById('diari-zona');
-  var selGruppo   = document.getElementById('diari-gruppo');
-  var selSpec     = document.getElementById('diari-specialita');
-  var btnReset    = document.getElementById('diari-reset');
-  var noResult    = document.getElementById('diari-nessun-risultato');
+  var tbody   = table.querySelector('tbody');
+  var search  = document.getElementById('diari-search');
+  var selZona = document.getElementById('diari-zona');
+  var selGrp  = document.getElementById('diari-gruppo');
+  var selSpec = document.getElementById('diari-specialita');
+  var selStat = document.getElementById('diari-stato');
+  var selTipo = document.getElementById('diari-tipo');
+  var btnRst  = document.getElementById('diari-reset');
+  var noRes   = document.getElementById('diari-nessun-risultato');
 
   function applyFilters() {
-    var q       = search.value.trim().toLowerCase();
-    var zona    = selZona.value.toLowerCase();
-    var gruppo  = selGruppo.value.toLowerCase();
-    var spec    = selSpec.value.toLowerCase();
-    var visible = 0;
+    var q    = search.value.trim().toLowerCase();
+    var zona = selZona.value.toLowerCase();
+    var grp  = selGrp.value.toLowerCase();
+    var spec = selSpec.value.toLowerCase();
+    var stat = selStat ? selStat.value.toLowerCase() : '';
+    var tipo = selTipo ? selTipo.value.toLowerCase() : '';
+    var vis  = 0;
     Array.from(tbody.querySelectorAll('tr')).forEach(function (tr) {
-      var match =
-        (!zona   || (tr.dataset.zona   || '').toLowerCase() === zona) &&
-        (!gruppo || (tr.dataset.gruppo || '').toLowerCase() === gruppo) &&
-        (!spec   || (tr.dataset.specialita || '').toLowerCase() === spec) &&
-        (!q      || (tr.dataset.crp || '').toLowerCase().includes(q) ||
-                    (tr.dataset.csq || '').toLowerCase().includes(q));
-      tr.style.display = match ? '' : 'none';
-      if (match) visible++;
+      var ok =
+        (!zona || (tr.dataset.zona   || '').toLowerCase() === zona) &&
+        (!grp  || (tr.dataset.gruppo || '').toLowerCase() === grp)  &&
+        (!spec || (tr.dataset.specialita || '').toLowerCase() === spec) &&
+        (!stat || (tr.dataset.stato  || '').toLowerCase() === stat) &&
+        (!tipo || (tr.dataset.tipo   || '').toLowerCase() === tipo) &&
+        (!q    || (tr.dataset.crp    || '').toLowerCase().includes(q) ||
+                  (tr.dataset.csq    || '').toLowerCase().includes(q));
+      tr.style.display = ok ? '' : 'none';
+      if (ok) vis++;
     });
-    noResult.classList.toggle('d-none', visible > 0);
+    noRes.classList.toggle('d-none', vis > 0);
   }
 
-  search.addEventListener('input', applyFilters);
-  selZona.addEventListener('change', applyFilters);
-  selGruppo.addEventListener('change', applyFilters);
-  selSpec.addEventListener('change', applyFilters);
-  btnReset.addEventListener('click', function () {
-    search.value = ''; selZona.value = ''; selGruppo.value = ''; selSpec.value = '';
+  [search, selZona, selGrp, selSpec, selStat, selTipo].filter(Boolean).forEach(function (el) {
+    el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', applyFilters);
+  });
+  btnRst.addEventListener('click', function () {
+    search.value = ''; selZona.value = ''; selGrp.value = '';
+    selSpec.value = '';
+    if (selStat) selStat.value = '';
+    if (selTipo) selTipo.value = '';
     applyFilters();
   });
 
@@ -311,14 +320,24 @@
       table.querySelectorAll('th.sortable').forEach(function (h) {
         h.querySelector('svg').style.opacity = h === th ? '1' : '0.3';
       });
-      var rows = Array.from(tbody.querySelectorAll('tr'));
-      rows.sort(function (a, b) {
-        var aT = (a.cells[col] ? a.cells[col].textContent : '').trim().toLowerCase();
-        var bT = (b.cells[col] ? b.cells[col].textContent : '').trim().toLowerCase();
-        return sortAsc ? aT.localeCompare(bT, 'it') : bT.localeCompare(aT, 'it');
-      });
-      rows.forEach(function (r) { tbody.appendChild(r); });
+      Array.from(tbody.querySelectorAll('tr'))
+        .sort(function (a, b) {
+          var aT = (a.cells[col] ? a.cells[col].textContent : '').trim().toLowerCase();
+          var bT = (b.cells[col] ? b.cells[col].textContent : '').trim().toLowerCase();
+          return sortAsc ? aT.localeCompare(bT, 'it') : bT.localeCompare(aT, 'it');
+        })
+        .forEach(function (r) { tbody.appendChild(r); });
     });
+  });
+
+  // Riga cliccabile
+  tbody.querySelectorAll('tr[data-href]').forEach(function (tr) {
+    tr.addEventListener('click', function () { window.location = tr.dataset.href; });
+  });
+
+  // Tooltip Bootstrap
+  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+    new bootstrap.Tooltip(el);
   });
 })();
 </script>
