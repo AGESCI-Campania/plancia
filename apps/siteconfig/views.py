@@ -66,6 +66,13 @@ class ImpostazioniView(RuoloRequiredMixin, UpdateView):
         form_ok = form.is_valid()
         formset_ok = link_formset.is_valid()
 
+        import logging
+        _log = logging.getLogger("siteconfig.views")
+        _log.warning(
+            "ImpostazioniView POST — form_ok=%s form_errors=%s formset_ok=%s formset_errors=%s",
+            form_ok, dict(form.errors), formset_ok, link_formset.non_form_errors(),
+        )
+
         if form_ok:
             saved = form.save()
             # Aggiorna la cache con il valore appena salvato (evita stale cache)
