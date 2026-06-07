@@ -721,14 +721,19 @@ class FlowerProxyView(View):
         if request.GET:
             target_url += "?" + urlencode(request.GET)
 
-        headers = {}
-        for name in ("Accept", "Accept-Encoding", "X-Requested-With"):
+        headers = {
+            # Non passiamo Accept-Encoding: urllib non decomprime gzip e servirebbe
+            # dati binari al browser invece di JSON/HTML leggibile.
+            "Accept-Encoding": "identity",
+        }
+        for name in ("Accept", "X-Requested-With", "Content-Type"):
             if name in request.headers:
                 headers[name] = request.headers[name]
 
+        body = request.body if request.method in ("POST", "PUT", "PATCH") else None
         try:
-            req = urllib.request.Request(target_url, headers=headers)
-            with urllib.request.urlopen(req, timeout=10) as resp:
+            req = urllib.request.Request(target_url, data=body, headers=headers, method=request.method)
+            with urllib.request.urlopen(req, timeout=15) as resp:
                 content = resp.read()
                 content_type = resp.headers.get("Content-Type", "text/html")
                 return HttpResponse(content, status=resp.status, content_type=content_type)
