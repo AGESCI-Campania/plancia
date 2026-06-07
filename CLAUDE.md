@@ -156,8 +156,32 @@ In `apps.accounts.roles`: `ROLE_REQUIRES_CATEGORY`, `ROLE_CREATABLE_BY`, `ROLE_R
 - Niente segreti nel repo: tutto via `.env*`.
 
 ## Deploy e backup
-Ogni deploy: `git pull && sudo systemctl reload plancia` (rebuild immagine + migrate automatico).
-`systemctl restart` riavvia senza rebuild — solo per emergenze senza modifiche al codice.
+
+### Deploy in produzione (SSH: admin.agescicampania.org, cartella /srv/plancia)
+`sudo systemctl reload plancia` non è utilizzabile da SSH non interattivo (richiede password
+interattiva). Usare sempre **docker compose** direttamente:
+
+```bash
+# 1. Aggiorna il codice
+git pull
+
+# 2. Ricostruisce le immagini (--no-cache garantisce che il nuovo codice sia incluso)
+docker compose --env-file .env.prod build --no-cache web worker beat
+
+# 3. Ricrea i container con le nuove immagini (l'entrypoint applica le migrate automaticamente)
+docker compose --env-file .env.prod up -d web worker beat
+```
+
+**Importante:**
+- Usare sempre `up -d` (non `restart`): `restart` riavvia i container con la vecchia immagine senza ricrearli.
+- `build` senza `--no-cache` può usare layer in cache e non includere nuovi file (es. migrazioni).
+- Le migrate vengono applicate automaticamente dall'entrypoint al primo avvio del container.
+
+### Verifica post-deploy
+```bash
+docker compose --env-file .env.prod logs web --tail=30
+```
+
 Backup: `deploy/backup.sh` via cron (`deploy/crontab.example`).
 
 ## Funzionalità da sviluppare (non ancora implementate)
