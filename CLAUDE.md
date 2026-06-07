@@ -157,7 +157,10 @@ In `apps.accounts.roles`: `ROLE_REQUIRES_CATEGORY`, `ROLE_CREATABLE_BY`, `ROLE_R
 
 ## Deploy e backup
 
-### Deploy in produzione (SSH: admin.agescicampania.org, cartella /srv/plancia)
+### Deploy in produzione
+**Accesso SSH**: `ssh admin.agescicampania.org` — cartella di lavoro `/srv/plancia`.
+Claude Code ha accesso diretto via SSH e può eseguire il deploy autonomamente.
+
 `sudo systemctl reload plancia` non è utilizzabile da SSH non interattivo (richiede password
 interattiva). Usare sempre **docker compose** direttamente:
 
