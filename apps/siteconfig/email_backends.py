@@ -148,9 +148,13 @@ class GmailOAuth2Backend(SmtpBackend):
             conn.ehlo()
             conn.starttls()
             conn.ehlo()
-            auth_string = f"user={creds.account_email}\1auth=Bearer {access_token}\1\1"
+            # smtplib.auth() chiama b2a_base64() sul valore restituito dall'authobject,
+            # provocando doppia codifica. Usiamo docmd() con il base64 già calcolato.
+            auth_string = f"user={creds.account_email}\x01auth=Bearer {access_token}\x01\x01"
             auth_b64 = base64.b64encode(auth_string.encode("ascii")).decode("ascii")
-            conn.auth("XOAUTH2", lambda challenge=None: auth_b64)
+            code, resp = conn.docmd("AUTH", f"XOAUTH2 {auth_b64}")
+            if code != 235:
+                raise smtplib.SMTPAuthenticationError(code, resp)
             self.connection = conn
             return True
         except Exception:

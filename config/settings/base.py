@@ -18,6 +18,26 @@ def _read_app_version() -> str:
 
 
 def _read_app_commit() -> str:
+    # Legge il commit direttamente dai file .git/ (non richiede il binario git,
+    # che non è presente nell'immagine Docker python:3.14-slim).
+    try:
+        git_dir = BASE_DIR / ".git"
+        head = (git_dir / "HEAD").read_text().strip()
+        if head.startswith("ref: "):
+            ref_path = git_dir / head[5:]          # es. refs/heads/main
+            if ref_path.exists():
+                return ref_path.read_text().strip()[:7]
+            # Prova packed-refs
+            packed = git_dir / "packed-refs"
+            if packed.exists():
+                ref_name = head[5:]
+                for line in packed.read_text().splitlines():
+                    if not line.startswith("#") and line.endswith(ref_name):
+                        return line.split()[0][:7]
+        return head[:7]             # detached HEAD
+    except Exception:
+        pass
+    # Fallback: prova con il binario git se disponibile
     try:
         r = subprocess.run(
             ["git", "rev-parse", "--short", "HEAD"],

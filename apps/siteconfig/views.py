@@ -342,40 +342,46 @@ class AxesSbloccaView(RuoloRequiredMixin, View):
 
 
 class TestEmailView(RuoloRequiredMixin, View):
-    """Invia un'email di test all'utente corrente per verificare la configurazione SMTP."""
+    """Invia un'email di test tramite SMTP o provider transazionale."""
 
     ruoli_ammessi = (Ruolo.ADMIN, Ruolo.SEGRETERIA, Ruolo.INCARICATO_EG)
 
     def post(self, request):
         from django.core.mail import EmailMessage
+        from django.urls import reverse
 
         from apps.siteconfig.email_backends import _smtp_backend, _transazionale_backend
-        from apps.siteconfig.models import BackendPosta, Impostazioni
+        from apps.siteconfig.models import Impostazioni
 
         imp = Impostazioni.get()
+        backend_tipo = request.POST.get("backend", "smtp")  # "smtp" | "transazionale"
+
         try:
-            # Testa sempre il backend reale (non SIMULATO/MAILPIT)
-            backend_key = imp.email_backend_standard
-            if backend_key == BackendPosta.TRANSAZIONALE:
+            if backend_tipo == "transazionale":
                 conn = _transazionale_backend(imp, fail_silently=False)
+                label = "provider transazionale"
             else:
                 conn = _smtp_backend(imp, fail_silently=False)
+                label = "SMTP"
 
             msg = EmailMessage(
-                subject=f"Test invio email — {imp.titolo or 'Plancia'}",
+                subject=f"Test invio email ({label}) — {imp.titolo or 'Plancia'}",
                 body=(
-                    "Questo è un messaggio di test inviato dalle impostazioni di Plancia.\n"
-                    "Se lo ricevi, la configurazione email funziona correttamente."
+                    f"Questo è un messaggio di test inviato tramite {label} "
+                    "dalle impostazioni di Plancia.\n"
+                    "Se lo ricevi, la configurazione funziona correttamente."
                 ),
                 from_email=imp.from_email,
                 to=[request.user.email],
                 connection=conn,
             )
             msg.send()
-            messages.success(request, f"Email di test inviata a {request.user.email}.")
+            messages.success(
+                request,
+                f"Email di test ({label}) inviata a {request.user.email}.",
+            )
         except Exception as exc:
-            messages.error(request, f"Errore nell'invio email: {exc}")
-        from django.urls import reverse
+            messages.error(request, f"Errore nell'invio ({label}): {exc}")
         return redirect(reverse("siteconfig:impostazioni") + "#email")
 
 
