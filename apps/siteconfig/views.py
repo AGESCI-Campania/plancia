@@ -57,6 +57,8 @@ class ImpostazioniView(RuoloRequiredMixin, UpdateView):
             for chiave in TAG_REGISTRY
         ]
         ctx["log_export"] = LogTaskExport.objects.all()[:50]
+        from axes.models import AccessAttempt
+        ctx["access_attempts"] = AccessAttempt.objects.order_by("-attempt_time")[:100]
         return ctx
 
     def post(self, request, *args, **kwargs):
@@ -282,6 +284,30 @@ class MailTemplateDeleteView(RuoloRequiredMixin, View):
         tpl = get_object_or_404(MailTemplate, chiave=chiave)
         tpl.delete()
         messages.success(request, f"Template «{chiave}» eliminato — verrà usato il file di default.")
+        return redirect("siteconfig:impostazioni")
+
+
+class AxesSbloccaView(RuoloRequiredMixin, View):
+    """Sblocca uno o tutti gli AccessAttempt di axes."""
+
+    ruoli_ammessi = (Ruolo.ADMIN,)
+
+    def post(self, request):
+        from axes.models import AccessAttempt
+
+        attempt_pk = request.POST.get("attempt_pk")
+        if attempt_pk == "tutti":
+            count = AccessAttempt.objects.count()
+            AccessAttempt.objects.all().delete()
+            messages.success(request, f"Sbloccati tutti i {count} IP bloccati.")
+        else:
+            try:
+                attempt = AccessAttempt.objects.get(pk=attempt_pk)
+                ip = attempt.ip_address
+                attempt.delete()
+                messages.success(request, f"IP {ip} sbloccato.")
+            except AccessAttempt.DoesNotExist:
+                messages.error(request, "Tentativo non trovato.")
         return redirect("siteconfig:impostazioni")
 
 

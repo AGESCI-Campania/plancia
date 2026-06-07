@@ -35,6 +35,7 @@ class ImpostazioniForm(forms.ModelForm):
             "smtp_host", "smtp_port", "smtp_user", "smtp_password", "smtp_use_tls",
             "email_provider", "email_provider_api_key", "email_provider_webhook_secret",
             "mfa_obbligatoria_ruoli_estesi",
+            "axes_failure_limit", "axes_cooloff_minutes", "axes_use_attempt_expiration",
             "manutenzione", "debug_toolbar", "debug_diagnostico",
         ]
         widgets = {
@@ -59,6 +60,9 @@ class ImpostazioniForm(forms.ModelForm):
                 render_value=True,
                 attrs={**_ctrl, "autocomplete": "off"},
             ),
+            "axes_failure_limit": forms.NumberInput(attrs={**_ctrl, "min": "1", "max": "20"}),
+            "axes_cooloff_minutes": forms.NumberInput(attrs={**_ctrl, "min": "0", "max": "1440"}),
+            "axes_use_attempt_expiration": forms.CheckboxInput(attrs=_sw),
             "mfa_obbligatoria_ruoli_estesi": forms.CheckboxInput(attrs=_sw),
             "manutenzione": forms.CheckboxInput(attrs=_sw),
             "debug_toolbar": forms.CheckboxInput(attrs=_sw),

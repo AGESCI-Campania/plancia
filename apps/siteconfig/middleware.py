@@ -1,5 +1,23 @@
 # apps/siteconfig/middleware.py
+from django.conf import settings as django_settings
 from django.shortcuts import render
+
+
+class AxesSettingsSyncMiddleware:
+    """Sincronizza AXES_USE_ATTEMPT_EXPIRATION da Impostazioni prima che AxesMiddleware processi la request.
+
+    Deve stare in MIDDLEWARE subito PRIMA di axes.middleware.AxesMiddleware.
+    Gunicorn usa worker sync mono-thread: update di settings per processo è thread-safe.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        from apps.siteconfig.models import Impostazioni
+        imp = Impostazioni.get()
+        django_settings.AXES_USE_ATTEMPT_EXPIRATION = imp.axes_use_attempt_expiration
+        return self.get_response(request)
 
 
 class MaintenanceModeMiddleware:

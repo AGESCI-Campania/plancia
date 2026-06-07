@@ -50,10 +50,14 @@
       </div>
       <div class="alert alert-light border small mb-4 py-2">
         {% bs_icon "info-circle" size="13" extra_classes="me-1 text-muted" %}
-        Il testo del footer è <strong>HTML libero</strong>. Non sono disponibili variabili template.
-        Esempi: <code>&lt;strong&gt;testo&lt;/strong&gt;</code>,
-        <code>&lt;br&gt;</code>,
-        <code>&lt;a href="https://..."&gt;link&lt;/a&gt;</code>.
+        Testo HTML. Variabili template disponibili:
+        <code>{% templatetag openvariable %} titolo {% templatetag closevariable %}</code>,
+        <code>{% templatetag openvariable %} sottotitolo {% templatetag closevariable %}</code>,
+        <code>{% templatetag openvariable %} versione {% templatetag closevariable %}</code>
+        (es. <em>{{ app_version }}</em>),
+        <code>{% templatetag openvariable %} commit {% templatetag closevariable %}</code>
+        (es. <em>{{ app_commit }}</em>).
+        HTML: <code>&lt;strong&gt;</code>, <code>&lt;br&gt;</code>, <code>&lt;a href="..."&gt;</code>.
       </div>
 
       <p class="small fw-semibold text-muted mb-2 border-top pt-3">
@@ -225,8 +229,21 @@
       <span class="fw-semibold">Sicurezza</span>
     </div>
     <div class="card-body">
-      <div class="row g-3 row-cols-1 row-cols-md-2">
+
+      {# MFA #}
+      <p class="small fw-semibold text-muted mb-2">Autenticazione a due fattori (MFA)</p>
+      <div class="row g-3 row-cols-1 row-cols-md-2 mb-4">
         {% include "siteconfig/_switch.html" with field=form.mfa_obbligatoria_ruoli_estesi badge="primary" desc="Se disattivato, solo gli Admin sono obbligati ad attivare la MFA. Segreteria e Incaricati EG possono accedere senza." %}
+      </div>
+
+      {# Brute-force (axes) #}
+      <p class="small fw-semibold text-muted mb-2 border-top pt-3">Protezione brute-force (django-axes)</p>
+      <div class="row g-3 mb-3">
+        {% include "siteconfig/_campo.html" with field=form.axes_failure_limit col="col-md-3" %}
+        {% include "siteconfig/_campo.html" with field=form.axes_cooloff_minutes col="col-md-3" %}
+      </div>
+      <div class="row g-3 row-cols-1 row-cols-md-2">
+        {% include "siteconfig/_switch.html" with field=form.axes_use_attempt_expiration badge="info" desc="Se attivo, i tentativi falliti scadono automaticamente dopo il periodo di blocco e non vengono più conteggiati. Consigliato con blocco automatico." %}
       </div>
     </div>
   </div>
@@ -253,7 +270,70 @@
   </div>
 </form>
 
-{# ── 6. Import tracciati ───────────────────────────────────────────────── #}
+{# ── 6. IP bloccati (axes) ─────────────────────────────────────────────── #}
+<div class="card mb-4 shadow-sm">
+  <div class="card-header d-flex align-items-center justify-content-between gap-2">
+    <div class="d-flex align-items-center gap-2">
+      {% bs_icon "shield-exclamation" size="20" extra_classes="text-danger" %}
+      <span class="fw-semibold">IP bloccati (brute-force)</span>
+      {% if access_attempts %}
+        <span class="badge bg-danger">{{ access_attempts|length }}</span>
+      {% else %}
+        <span class="badge bg-secondary">0</span>
+      {% endif %}
+    </div>
+    {% if access_attempts %}
+    <form method="post" action="{% url 'siteconfig:sblocca_ip' %}"
+          onsubmit="return confirm('Sbloccare tutti gli IP bloccati?')">
+      {% csrf_token %}
+      <input type="hidden" name="attempt_pk" value="tutti">
+      <button type="submit" class="btn btn-outline-danger btn-sm">
+        {% bs_icon "unlock" size="14" extra_classes="me-1" %}Sblocca tutti
+      </button>
+    </form>
+    {% endif %}
+  </div>
+  {% if access_attempts %}
+  <div class="table-responsive">
+    <table class="table table-sm table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-3">IP</th>
+          <th>Utente tentato</th>
+          <th>Tentativi</th>
+          <th>Ultimo tentativo</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for attempt in access_attempts %}
+        <tr>
+          <td class="ps-3 fw-semibold">{{ attempt.ip_address|default:"—" }}</td>
+          <td class="text-muted small">{{ attempt.username|default:"—" }}</td>
+          <td>
+            <span class="badge bg-warning text-dark">{{ attempt.failures_since_start }}</span>
+          </td>
+          <td class="small text-muted text-nowrap">{{ attempt.attempt_time|date:"d/m/Y H:i" }}</td>
+          <td class="text-end pe-3">
+            <form method="post" action="{% url 'siteconfig:sblocca_ip' %}">
+              {% csrf_token %}
+              <input type="hidden" name="attempt_pk" value="{{ attempt.pk }}">
+              <button type="submit" class="btn btn-outline-success btn-sm">
+                {% bs_icon "unlock" size="13" extra_classes="me-1" %}Sblocca
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body text-muted small">Nessun IP bloccato.</div>
+  {% endif %}
+</div>
+
+{# ── 8. Import tracciati ───────────────────────────────────────────────── #}
 <div class="card mb-4 shadow-sm">
   <div class="card-header d-flex align-items-center gap-2">
     {% bs_icon "cloud-upload" size="20" extra_classes="text-success" %}
@@ -269,7 +349,7 @@
   </div>
 </div>
 
-{# ── 7. Log generazione PDF/Excel ─────────────────────────────────────── #}
+{# ── 9. Log generazione PDF/Excel ─────────────────────────────────────── #}
 <div class="card shadow-sm mb-4" id="log-export">
   <div class="card-header d-flex align-items-center gap-2">
     {% bs_icon "journal-text" size="20" extra_classes="text-secondary" %}
@@ -346,7 +426,7 @@
 {% endif %}
 {% endfor %}
 
-{# ── 8. Pagine statiche (privacy / termini) ────────────────────────────── #}
+{# ── 10. Pagine statiche (privacy / termini) ───────────────────────────── #}
 <div class="card shadow-sm mb-4">
   <div class="card-header d-flex align-items-center gap-2">
     {% bs_icon "file-earmark-richtext" size="20" extra_classes="text-secondary" %}
@@ -384,7 +464,7 @@
   </div>
 </div>
 
-{# ── 9. Template email ─────────────────────────────────────────────────── #}
+{# ── 11. Template email ────────────────────────────────────────────────── #}
 <div class="card shadow-sm">
   <div class="card-header d-flex align-items-center gap-2">
     {% bs_icon "file-earmark-text" size="20" extra_classes="text-secondary" %}

@@ -303,7 +303,7 @@
           <a href="{% url 'pagina_termini' %}" class="text-white-50">Condizioni del Servizio</a>
         </div>
         {% if impostazioni.footer_testo %}
-          {{ impostazioni.footer_testo|safe }}
+          {{ footer_rendered|safe }}
         {% else %}
           <strong>{{ impostazioni.titolo }}</strong><br>
           Guidoncini Verdi &mdash; AGESCI Campania

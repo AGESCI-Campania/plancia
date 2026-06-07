@@ -107,6 +107,26 @@ class Impostazioni(models.Model):
         help_text="Se disattivato, la MFA resta obbligatoria solo per gli Admin.",
     )
 
+    # Sicurezza — brute-force (django-axes)
+    axes_failure_limit = models.PositiveIntegerField(
+        default=5,
+        verbose_name="tentativi prima del blocco",
+        help_text="Numero di tentativi di login errati prima che l'IP venga bloccato.",
+    )
+    axes_cooloff_minutes = models.PositiveIntegerField(
+        default=10,
+        verbose_name="minuti di blocco automatico",
+        help_text="Dopo quanti minuti l'IP si sblocca automaticamente. 0 = blocco permanente.",
+    )
+    axes_use_attempt_expiration = models.BooleanField(
+        default=True,
+        verbose_name="scadenza tentativi (AXES_USE_ATTEMPT_EXPIRATION)",
+        help_text=(
+            "Se attivo, i tentativi falliti scadono dopo il periodo di blocco e non vengono "
+            "più conteggiati. Consigliato quando è impostato un blocco automatico."
+        ),
+    )
+
     # Stato piattaforma / diagnostica
     manutenzione = models.BooleanField(default=False)
     debug_diagnostico = models.BooleanField(default=False)  # logging verboso (NON ribalta settings.DEBUG)

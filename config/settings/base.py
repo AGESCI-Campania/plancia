@@ -1,10 +1,35 @@
 # config/settings/base.py
 """Impostazioni condivise. Override in dev.py / prod.py."""
+import subprocess
+import tomllib
 from pathlib import Path
 
 import environ
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+# --- Versione e commit (usati nel footer e nel template impostazioni) -------
+def _read_app_version() -> str:
+    try:
+        with open(BASE_DIR / "pyproject.toml", "rb") as _f:
+            return tomllib.load(_f).get("project", {}).get("version", "?")
+    except Exception:
+        return "?"
+
+
+def _read_app_commit() -> str:
+    try:
+        r = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            capture_output=True, text=True, cwd=BASE_DIR, timeout=3,
+        )
+        return r.stdout.strip() or "?"
+    except Exception:
+        return "?"
+
+
+APP_VERSION = _read_app_version()
+APP_COMMIT = _read_app_commit()
 
 env = environ.Env(
     DJANGO_DEBUG=(bool, False),
@@ -76,6 +101,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    "apps.siteconfig.middleware.AxesSettingsSyncMiddleware",
     "axes.middleware.AxesMiddleware",
     "hijack.middleware.HijackUserMiddleware",
     "apps.accounts.middleware.MFAEnforcementMiddleware",
@@ -122,6 +148,12 @@ AUTHENTICATION_BACKENDS = [
     "allauth.account.auth_backends.AuthenticationBackend",
     "guardian.backends.ObjectPermissionBackend",
 ]
+
+# --- django-axes (brute-force) -----------------------------------------------
+# Limite tentativi e cooloff letti da DB (Impostazioni) tramite callable.
+AXES_FAILURE_LIMIT = "apps.siteconfig.axes_helpers.axes_failure_limit"
+AXES_COOLOFF_TIME = "apps.siteconfig.axes_helpers.axes_cooloff_time"
+AXES_LOCKOUT_PARAMETERS = ["ip_address"]  # blocca per IP
 
 # allauth (rifinire secondo docs sez. 12)
 LOGIN_REDIRECT_URL = "/"
