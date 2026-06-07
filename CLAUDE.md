@@ -58,7 +58,7 @@ uv run mypy .
 | `exports` | PDF WeasyPrint + Excel openpyxl, tasks Celery |
 | `storage_drive` | `DriveCredenziali`, `DriveFile`, service `carica_file/crea_cartella` |
 | `siteconfig` | `Impostazioni` (singleton), `FooterLink`, `GmailSMTPCredenziali`, `PaginaStatica` |
-| `imports` | `LogImportazione`, `RigaImportazione`, commands `import_coca/ragazzi/squadriglie` |
+| `imports` | `LogImportazione`, `RigaImportazione`, commands `import_coca/ragazzi/squadriglie/risposte_eg` |
 | `helpdesk` | `Ticket`, `RispostaTicket` |
 | `stats` | dashboard per zona |
 

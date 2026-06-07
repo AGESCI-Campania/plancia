@@ -169,7 +169,7 @@ docs/        specifica di progetto
 | **diaries** — visibilità | 6 | ✅ pass | Accesso a moduli per ruolo |
 | **diaries** — cambio referenti | 29 | ✅ pass | CambiaCsqView, CambiaCrpView, bulk |
 | **diaries** — Selenium E2E | 15 | ✅ pass | Chrome headless, Tom Select, sessione |
-| **Totale** | **117** | **✅ 117/117** | `uv run pytest` — 2026-06-07 |
+| **Totale** | **117** | **✅ 117/117** | `uv run pytest` — 2026-06-07 (v1.11.1) |
 
 I test Selenium (12) usano **Django LiveServer** + **Selenium 4** con ChromeDriver scaricato
 automaticamente da Selenium Manager. Coprono:
