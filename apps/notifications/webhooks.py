@@ -28,7 +28,7 @@ def _invito_da_messaggio(message):
     return metadata.get("invito_pk")
 
 
-def handle_post_send(sender, message, status, esp_response, **kwargs):
+def handle_post_send(sender, message, status, esp_response=None, **kwargs):
     """Cattura il provider_message_id dopo l'invio e aggiorna il delivery_status."""
     invito_pk = _invito_da_messaggio(message)
     if not invito_pk:

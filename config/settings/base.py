@@ -304,6 +304,11 @@ BASE_URL = env.str("BASE_URL", default="http://localhost:8000")
 # --- Email ------------------------------------------------------------------
 DEFAULT_FROM_EMAIL = env.str("DEFAULT_FROM_EMAIL", default="plancia@agescicampania.org")
 
+# Il tema usa alert-{{ message.tags }}: "error" non è una classe Bootstrap valida,
+# serve "danger". MESSAGE_TAGS mappa i livelli Django ai tag Bootstrap corretti.
+# noqa: E402 — import posizionato qui per leggibilità vicino all'uso
+MESSAGE_TAGS = {40: "danger"}  # 40 = messages.ERROR
+
 # Backend custom: rispetta Impostazioni.email_mode (reale / simulato / simulato_piu_invio).
 # In dev (vedi dev.py) si usa il backend console.
 EMAIL_BACKEND = "apps.siteconfig.email_backends.PlanciaEmailBackend"
