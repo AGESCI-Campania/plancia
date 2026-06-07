@@ -12,40 +12,45 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
-from django.views.generic import UpdateView
 
 from apps.accounts.mixins import RuoloRequiredMixin
 from apps.accounts.models import Ruolo
 from apps.notifications.models import TAG_REGISTRY, MailTemplate
 from apps.siteconfig.forms import (
+    CAMPI_SMTP_MANUALI,
+    SEZIONE_FORM,
+    SEZIONE_LABEL,
     FooterLinkFormSet,
-    ImpostazioniForm,
     MailTemplateForm,
     PaginaStaticaForm,
 )
 from apps.siteconfig.models import Impostazioni, PaginaStatica, SlugPagina
 
 
-class ImpostazioniView(RuoloRequiredMixin, UpdateView):
-    """Pagina impostazioni piattaforma accessibile da Admin, IABR e Segreteria."""
+class ImpostazioniView(RuoloRequiredMixin, View):
+    """Pagina impostazioni piattaforma. Ogni sezione ha il proprio form isolato."""
 
-    model = Impostazioni
-    form_class = ImpostazioniForm
     template_name = "siteconfig/impostazioni.html"
     ruoli_ammessi = (Ruolo.ADMIN, Ruolo.SEGRETERIA, Ruolo.INCARICATO_EG)
 
-    def get_object(self, queryset=None):
-        return Impostazioni.get()
+    def _build_context(self, imp, **form_overrides):
+        from axes.models import AccessAttempt
 
-    def get_success_url(self):
-        return self.request.path
-
-    def get_context_data(self, **kwargs):
-        if "link_formset" not in kwargs:
-            kwargs["link_formset"] = FooterLinkFormSet(instance=self.get_object())
-        ctx = super().get_context_data(**kwargs)
         from apps.editions.models import Edizione
         from apps.exports.models import LogTaskExport
+
+        ctx: dict = {"object": imp}
+
+        # Form per sezione — usa override se c'è un form con errori da mostrare
+        for sezione, form_class in SEZIONE_FORM.items():
+            key = f"form_{sezione}"
+            ctx[key] = form_overrides.get(key, form_class(instance=imp))
+
+        # Formset footer
+        ctx["link_formset"] = form_overrides.get(
+            "link_formset", FooterLinkFormSet(instance=imp)
+        )
+
         ctx["edizioni_import"] = Edizione.objects.order_by("-anno")
         db_map = {t.chiave: t for t in MailTemplate.objects.all()}
         ctx["mail_template_righe"] = [
@@ -57,39 +62,64 @@ class ImpostazioniView(RuoloRequiredMixin, UpdateView):
             for chiave in TAG_REGISTRY
         ]
         ctx["log_export"] = LogTaskExport.objects.all()[:50]
-        from axes.models import AccessAttempt
         ctx["access_attempts"] = AccessAttempt.objects.order_by("-attempt_time")[:100]
         return ctx
 
+    def get(self, request, *args, **kwargs):
+        imp = Impostazioni.objects.get_or_create(pk=1)[0]
+        return render(request, self.template_name, self._build_context(imp))
+
     def post(self, request, *args, **kwargs):
-        # Bypassa la cache per il POST: legge sempre da DB per avere dati freschi.
-        self.object = Impostazioni.objects.get_or_create(pk=1)[0]
-        form = self.get_form()
-        link_formset = FooterLinkFormSet(request.POST, instance=self.object)
+        from django.core.cache import cache
 
-        form_ok = form.is_valid()
-        formset_ok = link_formset.is_valid()
+        sezione = request.POST.get("sezione", "")
+        if sezione not in SEZIONE_FORM:
+            messages.error(request, "Sezione non valida.")
+            return redirect("siteconfig:impostazioni")
 
-        if form_ok:
-            saved = form.save()
-            # Aggiorna la cache con il valore appena salvato (evita stale cache)
-            from django.core.cache import cache
+        # Sempre da DB per evitare cache stale sul POST
+        imp = Impostazioni.objects.get_or_create(pk=1)[0]
+        form_class = SEZIONE_FORM[sezione]
+        form = form_class(request.POST, instance=imp)
+
+        link_formset = None
+        if sezione == "footer":
+            link_formset = FooterLinkFormSet(request.POST, instance=imp)
+
+        if form.is_valid():
+            update_fields = list(form_class.Meta.fields)
+
+            # Quando Gmail OAuth è attivo i campi SMTP manuali non vengono renderizzati
+            # nell'HTML: arriverebbero vuoti e sovrascriverebbero i valori salvati.
+            if sezione == "email" and imp.smtp_use_gmail_oauth:
+                update_fields = [f for f in update_fields if f not in CAMPI_SMTP_MANUALI]
+
+            saved = form.save(commit=False)
+            saved.save(update_fields=[*update_fields, "aggiornato_at"])
             cache.set(Impostazioni.CACHE_KEY, saved, 300)
-            if formset_ok:
-                link_formset.save()
-                messages.success(request, "Impostazioni salvate.")
-            else:
-                messages.warning(
-                    request,
-                    "Impostazioni salvate. Errore nei link footer: " +
-                    str(link_formset.non_form_errors() or link_formset.errors),
-                )
-            return redirect(self.get_success_url())
 
-        # Il form principale non è valido
-        return self.render_to_response(
-            self.get_context_data(form=form, link_formset=link_formset)
+            if link_formset is not None:
+                if link_formset.is_valid():
+                    link_formset.save()
+                    messages.success(request, "Footer salvato.")
+                else:
+                    messages.warning(
+                        request,
+                        "Testo footer salvato. Errore nei link: "
+                        + str(link_formset.non_form_errors() or link_formset.errors),
+                    )
+            else:
+                messages.success(request, f"{SEZIONE_LABEL.get(sezione, sezione)} salvato.")
+
+            return redirect(f"{request.path}#{sezione}")
+
+        # Form non valido: ri-renderizza mostrando gli errori nella sezione corretta
+        ctx = self._build_context(
+            imp,
+            **{f"form_{sezione}": form},
+            **({"link_formset": link_formset} if link_formset is not None else {}),
         )
+        return render(request, self.template_name, ctx)
 
 
 class LanciaImportView(RuoloRequiredMixin, View):

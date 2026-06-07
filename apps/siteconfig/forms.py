@@ -24,24 +24,52 @@ _FOOTER_TINYMCE = TinyMCE(
 )
 
 
-class ImpostazioniForm(forms.ModelForm):
+# ---------------------------------------------------------------------------
+# Form per sezione — ogni sezione ha la propria form isolata
+# ---------------------------------------------------------------------------
+
+class IdentitaForm(forms.ModelForm):
+    class Meta:
+        model = Impostazioni
+        fields = ["titolo", "sottotitolo"]
+        widgets = {
+            "titolo": forms.TextInput(attrs=_ctrl),
+            "sottotitolo": forms.TextInput(attrs=_ctrl),
+        }
+
+
+class FooterForm(forms.ModelForm):
+    class Meta:
+        model = Impostazioni
+        fields = ["footer_testo"]
+        widgets = {"footer_testo": _FOOTER_TINYMCE}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and not self.instance.footer_testo:
+            titolo = self.instance.titolo or "Plancia"
+            self.initial["footer_testo"] = (
+                f"<strong>{titolo}</strong><br>Guidoncini Verdi — AGESCI Campania"
+            )
+
+
+class EmailForm(forms.ModelForm):
+    """Form per la sezione Posta elettronica.
+
+    I campi SMTP manuali (smtp_host, smtp_port, ecc.) vengono inclusi nel salvataggio
+    solo se smtp_use_gmail_oauth è False, per evitare di sovrascrivere i valori
+    quando quei campi non sono renderizzati nell'HTML.
+    """
+
     class Meta:
         model = Impostazioni
         fields = [
-            "titolo", "sottotitolo",
-            "footer_testo",
             "email_mode", "from_email",
             "email_backend_standard", "email_backend_massivo",
             "smtp_host", "smtp_port", "smtp_user", "smtp_password", "smtp_use_tls",
             "email_provider", "email_provider_api_key", "email_provider_webhook_secret",
-            "mfa_obbligatoria_ruoli_estesi",
-            "axes_failure_limit", "axes_cooloff_minutes", "axes_use_attempt_expiration",
-            "manutenzione", "debug_toolbar", "debug_diagnostico",
         ]
         widgets = {
-            "titolo": forms.TextInput(attrs=_ctrl),
-            "sottotitolo": forms.TextInput(attrs=_ctrl),
-            "footer_testo": _FOOTER_TINYMCE,
             "email_mode": forms.Select(attrs=_sel),
             "email_backend_standard": forms.Select(attrs=_sel),
             "email_backend_massivo": forms.Select(attrs=_sel),
@@ -60,13 +88,6 @@ class ImpostazioniForm(forms.ModelForm):
                 render_value=True,
                 attrs={**_ctrl, "autocomplete": "off"},
             ),
-            "axes_failure_limit": forms.NumberInput(attrs={**_ctrl, "min": "1", "max": "20"}),
-            "axes_cooloff_minutes": forms.NumberInput(attrs={**_ctrl, "min": "0", "max": "1440"}),
-            "axes_use_attempt_expiration": forms.CheckboxInput(attrs=_sw),
-            "mfa_obbligatoria_ruoli_estesi": forms.CheckboxInput(attrs=_sw),
-            "manutenzione": forms.CheckboxInput(attrs=_sw),
-            "debug_toolbar": forms.CheckboxInput(attrs=_sw),
-            "debug_diagnostico": forms.CheckboxInput(attrs=_sw),
         }
 
     def clean(self):
@@ -82,14 +103,61 @@ class ImpostazioniForm(forms.ModelForm):
             )
         return cd
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if self.instance and not self.instance.footer_testo:
-            titolo = self.instance.titolo or "Plancia"
-            self.initial["footer_testo"] = (
-                f"<strong>{titolo}</strong><br>Guidoncini Verdi — AGESCI Campania"
-            )
 
+# Campi SMTP manuali da escludere dal salvataggio quando Gmail OAuth è attivo
+# (quei campi non vengono renderizzati nell'HTML, arriverebbero vuoti nel POST)
+CAMPI_SMTP_MANUALI = frozenset({
+    "smtp_host", "smtp_port", "smtp_user", "smtp_password", "smtp_use_tls",
+})
+
+
+class SicurezzaForm(forms.ModelForm):
+    class Meta:
+        model = Impostazioni
+        fields = [
+            "mfa_obbligatoria_ruoli_estesi",
+            "axes_failure_limit", "axes_cooloff_minutes", "axes_use_attempt_expiration",
+        ]
+        widgets = {
+            "mfa_obbligatoria_ruoli_estesi": forms.CheckboxInput(attrs=_sw),
+            "axes_failure_limit": forms.NumberInput(attrs={**_ctrl, "min": "1", "max": "20"}),
+            "axes_cooloff_minutes": forms.NumberInput(attrs={**_ctrl, "min": "0", "max": "1440"}),
+            "axes_use_attempt_expiration": forms.CheckboxInput(attrs=_sw),
+        }
+
+
+class DiagnosticaForm(forms.ModelForm):
+    class Meta:
+        model = Impostazioni
+        fields = ["manutenzione", "debug_toolbar", "debug_diagnostico"]
+        widgets = {
+            "manutenzione": forms.CheckboxInput(attrs=_sw),
+            "debug_toolbar": forms.CheckboxInput(attrs=_sw),
+            "debug_diagnostico": forms.CheckboxInput(attrs=_sw),
+        }
+
+
+# Mappa sezione → form class (usata dalla view)
+SEZIONE_FORM: dict[str, type[forms.ModelForm]] = {
+    "identita": IdentitaForm,
+    "footer": FooterForm,
+    "email": EmailForm,
+    "sicurezza": SicurezzaForm,
+    "diagnostica": DiagnosticaForm,
+}
+
+SEZIONE_LABEL: dict[str, str] = {
+    "identita": "Identità",
+    "footer": "Footer",
+    "email": "Posta elettronica",
+    "sicurezza": "Sicurezza",
+    "diagnostica": "Diagnostica",
+}
+
+
+# ---------------------------------------------------------------------------
+# Form accessori (invariati)
+# ---------------------------------------------------------------------------
 
 class FooterLinkForm(forms.ModelForm):
     class Meta:

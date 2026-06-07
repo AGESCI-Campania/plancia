@@ -5,48 +5,53 @@
 
 {% block extra_head %}
 {{ block.super }}
-{{ form.media }}
+{{ form_footer.media }}
 {% endblock %}
 
 {% block content %}
 
-<div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2">
-  <div>
-    <h1 class="h4 mb-0">Impostazioni piattaforma</h1>
-    <small class="text-muted">Aggiornato il {{ object.aggiornato_at|date:"d/m/Y alle H:i" }}</small>
-  </div>
-  <button type="submit" form="form-impostazioni" class="btn btn-primary">
-    {% bs_icon "check-lg" size="14" extra_classes="me-1" %} Salva impostazioni
-  </button>
+<div class="mb-4">
+  <h1 class="h4 mb-0">Impostazioni piattaforma</h1>
+  <small class="text-muted">Aggiornato il {{ object.aggiornato_at|date:"d/m/Y alle H:i" }}</small>
 </div>
 
 
-<form id="form-impostazioni" method="post" novalidate>
-  {% csrf_token %}
-
-  {# ── 1. Identità ───────────────────────────────────────────────────── #}
-  <div class="card mb-4 shadow-sm">
-    <div class="card-header d-flex align-items-center gap-2">
-      {% bs_icon "card-heading" size="20" extra_classes="text-primary" %}
-      <span class="fw-semibold">Identità</span>
-    </div>
-    <div class="card-body">
-      <div class="row g-3">
-        {% include "siteconfig/_campo.html" with field=form.titolo col="col-md-5" %}
-        {% include "siteconfig/_campo.html" with field=form.sottotitolo col="col-md-7" %}
-      </div>
-    </div>
+{# ── 1. Identità ───────────────────────────────────────────────────── #}
+<div class="card mb-4 shadow-sm" id="identita">
+  <div class="card-header d-flex align-items-center gap-2">
+    {% bs_icon "card-heading" size="20" extra_classes="text-primary" %}
+    <span class="fw-semibold">Identità</span>
   </div>
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="sezione" value="identita">
+      <div class="row g-3 mb-3">
+        {% include "siteconfig/_campo.html" with field=form_identita.titolo col="col-md-5" %}
+        {% include "siteconfig/_campo.html" with field=form_identita.sottotitolo col="col-md-7" %}
+      </div>
+      <div class="d-flex justify-content-end">
+        <button type="submit" class="btn btn-primary btn-sm">
+          {% bs_icon "check-lg" size="14" extra_classes="me-1" %}Salva identità
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
 
-  {# ── 2. Footer ──────────────────────────────────────────────────────── #}
-  <div class="card mb-4 shadow-sm">
-    <div class="card-header d-flex align-items-center gap-2">
-      {% bs_icon "layout-text-window-reverse" size="20" extra_classes="text-secondary" %}
-      <span class="fw-semibold">Footer</span>
-    </div>
-    <div class="card-body">
-      <div class="row g-3 mb-4">
-        {% include "siteconfig/_campo.html" with field=form.footer_testo col="col-12" %}
+{# ── 2. Footer ──────────────────────────────────────────────────────── #}
+<div class="card mb-4 shadow-sm" id="footer">
+  <div class="card-header d-flex align-items-center gap-2">
+    {% bs_icon "layout-text-window-reverse" size="20" extra_classes="text-secondary" %}
+    <span class="fw-semibold">Footer</span>
+  </div>
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="sezione" value="footer">
+
+      <div class="row g-3 mb-2">
+        {% include "siteconfig/_campo.html" with field=form_footer.footer_testo col="col-12" %}
       </div>
       <div class="alert alert-light border small mb-4 py-2">
         {% bs_icon "info-circle" size="13" extra_classes="me-1 text-muted" %}
@@ -64,7 +69,7 @@
         Link laterali <span class="fw-normal">(fino a 5 — lascia vuoto per non usare la riga)</span>
       </p>
       {{ link_formset.management_form }}
-      <div class="d-flex flex-column gap-2">
+      <div class="d-flex flex-column gap-2 mb-3">
         {% for lf in link_formset %}
           {{ lf.id }}
           <div class="row g-2 align-items-start">
@@ -94,45 +99,54 @@
           </div>
         {% endfor %}
       </div>
-    </div>
-  </div>
 
-  {# ── 3. Posta elettronica ───────────────────────────────────────────── #}
-  <div class="card mb-4 shadow-sm">
-    <div class="card-header d-flex align-items-center gap-2">
-      {% bs_icon "envelope" size="20" extra_classes="text-info" %}
-      <span class="fw-semibold">Posta elettronica</span>
-    </div>
-    <div class="card-body">
-      {# Modalità e routing #}
+      <div class="d-flex justify-content-end">
+        <button type="submit" class="btn btn-primary btn-sm">
+          {% bs_icon "check-lg" size="14" extra_classes="me-1" %}Salva footer
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── 3. Posta elettronica ───────────────────────────────────────────── #}
+<div class="card mb-4 shadow-sm" id="email">
+  <div class="card-header d-flex align-items-center gap-2">
+    {% bs_icon "envelope" size="20" extra_classes="text-info" %}
+    <span class="fw-semibold">Posta elettronica</span>
+  </div>
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="sezione" value="email">
+
       <div class="row g-3 mb-3">
-        {% include "siteconfig/_campo.html" with field=form.email_mode col="col-md-4" %}
-        {% include "siteconfig/_campo.html" with field=form.from_email col="col-md-4" %}
+        {% include "siteconfig/_campo.html" with field=form_email.email_mode col="col-md-4" %}
+        {% include "siteconfig/_campo.html" with field=form_email.from_email col="col-md-4" %}
       </div>
       <div class="row g-3 mb-3">
-        {% include "siteconfig/_campo.html" with field=form.email_backend_standard col="col-md-6" %}
-        {% include "siteconfig/_campo.html" with field=form.email_backend_massivo col="col-md-6" %}
+        {% include "siteconfig/_campo.html" with field=form_email.email_backend_standard col="col-md-6" %}
+        {% include "siteconfig/_campo.html" with field=form_email.email_backend_massivo col="col-md-6" %}
       </div>
 
       {# ── SMTP ─────────────────────────────────────────────────────────── #}
       <div class="border-top pt-3 mt-2 mb-3">
         <p class="small fw-semibold text-muted mb-2">Backend SMTP</p>
 
-        {# Campi manuali SMTP — nascosti se Gmail OAuth è attivo #}
         {% if not impostazioni.smtp_use_gmail_oauth %}
         <div class="row g-3" id="smtp-manual-fields">
-          {% include "siteconfig/_campo.html" with field=form.smtp_host col="col-md-7" %}
-          {% include "siteconfig/_campo.html" with field=form.smtp_port col="col-md-2" %}
+          {% include "siteconfig/_campo.html" with field=form_email.smtp_host col="col-md-7" %}
+          {% include "siteconfig/_campo.html" with field=form_email.smtp_port col="col-md-2" %}
           <div class="col-md-3 d-flex align-items-end pb-1">
             <div class="form-check form-switch ms-2">
-              {{ form.smtp_use_tls }}
-              <label class="form-check-label small fw-semibold" for="{{ form.smtp_use_tls.id_for_label }}">
-                {{ form.smtp_use_tls.label }}
+              {{ form_email.smtp_use_tls }}
+              <label class="form-check-label small fw-semibold" for="{{ form_email.smtp_use_tls.id_for_label }}">
+                {{ form_email.smtp_use_tls.label }}
               </label>
             </div>
           </div>
-          {% include "siteconfig/_campo.html" with field=form.smtp_user col="col-md-6" %}
-          {% include "siteconfig/_campo.html" with field=form.smtp_password col="col-md-6" %}
+          {% include "siteconfig/_campo.html" with field=form_email.smtp_user col="col-md-6" %}
+          {% include "siteconfig/_campo.html" with field=form_email.smtp_password col="col-md-6" %}
         </div>
         {% else %}
         <div class="alert alert-success border-0 py-2 small mb-2">
@@ -188,9 +202,9 @@
           <span class="badge bg-info text-dark fw-normal ms-1">tracking bounce/errori</span>
         </p>
         <div class="row g-3">
-          {% include "siteconfig/_campo.html" with field=form.email_provider col="col-md-4" %}
-          {% include "siteconfig/_campo.html" with field=form.email_provider_api_key col="col-md-4" %}
-          {% include "siteconfig/_campo.html" with field=form.email_provider_webhook_secret col="col-md-4" %}
+          {% include "siteconfig/_campo.html" with field=form_email.email_provider col="col-md-4" %}
+          {% include "siteconfig/_campo.html" with field=form_email.email_provider_api_key col="col-md-4" %}
+          {% include "siteconfig/_campo.html" with field=form_email.email_provider_webhook_secret col="col-md-4" %}
         </div>
         <div class="mt-2">
           <small class="text-muted">
@@ -219,56 +233,73 @@
           </form>
         </div>
       </div>
-    </div>
+
+      <div class="d-flex justify-content-end mt-3 pt-3 border-top">
+        <button type="submit" class="btn btn-primary btn-sm">
+          {% bs_icon "check-lg" size="14" extra_classes="me-1" %}Salva posta elettronica
+        </button>
+      </div>
+    </form>
   </div>
+</div>
 
-  {# ── 4. Sicurezza ───────────────────────────────────────────────────── #}
-  <div class="card mb-4 shadow-sm">
-    <div class="card-header d-flex align-items-center gap-2">
-      {% bs_icon "shield-lock" size="20" extra_classes="text-danger" %}
-      <span class="fw-semibold">Sicurezza</span>
-    </div>
-    <div class="card-body">
+{# ── 4. Sicurezza ───────────────────────────────────────────────────── #}
+<div class="card mb-4 shadow-sm" id="sicurezza">
+  <div class="card-header d-flex align-items-center gap-2">
+    {% bs_icon "shield-lock" size="20" extra_classes="text-danger" %}
+    <span class="fw-semibold">Sicurezza</span>
+  </div>
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="sezione" value="sicurezza">
 
-      {# MFA #}
       <p class="small fw-semibold text-muted mb-2">Autenticazione a due fattori (MFA)</p>
       <div class="row g-3 row-cols-1 row-cols-md-2 mb-4">
-        {% include "siteconfig/_switch.html" with field=form.mfa_obbligatoria_ruoli_estesi badge="primary" desc="Se disattivato, solo gli Admin sono obbligati ad attivare la MFA. Segreteria e Incaricati EG possono accedere senza." %}
+        {% include "siteconfig/_switch.html" with field=form_sicurezza.mfa_obbligatoria_ruoli_estesi badge="primary" desc="Se disattivato, solo gli Admin sono obbligati ad attivare la MFA. Segreteria e Incaricati EG possono accedere senza." %}
       </div>
 
-      {# Brute-force (axes) #}
       <p class="small fw-semibold text-muted mb-2 border-top pt-3">Protezione brute-force (django-axes)</p>
       <div class="row g-3 mb-3">
-        {% include "siteconfig/_campo.html" with field=form.axes_failure_limit col="col-md-3" %}
-        {% include "siteconfig/_campo.html" with field=form.axes_cooloff_minutes col="col-md-3" %}
+        {% include "siteconfig/_campo.html" with field=form_sicurezza.axes_failure_limit col="col-md-3" %}
+        {% include "siteconfig/_campo.html" with field=form_sicurezza.axes_cooloff_minutes col="col-md-3" %}
       </div>
-      <div class="row g-3 row-cols-1 row-cols-md-2">
-        {% include "siteconfig/_switch.html" with field=form.axes_use_attempt_expiration badge="info" desc="Se attivo, i tentativi falliti scadono automaticamente dopo il periodo di blocco e non vengono più conteggiati. Consigliato con blocco automatico." %}
+      <div class="row g-3 row-cols-1 row-cols-md-2 mb-3">
+        {% include "siteconfig/_switch.html" with field=form_sicurezza.axes_use_attempt_expiration badge="info" desc="Se attivo, i tentativi falliti scadono automaticamente dopo il periodo di blocco e non vengono più conteggiati. Consigliato con blocco automatico." %}
       </div>
-    </div>
-  </div>
 
-  {# ── 5. Stato e diagnostica ─────────────────────────────────────────── #}
-  <div class="card mb-4 shadow-sm">
-    <div class="card-header d-flex align-items-center gap-2">
-      {% bs_icon "sliders" size="20" extra_classes="text-warning" %}
-      <span class="fw-semibold">Stato e diagnostica</span>
-    </div>
-    <div class="card-body">
-      <div class="row g-3 row-cols-1 row-cols-md-3">
-        {% include "siteconfig/_switch.html" with field=form.manutenzione badge="danger" desc="Mostra una pagina di cortesia a tutti gli utenti non-Admin." %}
-        {% include "siteconfig/_switch.html" with field=form.debug_toolbar badge="warning" desc="Mostra la debug-toolbar Django ai soli Admin (non ribalta DEBUG)." %}
-        {% include "siteconfig/_switch.html" with field=form.debug_diagnostico badge="warning" desc="Alza il livello di logging a DEBUG per facilitare la diagnosi." %}
+      <div class="d-flex justify-content-end">
+        <button type="submit" class="btn btn-primary btn-sm">
+          {% bs_icon "check-lg" size="14" extra_classes="me-1" %}Salva sicurezza
+        </button>
       </div>
-    </div>
+    </form>
   </div>
+</div>
 
-  <div class="d-flex justify-content-end mb-5">
-    <button type="submit" class="btn btn-primary px-4">
-      {% bs_icon "check-lg" size="14" extra_classes="me-1" %} Salva impostazioni
-    </button>
+{# ── 5. Stato e diagnostica ─────────────────────────────────────────── #}
+<div class="card mb-4 shadow-sm" id="diagnostica">
+  <div class="card-header d-flex align-items-center gap-2">
+    {% bs_icon "sliders" size="20" extra_classes="text-warning" %}
+    <span class="fw-semibold">Stato e diagnostica</span>
   </div>
-</form>
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="sezione" value="diagnostica">
+      <div class="row g-3 row-cols-1 row-cols-md-3 mb-3">
+        {% include "siteconfig/_switch.html" with field=form_diagnostica.manutenzione badge="danger" desc="Mostra una pagina di cortesia a tutti gli utenti non-Admin." %}
+        {% include "siteconfig/_switch.html" with field=form_diagnostica.debug_toolbar badge="warning" desc="Mostra la debug-toolbar Django ai soli Admin (non ribalta DEBUG)." %}
+        {% include "siteconfig/_switch.html" with field=form_diagnostica.debug_diagnostico badge="warning" desc="Alza il livello di logging a DEBUG per facilitare la diagnosi." %}
+      </div>
+      <div class="d-flex justify-content-end">
+        <button type="submit" class="btn btn-primary btn-sm">
+          {% bs_icon "check-lg" size="14" extra_classes="me-1" %}Salva diagnostica
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
 
 {# ── 6. IP bloccati (axes) ─────────────────────────────────────────────── #}
 <div class="card mb-4 shadow-sm">
@@ -333,7 +364,7 @@
   {% endif %}
 </div>
 
-{# ── 8. Import tracciati ───────────────────────────────────────────────── #}
+{# ── 7. Import tracciati ───────────────────────────────────────────────── #}
 <div class="card mb-4 shadow-sm">
   <div class="card-header d-flex align-items-center gap-2">
     {% bs_icon "cloud-upload" size="20" extra_classes="text-success" %}
@@ -349,7 +380,7 @@
   </div>
 </div>
 
-{# ── 9. Log generazione PDF/Excel ─────────────────────────────────────── #}
+{# ── 8. Log generazione PDF/Excel ─────────────────────────────────────── #}
 <div class="card shadow-sm mb-4" id="log-export">
   <div class="card-header d-flex align-items-center gap-2">
     {% bs_icon "journal-text" size="20" extra_classes="text-secondary" %}
@@ -426,7 +457,7 @@
 {% endif %}
 {% endfor %}
 
-{# ── 10. Pagine statiche (privacy / termini) ───────────────────────────── #}
+{# ── 9. Pagine statiche (privacy / termini) ────────────────────────────── #}
 <div class="card shadow-sm mb-4">
   <div class="card-header d-flex align-items-center gap-2">
     {% bs_icon "file-earmark-richtext" size="20" extra_classes="text-secondary" %}
@@ -464,7 +495,7 @@
   </div>
 </div>
 
-{# ── 11. Template email ────────────────────────────────────────────────── #}
+{# ── 10. Template email ────────────────────────────────────────────────── #}
 <div class="card shadow-sm">
   <div class="card-header d-flex align-items-center gap-2">
     {% bs_icon "file-earmark-text" size="20" extra_classes="text-secondary" %}
