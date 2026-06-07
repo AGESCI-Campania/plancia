@@ -3,8 +3,10 @@ from django import forms
 from django.forms import inlineformset_factory
 
 from apps.diaries.models import (
-    Anagrafica,
     BREVETTI_COMPETENZA,
+    SPECIALITA_INDIVIDUALI,
+    SPECIALITA_SQUADRIGLIA,
+    Anagrafica,
     EsitoSpecialita,
     Impresa,
     MembroSq,
@@ -13,8 +15,6 @@ from apps.diaries.models import (
     PostoAzioneMissione,
     Presentazione,
     RelazioneFinale,
-    SPECIALITA_INDIVIDUALI,
-    SPECIALITA_SQUADRIGLIA,
     TipoEsito,
 )
 

@@ -10,8 +10,7 @@ from django.views import View
 from django.views.generic import CreateView, DetailView, ListView
 
 from apps.accounts.models import Ruolo
-from apps.helpdesk.models import CategoriaTicket, RispostaTicket, StatoTicket, Ticket
-
+from apps.helpdesk.models import RispostaTicket, StatoTicket, Ticket
 
 _STAFF_RUOLI = (Ruolo.ADMIN, Ruolo.SEGRETERIA, Ruolo.INCARICATO_EG)
 

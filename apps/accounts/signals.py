@@ -59,8 +59,7 @@ def on_logout(sender, request, user, **kwargs):
 
 @receiver(auth_login_failed)
 def on_login_failed(sender, credentials, request, **kwargs):
-    from apps.accounts.models import EsitoLogin, LoginEvent
-    from apps.accounts.models import User
+    from apps.accounts.models import EsitoLogin, LoginEvent, User
 
     email = credentials.get("email") or credentials.get("username", "")
     utente = User.objects.filter(email=email).first()

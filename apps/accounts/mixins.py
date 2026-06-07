@@ -3,8 +3,6 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 
-from apps.accounts.models import Ruolo
-
 
 class RuoloRequiredMixin(LoginRequiredMixin):
     """Richiede che l'utente abbia uno dei ruoli indicati in `ruoli_ammessi`."""

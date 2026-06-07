@@ -5,7 +5,6 @@ import pytest
 from apps.accounts.adapters import PlanciaMFAAdapter, ruolo_richiede_mfa
 from apps.accounts.models import Ruolo, User
 
-
 # ---------------------------------------------------------------------------
 # Fixture
 # ---------------------------------------------------------------------------
@@ -135,8 +134,9 @@ class TestMFAEnforcementMiddleware:
 
     def test_admin_con_mfa_accede_liberamente(self, client, utente_admin):
         """Un Admin con TOTP attivo non viene bloccato."""
-        from allauth.mfa.models import Authenticator
         import json
+
+        from allauth.mfa.models import Authenticator
         Authenticator.objects.create(
             user=utente_admin,
             type=Authenticator.Type.TOTP,
@@ -174,8 +174,9 @@ class TestMFAEnforcementMiddleware:
 @pytest.mark.django_db
 class TestCanDeleteAuthenticator:
     def _crea_authenticator(self, user, tipo):
-        from allauth.mfa.models import Authenticator
         import json
+
+        from allauth.mfa.models import Authenticator
         return Authenticator(
             user=user,
             type=tipo,

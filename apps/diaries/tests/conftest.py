@@ -6,7 +6,6 @@ from django.utils import timezone
 from apps.accounts.models import Ruolo, User
 from apps.diaries.models import Diario, ScadenzaRiferimento, StatoDiario, TipoDiario
 
-
 # ---------------------------------------------------------------------------
 # Org fixtures
 # ---------------------------------------------------------------------------
@@ -102,6 +101,7 @@ def user_crp(db, socio_crp):
 @pytest.fixture
 def user_admin(db):
     import json
+
     from allauth.mfa.models import Authenticator
 
     u = User.objects.create_superuser(

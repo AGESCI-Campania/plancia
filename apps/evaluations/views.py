@@ -7,7 +7,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect
 from django.views import View
-from django.views.generic import DetailView, UpdateView
+from django.views.generic import DetailView
 
 from apps.accounts.mixins import RuoloRequiredMixin
 from apps.accounts.models import Ruolo
@@ -206,9 +206,10 @@ class PubblicaEsitiEdizioneView(RuoloRequiredMixin, View):
     ruoli_ammessi = (Ruolo.INCARICATO_EG, Ruolo.ADMIN)
 
     def post(self, request, edizione_pk):
+        from django.utils import timezone
+
         from apps.editions.models import Edizione
         from apps.evaluations.models import StatoValutazione
-        from django.utils import timezone
 
         edizione = get_object_or_404(Edizione, pk=edizione_pk)
         scadenza = request.POST.get("scadenza")

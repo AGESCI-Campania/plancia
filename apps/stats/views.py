@@ -2,12 +2,9 @@
 """Statistiche di chiusura per zona: esiti, tempi, ticket. Vedi docs sez. 13."""
 from __future__ import annotations
 
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Avg, Count, Q
 from django.views.generic import TemplateView
 
 from apps.accounts.mixins import StaffPlanciaRequiredMixin
-from apps.accounts.models import Ruolo
 from apps.diaries.models import StatoDiario
 from apps.evaluations.models import EsitoValutazione
 from apps.helpdesk.models import StatoTicket
@@ -44,8 +41,8 @@ class DashboardView(StaffPlanciaRequiredMixin, TemplateView):
         return ctx
 
     def _stats_per_zona(self, edizione) -> list[dict]:
-        from apps.org.models import Zona
         from apps.diaries.models import Diario
+        from apps.org.models import Zona
 
         risultati = []
         for zona in Zona.objects.order_by("nome"):

@@ -1,9 +1,7 @@
 # apps/diaries/tests/test_cambio_referenti.py
 """Test per le view CambiaCsqView, CambiaCrpView, CambiaCrpRepartoView (docs sez. 4)."""
-import pytest
 
 from apps.diaries.models import Diario, StatoDiario
-
 
 # ---------------------------------------------------------------------------
 # Test CambiaCsqView

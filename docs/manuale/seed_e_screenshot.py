@@ -11,6 +11,7 @@ Richiede: server Django già avviato su http://127.0.0.1:8000
 import os
 import sys
 import time
+
 import django
 
 # ── setup Django ─────────────────────────────────────────────────────────────
@@ -21,15 +22,23 @@ django.setup()
 
 # ── seed dati ─────────────────────────────────────────────────────────────────
 def seed():
-    from django.utils import timezone
-    from apps.accounts.models import User, Ruolo
-    from apps.org.models import Zona, Gruppo, Reparto, Squadriglia, Socio, Categoria
-    from apps.editions.models import Edizione, StatoEdizione
+    from apps.accounts.models import Ruolo, User
     from apps.diaries.models import (
-        Diario, TipoDiario, StatoDiario, Anagrafica, Presentazione,
-        Impresa, Missione, EsitoSpecialita, TipoEsito, MembroSq, PostoAzione,
+        Anagrafica,
+        Diario,
+        EsitoSpecialita,
+        Impresa,
+        MembroSq,
+        Missione,
+        PostoAzione,
         PostoAzioneMissione,
+        Presentazione,
+        StatoDiario,
+        TipoDiario,
+        TipoEsito,
     )
+    from apps.editions.models import Edizione, StatoEdizione
+    from apps.org.models import Categoria, Gruppo, Reparto, Socio, Squadriglia, Zona
 
     print("→ Seed zona/gruppo/reparto/squadriglie…")
     zona, _ = Zona.objects.get_or_create(nome="ZONA HIRPINIA")
@@ -250,7 +259,7 @@ def seed():
             diario_valutazione.stato = StatoDiario.IN_VALUTAZIONE
             diario_valutazione.save(update_fields=["stato"])
 
-        from apps.evaluations.models import Valutazione, AssegnazionePGV
+        from apps.evaluations.models import AssegnazionePGV, Valutazione
         val, _ = Valutazione.objects.get_or_create(diario=diario_valutazione)
         AssegnazionePGV.objects.get_or_create(
             valutazione=val,
@@ -293,7 +302,11 @@ def _crea_totp_se_mancante(user):
 
 def _totp_code_now(secret_b32: str) -> str:
     """Calcola il codice TOTP corrente dal segreto B32 (non richiede riavvio server)."""
-    import base64, hashlib, hmac as _hmac, struct, time
+    import base64
+    import hashlib
+    import hmac as _hmac
+    import struct
+    import time
     counter = int(time.time()) // 30
     key = base64.b32decode(secret_b32.encode("ascii"), casefold=True)
     for delta in (0, -1, 1):

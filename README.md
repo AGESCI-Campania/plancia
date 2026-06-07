@@ -164,12 +164,12 @@ docs/        specifica di progetto
 |---|---|---|---|
 | **accounts** — login form | 12 | ✅ pass | Form Bootstrap, validazioni, allauth |
 | **accounts** — MFA enforcement | 18 | ✅ pass | Middleware, bypass dev, ruoli con MFA |
-| **accounts** — ruoli e nomina | 19 | ✅ pass | Permessi, ranghi, puo_nominare |
+| **accounts** — ruoli e nomina | 21 | ✅ pass | Permessi, ranghi, puo_nominare, staff diretto |
 | **diaries** — FSM | 16 | ✅ pass | Transizioni stato, riapertura |
 | **diaries** — visibilità | 6 | ✅ pass | Accesso a moduli per ruolo |
 | **diaries** — cambio referenti | 29 | ✅ pass | CambiaCsqView, CambiaCrpView, bulk |
-| **diaries** — Selenium E2E | 12 | ✅ pass | Chrome headless, Tom Select, sessione |
-| **Totale** | **112** | **✅ 112/112** | `uv run pytest` — 2026-06-04 |
+| **diaries** — Selenium E2E | 15 | ✅ pass | Chrome headless, Tom Select, sessione |
+| **Totale** | **117** | **✅ 117/117** | `uv run pytest` — 2026-06-07 |
 
 I test Selenium (12) usano **Django LiveServer** + **Selenium 4** con ChromeDriver scaricato
 automaticamente da Selenium Manager. Coprono:
@@ -210,22 +210,29 @@ vengono attivati tramite il flusso inviti (`/notifiche/inviti/`).
 **Box di avvio import**: le schede per lanciare i tre import (Co.Ca., Ragazzi, Squadriglie iscritte)
 si trovano nella pagina **`/import/`**, non più in `/impostazioni/`.
 
-## Impostazioni di piattaforma (solo Admin)
-Pagina `/impostazioni/` riservata ad Admin, IABR e Segreteria, organizzata in sezioni:
+## Impostazioni di piattaforma (solo Admin/Segreteria/IABR)
+Pagina `/impostazioni/` organizzata in sezioni:
 
-| Sezione | Campi |
+| Sezione | Contenuto |
 |---|---|
 | **Identità** | Titolo · Sottotitolo (visualizzati nella navbar) |
-| **Footer** | Testo rich text · Fino a 5 link tipizzati (Sito web, Email, Facebook, Instagram, TikTok) con etichetta opzionale |
-| **Posta elettronica** | Modalità email · Provider (SMTP / Brevo / Mailgun / ecc.) · API key · Webhook secret · From · SMTP |
-| **Stato e diagnostica** | Manutenzione · Debug toolbar · Debug diagnostico |
+| **Footer** | Testo rich text · Fino a 5 link tipizzati con etichetta opzionale |
+| **Posta elettronica** | Modalità email · Provider · API key · SMTP · Gmail OAuth2 · Test invio |
+| **Sicurezza** | MFA obbligatoria · Protezione brute-force axes · IP bloccati |
+| **Allegati** | Dimensione massima immagini upload (default 1024px) |
+| **Diagnostica** | Manutenzione · Debug toolbar · Link Flower/Mailpit |
+| **Strumenti** | Link Cache PDF (`/impostazioni/cache-pdf/`) · Log export (`/impostazioni/log-export/`) |
 | **Import tracciati** | Avvia import Co.Ca. / Ragazzi / Evento + link storico |
-| **Template email** | Elenco tutte le chiavi con stato (DB / file default) |
+| **Pagine legali** | Privacy Policy · Condizioni del Servizio · Carica testo predefinito |
+| **Template email** | Elenco chiavi con stato (DB / file default) · Editor rich text |
 
-**Template email**: ogni chiave del registro può essere personalizzata in rich text (TinyMCE)
-direttamente dalla pagina impostazioni. Se il template non è in DB usa il file di default
-`templates/mail/<chiave>.html`; il pulsante **"Importa da file"** carica quel file come punto
-di partenza per la personalizzazione. Il pulsante **"Elimina"** ripristina il fallback su file.
+**Cache PDF** (`/impostazioni/cache-pdf/`): lista PDF in cache per edizione, invalidazione singola/massiva,
+generazione massiva con task Celery (email aggiornamento ogni 10 diari; blocca PDF singoli durante la generazione).
+
+**Log export** (`/impostazioni/log-export/`): storico task PDF/Excel con errori completi (traceback in modale).
+
+**Template email**: editor rich text (TinyMCE). Se il template non è in DB usa il file di default
+`templates/mail/<chiave>.html`; il pulsante **"Importa da file"** carica quel file come punto di partenza.
 
 **Provider email transazionali** (tracking bounce/errori): selezionare un provider (Brevo,
 Mailgun, MailerSend, Postmark, SendGrid, SparkPost, Amazon SES) e inserire l'API key. Il webhook

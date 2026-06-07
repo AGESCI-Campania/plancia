@@ -215,7 +215,12 @@ delle altre.
 | **Posta elettronica** | Modalità invio, backend SMTP / provider transazionale, Gmail OAuth2, test invio |
 | **Sicurezza** | MFA, protezione brute-force (axes) |
 | **Allegati** | Dimensione massima immagini in upload |
-| **Diagnostica** | Manutenzione, debug-toolbar, log; link a Flower e Mailpit |
+| **Diagnostica** | Manutenzione, debug-toolbar; link rapidi a Flower e Mailpit |
+| **IP bloccati** | Lista IP bloccati da django-axes con sblocco singolo o massivo |
+| **Strumenti** | Link a Cache PDF (`/impostazioni/cache-pdf/`) e Log export (`/impostazioni/log-export/`) |
+| **Import tracciati** | Carica CSV Co.Ca. / Squadriglie / Ragazzi; storico import |
+| **Pagine legali** | Modifica Privacy Policy e Condizioni del Servizio; carica contenuto predefinito |
+| **Template email** | Visualizza e personalizza i template delle email automatiche |
 
 ### Sezione Posta elettronica
 
@@ -249,20 +254,46 @@ delle altre.
   più grandi vengono ridimensionate e salvate come JPEG quality 85.
   Il valore si applica agli allegati, non alle immagini nel footer o nei template email.
 
+### Cache PDF e generazione massiva
+
+Da **Gestione → Cache PDF** (o dal link in Impostazioni → Strumenti) è possibile:
+
+![Cache PDF](screenshots/36_cache_pdf.png)
+
+- **Lista PDF in cache**: per ogni edizione vengono mostrati i PDF già generati e caricati su Drive,
+  con dimensione e data di caricamento.
+- **Invalidazione singola**: elimina il PDF di una squadriglia dalla cache (il prossimo PDF sarà rigenerato).
+- **Invalidazione per edizione** o **totale**: svuota la cache di un'edizione o di tutte.
+- **Generazione massiva**: avvia un task Celery che genera i PDF di tutti i diari inviati
+  dell'edizione selezionata, li carica su Drive e invia aggiornamenti via email ogni 10 diari.
+  Durante la generazione i PDF singoli per quella edizione sono disabilitati.
+
+> Durante una generazione massiva attiva il selettore mostra "(generazione in corso…)" e l'opzione
+> è disabilitata per evitare doppie esecuzioni. Il lock viene rilasciato automaticamente al termine o dopo 2 ore.
+
 ### Log generazione PDF/Excel
 
-Nella parte bassa della pagina Impostazioni è presente il log degli ultimi 50 task
-di generazione PDF/Excel con stato (completato/errore), messaggio e traceback completo
-(apribile in un modale). Gli errori generano automaticamente una notifica all'utente
-richiedente e agli Admin.
+Da **Gestione → Log export** (o dal link in Impostazioni → Strumenti) è disponibile
+lo storico completo dei task di generazione PDF e Excel:
 
-### Dashboard Celery (Flower)
+![Log export](screenshots/37_log_export.png)
 
-Nella sezione **Diagnostica** c'è il link alla **dashboard Flower** (`/celery/`),
-accessibile solo agli staff. Flower mostra i task attivi, la coda, i worker e la
-cronologia delle esecuzioni in tempo reale.
+- Stato del task (completato / errore), tipo di export, data e richiedente.
+- Per i task in errore: traceback completo apribile in un modale.
+- I task di generazione massiva vengono registrati con il tipo `PDF massivo — Edizione XXXX`.
+- Gli errori generano automaticamente una notifica email al richiedente e agli Admin.
 
-Per avviare Flower (facoltativo, profilo separato):
+### Strumenti di sviluppo nel menu Gestione
+
+Il menu **Gestione** (in alto a destra, visibile a tutto lo staff) contiene la sezione
+**Strumenti di sviluppo** con accesso diretto a:
+
+![Menu Gestione con Strumenti](screenshots/39_navbar_gestione.png)
+
+- **Flower** (`/celery/`): dashboard Celery con task attivi, coda, worker e cronologia.
+- **Mailpit** (`/mailadmin/`): web UI per le email di debug in sviluppo/staging.
+
+Flower deve essere avviato con il profilo opzionale:
 ```bash
 COMPOSE_PROFILES=flower docker compose --env-file .env.prod up -d
 ```
@@ -349,6 +380,38 @@ L'Admin ha accesso alle stesse funzionalità di cambio referenti descritte nella
 
 In aggiunta, l'Admin può sempre accedere al pannello Django Admin
 per modifiche di emergenza su qualsiasi diario indipendentemente dallo stato.
+
+---
+
+## Crea utente staff
+
+Da **Gestione → Persone → Crea utente staff** Admin e Segreteria possono creare direttamente
+utenti con ruolo **Admin**, **Segreteria** o **Incaricato EG** senza passare per il codice socio AGESCI.
+Questa funzione è pensata per i gestori della piattaforma che non sono necessariamente soci registrati.
+
+![Crea utente staff](screenshots/38_crea_staff.png)
+
+Il form richiede: nome, cognome, email e ruolo.
+Al salvataggio viene inviata automaticamente un'email di **reset password** all'indirizzo indicato,
+consentendo all'utente di impostare la propria password al primo accesso.
+
+> Solo gli Admin possono creare altri Admin. La Segreteria può creare Segreteria e Incaricati EG.
+
+---
+
+## Pagine legali
+
+Da **Impostazioni → Pagine legali** è possibile modificare i contenuti di **Privacy Policy**
+(`/privacy/`) e **Condizioni del Servizio** (`/termini/`).
+
+![Pagine legali](screenshots/40_pagine_legali.png)
+
+Per ogni pagina sono disponibili tre azioni:
+- **Apri** (icona esterna): visualizza la pagina pubblica in una nuova scheda.
+- **Predefinito**: carica il testo di base fornito dalla piattaforma (con confirm di sovrascrittura).
+  Il testo predefinito è pensato come punto di partenza per la Privacy Policy GDPR e le Condizioni
+  del Servizio dell'AGESCI Campania — **personalizzalo prima di pubblicarlo**.
+- **Modifica**: apre l'editor HTML per personalizzare il contenuto.
 
 ---
 

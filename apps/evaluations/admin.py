@@ -1,7 +1,7 @@
 # apps/evaluations/admin.py
 from django.contrib import admin
 
-from apps.evaluations.models import AssegnazionePGV, EsitoValutazione, Valutazione
+from apps.evaluations.models import AssegnazionePGV, Valutazione
 
 
 class AssegnazionePGVInline(admin.TabularInline):

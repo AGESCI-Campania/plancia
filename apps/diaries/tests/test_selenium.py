@@ -19,7 +19,6 @@ from selenium.webdriver.support.wait import WebDriverWait
 
 from apps.diaries.models import StatoDiario
 
-
 # ---------------------------------------------------------------------------
 # Fixture: Chrome headless driver (scope=session per riuso tra i test)
 # ---------------------------------------------------------------------------

@@ -1,6 +1,5 @@
 # apps/evaluations/models.py
 from django.db import models
-from django.utils import timezone
 
 
 class EsitoValutazione(models.TextChoices):

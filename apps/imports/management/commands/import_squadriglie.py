@@ -250,7 +250,9 @@ class Command(BaseCommand):
                             # Crea gli account utente (password inutilizzabile;
                             # l'attivazione avviene via invito).
                             try:
-                                from apps.notifications.service import crea_o_ottieni_utente_per_socio
+                                from apps.notifications.service import (
+                                    crea_o_ottieni_utente_per_socio,
+                                )
                                 crea_o_ottieni_utente_per_socio(csq, "csq")
                                 if crp_socio and not getattr(crp_socio, "provvisorio", False):
                                     crea_o_ottieni_utente_per_socio(crp_socio, "crp")

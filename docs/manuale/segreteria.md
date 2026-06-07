@@ -31,6 +31,16 @@ Per ogni utente puoi:
 
 > La Segreteria **non può** creare o modificare account Admin.
 
+### Crea utente staff
+
+Da **Gestione → Persone → Crea utente staff** puoi creare direttamente utenti con ruolo
+**Segreteria** o **Incaricato EG** senza passare per il codice socio AGESCI.
+
+![Crea utente staff](screenshots/38_crea_staff.png)
+
+Inserisci nome, cognome, email e ruolo: al salvataggio viene inviata automaticamente
+un'email di reset password all'indirizzo indicato per il primo accesso.
+
 ---
 
 ## Impostazioni di piattaforma

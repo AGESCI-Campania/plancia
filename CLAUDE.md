@@ -195,23 +195,17 @@ Accessibile solo a CRP, Incaricati EG e Admin — non al Capo Squadriglia.
 - **`genera_pdf_diario(diario, include_relazione=True)`** in `apps/exports/service.py`
 - **Lock anti-duplicati**: chiave Redis `pdf_task_lock:{diario_pk}` (TTL 30 min); impostata
   in `DiarioPdfView.get()`, rilasciata in `finally` nel task.
-- **Log**: `LogTaskExport` (model `apps/exports/models.py`); visibile in Impostazioni.
+- **Log**: `LogTaskExport` (model `apps/exports/models.py`); visibile in `/impostazioni/log-export/`.
 - **Compressione immagini**: `_compress_image_for_pdf()` riduce a 480px prima dell'embedding.
 - **Errori**: notifica email al richiedente e agli Admin con traceback.
+- **Generazione massiva**: `task_genera_pdf_massivo` in `apps/exports/tasks.py`; lock Redis
+  `pdf_task_lock_massivo:{edizione_pk}` (TTL 2h). Blocca i PDF singoli durante la generazione.
+  UI in `/impostazioni/cache-pdf/`.
 
 ## Allegati
 
 - Resize automatico al caricamento: `_resize_immagine()` in `apps/diaries/views.py`
 - Dimensione configurabile: `Impostazioni.allegati_max_px` (default 1024px)
-
-## Funzionalità da sviluppare (non ancora implementate)
-
-- **Generazione massiva PDF diari**: task Celery che genera i PDF di tutti i diari
-  di un'edizione in batch. Flusso previsto:
-  1. Email di avvio al richiedente
-  2. Email di progresso ogni 10 diari con i link ai PDF già generati
-  3. Email finale con tutti i link
-  Vedi `apps/exports/tasks.py` (`task_genera_pdf_diario`) come base.
 
 ## Cosa NON fare
 - Non cambiare `AUTH_USER_MODEL` né l'app label dopo le prime migrazioni.

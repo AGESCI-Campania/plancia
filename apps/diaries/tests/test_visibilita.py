@@ -1,12 +1,15 @@
 # apps/diaries/tests/test_visibilita.py
 """Test delle regole di visibilità (docs sez. 5 — tre livelli: view, queryset)."""
 import pytest
-from django.test import RequestFactory
 from django.utils import timezone
 
 from apps.accounts.models import Ruolo, User
-from apps.diaries.models import Diario, RelazioneFinale, ScadenzaRiferimento, StatoDiario, TipoDiario
-from apps.diaries.views import DiarioDetailView, RelazioneFinaleUpdateView
+from apps.diaries.models import (
+    Diario,
+    ScadenzaRiferimento,
+    StatoDiario,
+    TipoDiario,
+)
 
 
 @pytest.fixture
