@@ -2,7 +2,7 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 from django.views.generic import DetailView, ListView, TemplateView
 
@@ -182,6 +182,83 @@ class CreaUtenteDaSocioView(StaffPlanciaRequiredMixin, View):
         except (PermissionError, ValueError) as e:
             messages.error(request, str(e))
 
+        return redirect("accounts:utente_detail", pk=utente.pk)
+
+
+class CreaUtenteStaffView(StaffPlanciaRequiredMixin, View):
+    """Crea un utente Admin/Segreteria/IABR senza Socio AGESCI e invia link per impostare la password."""
+
+    template_name = "accounts/crea_utente_staff.html"
+
+    # Ruoli che possono essere creati con questo flusso (senza Socio)
+    RUOLI_STAFF = {
+        Ruolo.ADMIN: {Ruolo.ADMIN},
+        Ruolo.SEGRETERIA: {Ruolo.ADMIN},
+        Ruolo.INCARICATO_EG: {Ruolo.ADMIN, Ruolo.SEGRETERIA},
+    }
+
+    def _ruoli_creabili(self, attore) -> list[tuple[str, str]]:
+        return [
+            (r, Ruolo(r).label)
+            for r, creatori in self.RUOLI_STAFF.items()
+            if attore.ruolo in creatori or attore.is_superuser
+        ]
+
+    def get(self, request):
+        return render(request, self.template_name, {
+            "ruoli_creabili": self._ruoli_creabili(request.user),
+        })
+
+    def post(self, request):
+        email = request.POST.get("email", "").strip().lower()
+        first_name = request.POST.get("first_name", "").strip()
+        last_name = request.POST.get("last_name", "").strip()
+        ruolo = request.POST.get("ruolo", "")
+
+        ruoli_ok = dict(self._ruoli_creabili(request.user))
+        if ruolo not in ruoli_ok:
+            messages.error(request, "Ruolo non consentito.")
+            return render(request, self.template_name, {
+                "ruoli_creabili": self._ruoli_creabili(request.user)
+            })
+        if not email:
+            messages.error(request, "L'indirizzo email è obbligatorio.")
+            return render(request, self.template_name, {
+                "ruoli_creabili": self._ruoli_creabili(request.user)
+            })
+
+        from apps.accounts.roles import nomina_staff_diretto
+        try:
+            utente, nomina_obj, creato = nomina_staff_diretto(
+                request.user, email, first_name, last_name, ruolo
+            )
+        except (PermissionError, ValueError) as exc:
+            messages.error(request, str(exc))
+            return render(request, self.template_name, {
+                "ruoli_creabili": self._ruoli_creabili(request.user)
+            })
+
+        # Invia email di reset password (l'utente non ha password — deve impostarla)
+        try:
+            from django.contrib.auth.forms import PasswordResetForm
+            form = PasswordResetForm({"email": utente.email})
+            if form.is_valid():
+                form.save(
+                    request=request,
+                    use_https=request.is_secure(),
+                    from_email=None,
+                    subject_template_name="registration/password_reset_subject.txt",
+                    email_template_name="registration/password_reset_email.html",
+                )
+        except Exception:
+            pass  # la mail non è bloccante
+
+        azione = "creato" if creato else "già esistente — nomina aggiunta"
+        messages.success(
+            request,
+            f"Utente {email} {azione} con ruolo {Ruolo(ruolo).label}. "
+            "È stata inviata un'email per impostare la password.",
+        )
         return redirect("accounts:utente_detail", pk=utente.pk)
 
 

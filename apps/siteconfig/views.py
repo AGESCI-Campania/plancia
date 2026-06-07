@@ -37,7 +37,6 @@ class ImpostazioniView(RuoloRequiredMixin, View):
         from axes.models import AccessAttempt
 
         from apps.editions.models import Edizione
-        from apps.exports.models import LogTaskExport
 
         ctx: dict = {"object": imp}
 
@@ -61,7 +60,6 @@ class ImpostazioniView(RuoloRequiredMixin, View):
             }
             for chiave in TAG_REGISTRY
         ]
-        ctx["log_export"] = LogTaskExport.objects.all()[:50]
         ctx["access_attempts"] = AccessAttempt.objects.order_by("-attempt_time")[:100]
         return ctx
 
@@ -339,6 +337,108 @@ class AxesSbloccaView(RuoloRequiredMixin, View):
             except AccessAttempt.DoesNotExist:
                 messages.error(request, "Tentativo non trovato.")
         return redirect("siteconfig:impostazioni")
+
+
+class LogExportView(RuoloRequiredMixin, View):
+    """Pagina dedicata ai log di generazione PDF/Excel."""
+
+    template_name = "siteconfig/log_export.html"
+    ruoli_ammessi = (Ruolo.ADMIN, Ruolo.SEGRETERIA, Ruolo.INCARICATO_EG)
+
+    def get(self, request):
+        from apps.exports.models import LogTaskExport
+        logs = LogTaskExport.objects.all()[:200]
+        return render(request, self.template_name, {"log_export": logs})
+
+
+class CachePdfView(RuoloRequiredMixin, View):
+    """Gestione cache PDF diari: lista, invalidazione singola/totale, generazione massiva."""
+
+    template_name = "siteconfig/cache_pdf.html"
+    ruoli_ammessi = (Ruolo.ADMIN, Ruolo.SEGRETERIA, Ruolo.INCARICATO_EG)
+
+    def get(self, request):
+        from django.core.cache import cache
+
+        from apps.editions.models import Edizione
+        from apps.exports.tasks import lock_key_massivo
+        from apps.storage_drive.models import DriveFile, TipoFile
+
+        edizioni = Edizione.objects.order_by("-anno").prefetch_related(
+            "diari"
+        )
+        cache_per_edizione = []
+        for ed in edizioni:
+            files = DriveFile.objects.filter(
+                tipo=TipoFile.PDF, diario__edizione=ed
+            ).select_related("diario__squadriglia").order_by(
+                "diario__squadriglia__nome"
+            )
+            if files.exists():
+                cache_per_edizione.append({
+                    "edizione": ed,
+                    "files": files,
+                    "bulk_lock": bool(cache.get(lock_key_massivo(ed.pk))),
+                })
+
+        edizioni_disponibili = list(Edizione.objects.order_by("-anno"))
+        locks_attivi = {
+            ed.pk: bool(cache.get(lock_key_massivo(ed.pk)))
+            for ed in edizioni_disponibili
+        }
+        return render(request, self.template_name, {
+            "cache_per_edizione": cache_per_edizione,
+            "edizioni_disponibili": edizioni_disponibili,
+            "locks_attivi": locks_attivi,
+        })
+
+    def post(self, request):
+        from django.core.cache import cache
+
+        from apps.exports.tasks import lock_key_massivo, task_genera_pdf_massivo
+        from apps.storage_drive.models import DriveFile, TipoFile
+
+        azione = request.POST.get("azione")
+
+        if azione == "invalida_singolo":
+            file_pk = request.POST.get("file_pk")
+            try:
+                f = DriveFile.objects.get(pk=file_pk, tipo=TipoFile.PDF)
+                diario_str = str(f.diario.squadriglia) if f.diario else str(f)
+                f.delete()
+                messages.success(request, f"Cache PDF eliminata per {diario_str}.")
+            except DriveFile.DoesNotExist:
+                messages.error(request, "File non trovato.")
+
+        elif azione == "invalida_edizione":
+            edizione_pk = request.POST.get("edizione_pk")
+            count = DriveFile.objects.filter(
+                tipo=TipoFile.PDF, diario__edizione_id=edizione_pk
+            ).delete()[0]
+            messages.success(request, f"Eliminati {count} PDF dalla cache.")
+
+        elif azione == "invalida_tutti":
+            count = DriveFile.objects.filter(tipo=TipoFile.PDF).delete()[0]
+            messages.success(request, f"Eliminati tutti i {count} PDF dalla cache.")
+
+        elif azione == "genera_massivo":
+            edizione_pk = request.POST.get("edizione_pk")
+            if not edizione_pk:
+                messages.error(request, "Seleziona un'edizione.")
+                return redirect("siteconfig:cache_pdf")
+            edizione_pk = int(edizione_pk)
+            if cache.get(lock_key_massivo(edizione_pk)):
+                messages.warning(request, "Generazione massiva già in corso per questa edizione.")
+                return redirect("siteconfig:cache_pdf")
+            cache.set(lock_key_massivo(edizione_pk), True, 7200)
+            task_genera_pdf_massivo.delay(edizione_pk, request.user.pk)
+            messages.success(
+                request,
+                "Generazione massiva avviata. Riceverai una mail al termine. "
+                "Durante la generazione i PDF singoli per questa edizione sono disabilitati.",
+            )
+
+        return redirect("siteconfig:cache_pdf")
 
 
 class TestEmailView(RuoloRequiredMixin, View):

@@ -413,7 +413,35 @@
   {% endif %}
 </div>
 
-{# ── 7. Import tracciati ───────────────────────────────────────────────── #}
+{# ── 7. Strumenti ──────────────────────────────────────────────────────── #}
+<div class="card mb-4 shadow-sm">
+  <div class="card-header d-flex align-items-center gap-2">
+    {% bs_icon "tools" size="20" extra_classes="text-secondary" %}
+    <span class="fw-semibold">Strumenti</span>
+  </div>
+  <div class="list-group list-group-flush">
+    <div class="list-group-item d-flex align-items-center justify-content-between py-3">
+      <div>
+        <strong>Cache e generazione PDF</strong>
+        <div class="text-muted small">Lista PDF in cache, invalidazione, generazione massiva per edizione.</div>
+      </div>
+      <a href="{% url 'siteconfig:cache_pdf' %}" class="btn btn-outline-danger btn-sm">
+        {% bs_icon "file-earmark-pdf" size="14" extra_classes="me-1" %}Gestione cache PDF
+      </a>
+    </div>
+    <div class="list-group-item d-flex align-items-center justify-content-between py-3">
+      <div>
+        <strong>Log generazione PDF / Excel</strong>
+        <div class="text-muted small">Storico task, errori con traceback, generazioni massive.</div>
+      </div>
+      <a href="{% url 'siteconfig:log_export' %}" class="btn btn-outline-secondary btn-sm">
+        {% bs_icon "journal-text" size="14" extra_classes="me-1" %}Vedi log
+      </a>
+    </div>
+  </div>
+</div>
+
+{# ── 8. Import tracciati ───────────────────────────────────────────────── #}
 <div class="card mb-4 shadow-sm">
   <div class="card-header d-flex align-items-center gap-2">
     {% bs_icon "cloud-upload" size="20" extra_classes="text-success" %}
@@ -428,83 +456,6 @@
     </a>
   </div>
 </div>
-
-{# ── 8. Log generazione PDF/Excel ─────────────────────────────────────── #}
-<div class="card shadow-sm mb-4" id="log-export">
-  <div class="card-header d-flex align-items-center gap-2">
-    {% bs_icon "journal-text" size="20" extra_classes="text-secondary" %}
-    <span class="fw-semibold">Log generazione PDF / Excel</span>
-    <span class="badge bg-secondary ms-1">ultimi {{ log_export|length }}</span>
-  </div>
-  {% if log_export %}
-  <div class="table-responsive">
-    <table class="table table-sm table-hover align-middle mb-0">
-      <thead class="table-light">
-        <tr>
-          <th class="ps-3" style="width:9%">Data</th>
-          <th style="width:6%">Tipo</th>
-          <th style="width:8%">Stato</th>
-          <th>Diario / Edizione</th>
-          <th>Utente</th>
-          <th>Messaggio</th>
-          <th style="width:7%"></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for log in log_export %}
-        <tr>
-          <td class="ps-3 text-nowrap small text-muted">{{ log.creato_at|date:"d/m/Y H:i" }}</td>
-          <td><span class="badge bg-secondary fw-normal">{{ log.get_tipo_display }}</span></td>
-          <td>
-            {% if log.stato == "ok" %}
-              <span class="badge bg-success fw-normal">{{ log.get_stato_display }}</span>
-            {% else %}
-              <span class="badge bg-danger fw-normal">{{ log.get_stato_display }}</span>
-            {% endif %}
-          </td>
-          <td class="small">{{ log.diario_str|default:"-" }}</td>
-          <td class="small text-muted">{{ log.utente_str|default:"-" }}</td>
-          <td class="small">{{ log.messaggio|truncatechars:80 }}</td>
-          <td>
-            {% if log.traceback_testo %}
-            <button type="button" class="btn btn-outline-secondary btn-sm"
-                    data-bs-toggle="modal"
-                    data-bs-target="#modal-traceback-{{ log.pk }}">
-              {% bs_icon "terminal" size="13" %}
-            </button>
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-  <div class="card-body text-muted small">Nessun log disponibile.</div>
-  {% endif %}
-</div>
-
-{# Modali traceback #}
-{% for log in log_export %}
-{% if log.traceback_testo %}
-<div class="modal fade" id="modal-traceback-{{ log.pk }}" tabindex="-1"
-     aria-labelledby="modal-tb-label-{{ log.pk }}" aria-hidden="true">
-  <div class="modal-dialog modal-xl modal-dialog-scrollable">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="modal-tb-label-{{ log.pk }}">
-          Traceback — {{ log.diario_str }} — {{ log.creato_at|date:"d/m/Y H:i" }}
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <pre class="small bg-dark text-light p-3 rounded" style="white-space:pre-wrap;word-break:break-all">{{ log.traceback_testo }}</pre>
-      </div>
-    </div>
-  </div>
-</div>
-{% endif %}
-{% endfor %}
 
 {# ── 9. Pagine statiche (privacy / termini) ────────────────────────────── #}
 <div class="card shadow-sm mb-4">

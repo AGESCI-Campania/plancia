@@ -166,6 +166,12 @@
                     <a class="dropdown-item {% if request.resolver_match.app_name == 'notifications' %}active{% endif %}"
                        href="{% url 'notifications:gestione_inviti' %}">{% bs_icon "envelope" size="14" extra_classes="me-2 opacity-75" %}Inviti</a>
                   </li>
+                  {% if user.ruolo == 'admin' or user.ruolo == 'segreteria' or user.is_superuser %}
+                  <li>
+                    <a class="dropdown-item {% if request.resolver_match.url_name == 'crea_staff' %}active{% endif %}"
+                       href="{% url 'accounts:crea_staff' %}">{% bs_icon "person-plus" size="14" extra_classes="me-2 opacity-75" %}Crea utente staff</a>
+                  </li>
+                  {% endif %}
 
                   <li><hr class="dropdown-divider"></li>
                   <li><h6 class="dropdown-header small">Dati</h6></li>
@@ -184,8 +190,16 @@
                     <li><hr class="dropdown-divider"></li>
                     <li><h6 class="dropdown-header small">Sistema</h6></li>
                     <li>
-                      <a class="dropdown-item {% if request.resolver_match.app_name == 'siteconfig' %}active{% endif %}"
+                      <a class="dropdown-item {% if request.resolver_match.url_name == 'impostazioni' %}active{% endif %}"
                          href="{% url 'siteconfig:impostazioni' %}">{% bs_icon "sliders" size="14" extra_classes="me-2 opacity-75" %}Impostazioni</a>
+                    </li>
+                    <li>
+                      <a class="dropdown-item {% if request.resolver_match.url_name == 'cache_pdf' %}active{% endif %}"
+                         href="{% url 'siteconfig:cache_pdf' %}">{% bs_icon "file-earmark-pdf" size="14" extra_classes="me-2 opacity-75" %}Cache PDF</a>
+                    </li>
+                    <li>
+                      <a class="dropdown-item {% if request.resolver_match.url_name == 'log_export' %}active{% endif %}"
+                         href="{% url 'siteconfig:log_export' %}">{% bs_icon "journal-text" size="14" extra_classes="me-2 opacity-75" %}Log export</a>
                     </li>
                     <li><a class="dropdown-item" href="{% url 'admin:index' %}">{% bs_icon "shield-lock" size="14" extra_classes="me-2 opacity-75" %}Pannello admin</a></li>
                   {% endif %}

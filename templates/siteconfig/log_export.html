@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% load bootstrap_icons %}
+
+{% block title %}Log export — {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <div>
+    <h1 class="h4 mb-0">Log generazione PDF / Excel</h1>
+    <small class="text-muted">Ultimi {{ log_export|length }} eventi</small>
+  </div>
+  <a href="{% url 'siteconfig:impostazioni' %}" class="btn btn-outline-secondary btn-sm">
+    {% bs_icon "arrow-left" size="14" extra_classes="me-1" %}Impostazioni
+  </a>
+</div>
+
+<div class="card shadow-sm">
+  {% if log_export %}
+  <div class="table-responsive">
+    <table class="table table-sm table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-3" style="width:10%">Data</th>
+          <th style="width:8%">Tipo</th>
+          <th style="width:8%">Stato</th>
+          <th>Diario / Edizione</th>
+          <th>Utente</th>
+          <th>Messaggio</th>
+          <th style="width:6%"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in log_export %}
+        <tr>
+          <td class="ps-3 text-nowrap small text-muted">{{ log.creato_at|date:"d/m/Y H:i" }}</td>
+          <td>
+            {% if log.tipo == "pdf_massivo" %}
+              <span class="badge bg-primary fw-normal">{{ log.get_tipo_display }}</span>
+            {% else %}
+              <span class="badge bg-secondary fw-normal">{{ log.get_tipo_display }}</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if log.stato == "ok" %}
+              <span class="badge bg-success fw-normal">{{ log.get_stato_display }}</span>
+            {% else %}
+              <span class="badge bg-danger fw-normal">{{ log.get_stato_display }}</span>
+            {% endif %}
+          </td>
+          <td class="small">
+            {% if log.edizione_str %}
+              <span class="text-muted">{{ log.edizione_str }}</span>{% if log.diario_str %} — {% endif %}
+            {% endif %}
+            {{ log.diario_str|default:"" }}
+          </td>
+          <td class="small text-muted">{{ log.utente_str|default:"-" }}</td>
+          <td class="small">{{ log.messaggio|truncatechars:80 }}</td>
+          <td>
+            {% if log.traceback_testo %}
+            <button type="button" class="btn btn-outline-secondary btn-sm"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modal-traceback-{{ log.pk }}">
+              {% bs_icon "terminal" size="13" %}
+            </button>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body text-muted small">Nessun log disponibile.</div>
+  {% endif %}
+</div>
+
+{% for log in log_export %}
+{% if log.traceback_testo %}
+<div class="modal fade" id="modal-traceback-{{ log.pk }}" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Traceback — {{ log.diario_str|default:log.edizione_str }} — {{ log.creato_at|date:"d/m/Y H:i" }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <pre class="small bg-dark text-light p-3 rounded" style="white-space:pre-wrap;word-break:break-all">{{ log.traceback_testo }}</pre>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% load bootstrap_icons %}
+
+{% block title %}Cache PDF diari — {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <h1 class="h4 mb-0">Cache PDF diari</h1>
+  <a href="{% url 'siteconfig:impostazioni' %}" class="btn btn-outline-secondary btn-sm">
+    {% bs_icon "arrow-left" size="14" extra_classes="me-1" %}Impostazioni
+  </a>
+</div>
+
+{# ── Generazione massiva ──────────────────────────────────────────────── #}
+<div class="card mb-4 shadow-sm">
+  <div class="card-header d-flex align-items-center gap-2">
+    {% bs_icon "file-earmark-pdf" size="20" extra_classes="text-danger" %}
+    <span class="fw-semibold">Genera tutti i PDF di un'edizione</span>
+  </div>
+  <div class="card-body">
+    <p class="text-muted small mb-3">
+      Avvia un task Celery che genera i PDF di tutti i diari inviati dell'edizione selezionata,
+      li carica su Drive e invia aggiornamenti per email ogni 10 diari.
+      Durante la generazione i PDF singoli per quella edizione sono disabilitati.
+    </p>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="azione" value="genera_massivo">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-4">
+          <label class="form-label small fw-semibold">Edizione</label>
+          <select name="edizione_pk" class="form-select form-select-sm" required>
+            <option value="">— seleziona —</option>
+            {% for ed in edizioni_disponibili %}
+              <option value="{{ ed.pk }}" {% if locks_attivi|dict_key:ed.pk %}disabled{% endif %}>
+                {{ ed }}{% if locks_attivi|dict_key:ed.pk %} (generazione in corso…){% endif %}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-auto">
+          <button type="submit" class="btn btn-danger btn-sm">
+            {% bs_icon "play-fill" size="14" extra_classes="me-1" %}Avvia generazione massiva
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── PDF in cache ─────────────────────────────────────────────────────── #}
+{% if cache_per_edizione %}
+  {% for item in cache_per_edizione %}
+  <div class="card mb-4 shadow-sm">
+    <div class="card-header d-flex align-items-center justify-content-between gap-2">
+      <div class="d-flex align-items-center gap-2">
+        {% bs_icon "archive" size="18" extra_classes="text-secondary" %}
+        <span class="fw-semibold">{{ item.edizione }}</span>
+        <span class="badge bg-secondary">{{ item.files|length }} PDF</span>
+        {% if item.bulk_lock %}
+          <span class="badge bg-warning text-dark">
+            {% bs_icon "hourglass-split" size="12" extra_classes="me-1" %}generazione in corso
+          </span>
+        {% endif %}
+      </div>
+      <form method="post"
+            onsubmit="return confirm('Eliminare tutti i {{ item.files|length }} PDF dalla cache per {{ item.edizione }}?')">
+        {% csrf_token %}
+        <input type="hidden" name="azione" value="invalida_edizione">
+        <input type="hidden" name="edizione_pk" value="{{ item.edizione.pk }}">
+        <button type="submit" class="btn btn-outline-danger btn-sm">
+          {% bs_icon "trash" size="13" extra_classes="me-1" %}Invalida tutti ({{ item.edizione }})
+        </button>
+      </form>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3">Squadriglia</th>
+            <th>Nome file</th>
+            <th>Dimensione</th>
+            <th>Caricato</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for f in item.files %}
+          <tr>
+            <td class="ps-3 small">{{ f.diario.squadriglia }}</td>
+            <td class="small text-muted">{{ f.nome|default:"—" }}</td>
+            <td class="small text-muted text-nowrap">
+              {% if f.dimensione %}{{ f.dimensione|filesizeformat }}{% else %}—{% endif %}
+            </td>
+            <td class="small text-muted text-nowrap">{{ f.caricato_at|date:"d/m/Y H:i" }}</td>
+            <td class="text-end pe-3">
+              <form method="post" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="azione" value="invalida_singolo">
+                <input type="hidden" name="file_pk" value="{{ f.pk }}">
+                <button type="submit" class="btn btn-outline-danger btn-sm" title="Elimina dalla cache">
+                  {% bs_icon "trash" size="13" %}
+                </button>
+              </form>
+              {% if f.url_esterno %}
+              <a href="{{ f.url_esterno }}" target="_blank"
+                 class="btn btn-outline-secondary btn-sm ms-1" title="Apri su Drive">
+                {% bs_icon "box-arrow-up-right" size="13" %}
+              </a>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endfor %}
+
+  <div class="d-flex justify-content-end mb-4">
+    <form method="post" onsubmit="return confirm('Eliminare TUTTI i PDF dalla cache?')">
+      {% csrf_token %}
+      <input type="hidden" name="azione" value="invalida_tutti">
+      <button type="submit" class="btn btn-danger btn-sm">
+        {% bs_icon "trash" size="14" extra_classes="me-1" %}Invalida tutta la cache PDF
+      </button>
+    </form>
+  </div>
+
+{% else %}
+  <div class="card shadow-sm">
+    <div class="card-body text-muted small">Nessun PDF in cache.</div>
+  </div>
+{% endif %}
+{% endblock %}

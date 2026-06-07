@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% load bootstrap_icons %}
+
+{% block title %}Crea utente staff — {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6 col-lg-5">
+    <div class="d-flex align-items-center gap-2 mb-4">
+      <a href="{% url 'accounts:utente_list' %}" class="btn btn-outline-secondary btn-sm">
+        {% bs_icon "arrow-left" size="14" %}
+      </a>
+      <h1 class="h4 mb-0">Crea utente staff</h1>
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <p class="text-muted small mb-4">
+          Crea un utente per le funzioni di amministrazione (Admin, Segreteria, IABR)
+          che non necessita di un codice socio AGESCI. L'utente riceverà un'email
+          per impostare la propria password.
+        </p>
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold" for="id_first_name">Nome</label>
+            <input type="text" name="first_name" id="id_first_name"
+                   class="form-control" placeholder="es. Mario" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" for="id_last_name">Cognome</label>
+            <input type="text" name="last_name" id="id_last_name"
+                   class="form-control" placeholder="es. Rossi">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" for="id_email">Email</label>
+            <input type="email" name="email" id="id_email"
+                   class="form-control" placeholder="email@example.com" required>
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-semibold" for="id_ruolo">Ruolo</label>
+            <select name="ruolo" id="id_ruolo" class="form-select" required>
+              <option value="">— seleziona —</option>
+              {% for valore, etichetta in ruoli_creabili %}
+                <option value="{{ valore }}">{{ etichetta }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="d-grid">
+            <button type="submit" class="btn btn-primary">
+              {% bs_icon "person-plus" size="16" extra_classes="me-2" %}Crea utente e invia invito
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="alert alert-info border-0 mt-3 small">
+      {% bs_icon "info-circle" size="13" extra_classes="me-1" %}
+      L'utente viene creato immediatamente. Riceve un'email con un link per
+      impostare la password e accedere alla piattaforma.
+      Se l'email non arriva, l'Admin può usare <strong>Reimposta password</strong>
+      dalla pagina utente.
+    </div>
+  </div>
+</div>
+{% endblock %}

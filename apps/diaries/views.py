@@ -626,7 +626,15 @@ class DiarioPdfView(DiarioAccessMixin, View):
         # 3. Drive configurato ma nessuna cache: avvia task Celery asincrono
         from django.core.cache import cache
 
-        from apps.exports.tasks import _invia_mail_pdf, task_genera_pdf_diario
+        # Blocca se è in corso una generazione massiva per questa edizione
+        from apps.exports.tasks import _invia_mail_pdf, lock_key_massivo, task_genera_pdf_diario
+        if cache.get(lock_key_massivo(diario.edizione.pk)):
+            messages.warning(
+                request,
+                "Generazione massiva PDF in corso per questa edizione. "
+                "Attendi il completamento prima di generare singoli PDF.",
+            )
+            return redirect("diaries:detail", pk=pk)
 
         lock_key = f"pdf_task_lock:{diario.pk}"
         if cache.get(lock_key):

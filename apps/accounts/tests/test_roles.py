@@ -1,14 +1,12 @@
 # apps/accounts/tests/test_roles.py
 """Test delle regole di nomina e impersonazione (docs sez. 2)."""
-import datetime
 
 import pytest
 
-from apps.accounts.models import Nomina, Ruolo, User
+from apps.accounts.models import Nomina, Ruolo
 from apps.accounts.roles import (
     ROLE_RANK,
     _rango_massimo,
-    can_hijack,
     categoria_compatibile,
     puo_impersonare,
     puo_nominare,
@@ -109,7 +107,7 @@ class TestImpersonazione:
 @pytest.mark.django_db
 class TestNominaMultiRuolo:
     def _crea_zona_gruppo(self):
-        from apps.org.models import Zona, Gruppo
+        from apps.org.models import Gruppo, Zona
         zona = Zona.objects.create(nome="TestZona")
         gruppo = Gruppo.objects.create(nome="TestGruppo", zona=zona)
         return zona, gruppo
@@ -161,11 +159,39 @@ class TestNominaMultiRuolo:
         utente.refresh_from_db()
         assert utente.ruolo == Ruolo.CRP
 
+    def test_nomina_staff_diretto_crea_utente_senza_socio(self, django_user_model):
+        """nomina_staff_diretto crea User + Nomina senza richiedere un Socio."""
+        from apps.accounts.roles import nomina_staff_diretto
+
+        admin = django_user_model.objects.create_superuser(
+            username="admin_staff", email="admin_staff@test.it", password="x"
+        )
+        admin.refresh_from_db()
+        utente, nomina_obj, creato = nomina_staff_diretto(
+            admin, "seg1@test.it", "Luisa", "Bianchi", Ruolo.SEGRETERIA
+        )
+        assert creato is True
+        assert utente.email == "seg1@test.it"
+        assert utente.ruolo == Ruolo.SEGRETERIA
+        assert not utente.has_usable_password()
+        assert nomina_obj.ruolo == Ruolo.SEGRETERIA
+        assert nomina_obj.socio is None
+
+    def test_nomina_staff_diretto_errore_permesso(self, django_user_model):
+        """La Segreteria non può creare un Admin."""
+        from apps.accounts.roles import nomina_staff_diretto
+
+        seg = django_user_model.objects.create_user(
+            username="seg_x", email="seg_x@test.it", password="x", ruolo=Ruolo.SEGRETERIA
+        )
+        with pytest.raises(PermissionError):
+            nomina_staff_diretto(seg, "nuovoadmin@test.it", "A", "B", Ruolo.ADMIN)
+
     def test_csq_esclusivo_nella_stessa_edizione(self, django_user_model):
         """CSQ e altri ruoli non possono coesistere nella stessa edizione."""
         from apps.accounts.roles import nomina as service_nomina
-        from apps.org.models import Socio
         from apps.editions.models import Edizione
+        from apps.org.models import Socio
 
         zona, gruppo = self._crea_zona_gruppo()
         admin = django_user_model.objects.create_superuser(

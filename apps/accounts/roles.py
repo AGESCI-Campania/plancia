@@ -45,7 +45,7 @@ def categoria_compatibile(ruolo_target: str, categoria_socio: str | None) -> boo
     return richiesta is None or richiesta == categoria_socio
 
 
-def nomina(attore: "User", utente: "User", ruolo: str, edizione=None, scadenza=None) -> "Nomina":
+def nomina(attore: User, utente: User, ruolo: str, edizione=None, scadenza=None) -> Nomina:
     """Assegna *ruolo* a *utente* per conto di *attore*.
 
     Applica puo_nominare + categoria_compatibile + esclusività CSQ, crea il record
@@ -94,6 +94,55 @@ def nomina(attore: "User", utente: "User", ruolo: str, edizione=None, scadenza=N
         edizione=edizione,
         scadenza=scadenza,
     )
+
+
+def nomina_staff_diretto(
+    attore: User,
+    email: str,
+    first_name: str,
+    last_name: str,
+    ruolo: str,
+) -> tuple[User, Nomina, bool]:
+    """Crea un utente staff (Admin/Segreteria/IABR) senza Socio associato.
+
+    Bypassa il check di categoria perché questi utenti non sono capi AGESCI
+    ma puri utenti della piattaforma. Ritorna (utente, nomina, creato).
+    """
+    from apps.accounts.models import Nomina, User
+
+    if not puo_nominare(attore.ruolo, ruolo):
+        raise PermissionError(f"{attore.ruolo} non può creare il ruolo {ruolo}.")
+
+    email = email.strip().lower()
+    utente, creato = User.objects.get_or_create(
+        email=email,
+        defaults={
+            "username": email,
+            "first_name": first_name.strip(),
+            "last_name": last_name.strip(),
+            "ruolo": ruolo,
+            "is_active": True,
+        },
+    )
+    if not creato:
+        if utente.ruoli_attivi:
+            raise ValueError(f"L'utente {email} ha già ruoli attivi.")
+    else:
+        utente.set_unusable_password()
+        utente.save(update_fields=["password"])
+
+    n = Nomina.objects.create(
+        utente=utente,
+        socio=None,
+        ruolo=ruolo,
+        nominato_da=attore,
+    )
+
+    if not utente.ruoli_attivi or utente.ruolo != ruolo:
+        utente.ruolo = ruolo
+        utente.save(update_fields=["ruolo"])
+
+    return utente, n, creato
 
 
 # --- Impersonazione (docs sez. 2) -------------------------------------------

@@ -7,6 +7,8 @@ app_name = "siteconfig"
 
 urlpatterns = [
     path("", views.ImpostazioniView.as_view(), name="impostazioni"),
+    path("log-export/", views.LogExportView.as_view(), name="log_export"),
+    path("cache-pdf/", views.CachePdfView.as_view(), name="cache_pdf"),
     path("test-email/", views.TestEmailView.as_view(), name="test_email"),
     path("sblocca-ip/", views.AxesSbloccaView.as_view(), name="sblocca_ip"),
     path("pagine/<str:slug>/", views.PaginaStaticaEditView.as_view(), name="pagina_edit"),

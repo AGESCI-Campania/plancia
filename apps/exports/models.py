@@ -8,6 +8,7 @@ class LogTaskExport(models.Model):
     class Tipo(models.TextChoices):
         PDF = "pdf", "PDF diario"
         EXCEL = "excel", "Excel edizione"
+        PDF_MASSIVO = "pdf_massivo", "PDF massivo edizione"
 
     class Stato(models.TextChoices):
         OK = "ok", "Completato"
@@ -19,6 +20,8 @@ class LogTaskExport(models.Model):
     traceback_testo = models.TextField(blank=True, verbose_name="traceback")
     diario_pk = models.IntegerField(null=True, blank=True)
     diario_str = models.CharField(max_length=200, blank=True)
+    edizione_pk = models.IntegerField(null=True, blank=True)
+    edizione_str = models.CharField(max_length=200, blank=True)
     utente_pk = models.IntegerField(null=True, blank=True)
     utente_str = models.CharField(max_length=200, blank=True)
     creato_at = models.DateTimeField(auto_now_add=True)
