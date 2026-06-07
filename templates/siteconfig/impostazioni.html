@@ -474,6 +474,13 @@
            class="btn btn-outline-secondary btn-sm">
           {% bs_icon "box-arrow-up-right" size="13" %}
         </a>
+        <form method="post" action="{% url 'siteconfig:pagina_importa' 'privacy' %}"
+              onsubmit="return confirm('Sovrascrivere il contenuto attuale con il testo predefinito?')">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-secondary btn-sm" title="Carica contenuto predefinito">
+            {% bs_icon "download" size="13" extra_classes="me-1" %}Predefinito
+          </button>
+        </form>
         <a href="{% url 'siteconfig:pagina_edit' 'privacy' %}"
            class="btn btn-outline-primary btn-sm">Modifica</a>
       </div>
@@ -488,6 +495,13 @@
            class="btn btn-outline-secondary btn-sm">
           {% bs_icon "box-arrow-up-right" size="13" %}
         </a>
+        <form method="post" action="{% url 'siteconfig:pagina_importa' 'termini' %}"
+              onsubmit="return confirm('Sovrascrivere il contenuto attuale con il testo predefinito?')">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-secondary btn-sm" title="Carica contenuto predefinito">
+            {% bs_icon "download" size="13" extra_classes="me-1" %}Predefinito
+          </button>
+        </form>
         <a href="{% url 'siteconfig:pagina_edit' 'termini' %}"
            class="btn btn-outline-primary btn-sm">Modifica</a>
       </div>

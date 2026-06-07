@@ -382,14 +382,13 @@ class CachePdfView(RuoloRequiredMixin, View):
                 })
 
         edizioni_disponibili = list(Edizione.objects.order_by("-anno"))
-        locks_attivi = {
-            ed.pk: bool(cache.get(lock_key_massivo(ed.pk)))
+        edizioni_con_lock = [
+            (ed, bool(cache.get(lock_key_massivo(ed.pk))))
             for ed in edizioni_disponibili
-        }
+        ]
         return render(request, self.template_name, {
             "cache_per_edizione": cache_per_edizione,
-            "edizioni_disponibili": edizioni_disponibili,
-            "locks_attivi": locks_attivi,
+            "edizioni_con_lock": edizioni_con_lock,
         })
 
     def post(self, request):
@@ -682,6 +681,37 @@ class PaginaStaticaEditView(RuoloRequiredMixin, View):
             "pagina": pagina,
             "slug": slug,
         })
+
+
+class PaginaStaticaImportaView(RuoloRequiredMixin, View):
+    """Importa il contenuto predefinito da templates/siteconfig/default_pages/<slug>.html."""
+
+    ruoli_ammessi = (Ruolo.ADMIN, Ruolo.SEGRETERIA, Ruolo.INCARICATO_EG)
+
+    def post(self, request, slug):
+        try:
+            SlugPagina(slug)
+        except ValueError:
+            from django.http import Http404
+            raise Http404 from None
+
+        from django.template import TemplateDoesNotExist
+        from django.template.loader import get_template
+        try:
+            tpl = get_template(f"siteconfig/default_pages/{slug}.html")
+            contenuto = tpl.template.source
+        except TemplateDoesNotExist:
+            messages.error(request, f"Nessun template predefinito trovato per «{slug}».")
+            return redirect("siteconfig:pagina_edit", slug=slug)
+
+        pagina, _ = PaginaStatica.objects.get_or_create(
+            slug=slug,
+            defaults={"titolo": SlugPagina(slug).label, "contenuto": ""},
+        )
+        pagina.contenuto = contenuto
+        pagina.save()
+        messages.success(request, f"Contenuto predefinito caricato per «{pagina.get_slug_display()}».")
+        return redirect("siteconfig:pagina_edit", slug=slug)
 
 
 @method_decorator(csrf_exempt, name="dispatch")

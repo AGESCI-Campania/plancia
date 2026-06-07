@@ -12,6 +12,7 @@ urlpatterns = [
     path("test-email/", views.TestEmailView.as_view(), name="test_email"),
     path("sblocca-ip/", views.AxesSbloccaView.as_view(), name="sblocca_ip"),
     path("pagine/<str:slug>/", views.PaginaStaticaEditView.as_view(), name="pagina_edit"),
+    path("pagine/<str:slug>/importa/", views.PaginaStaticaImportaView.as_view(), name="pagina_importa"),
     path("gmail-smtp/oauth/", views.GmailSMTPOAuthInitView.as_view(), name="gmail_smtp_oauth_init"),
     path("gmail-smtp/oauth/callback/", views.GmailSMTPOAuthCallbackView.as_view(), name="gmail_smtp_oauth_callback"),
     path("gmail-smtp/oauth/disconnect/", views.GmailSMTPOAuthDisconnectView.as_view(), name="gmail_smtp_oauth_disconnect"),

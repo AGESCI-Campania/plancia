@@ -31,9 +31,9 @@
           <label class="form-label small fw-semibold">Edizione</label>
           <select name="edizione_pk" class="form-select form-select-sm" required>
             <option value="">— seleziona —</option>
-            {% for ed in edizioni_disponibili %}
-              <option value="{{ ed.pk }}" {% if locks_attivi|dict_key:ed.pk %}disabled{% endif %}>
-                {{ ed }}{% if locks_attivi|dict_key:ed.pk %} (generazione in corso…){% endif %}
+            {% for ed, locked in edizioni_con_lock %}
+              <option value="{{ ed.pk }}" {% if locked %}disabled{% endif %}>
+                {{ ed }}{% if locked %} (generazione in corso…){% endif %}
               </option>
             {% endfor %}
           </select>

@@ -203,6 +203,15 @@
                     </li>
                     <li><a class="dropdown-item" href="{% url 'admin:index' %}">{% bs_icon "shield-lock" size="14" extra_classes="me-2 opacity-75" %}Pannello admin</a></li>
                   {% endif %}
+
+                  <li><hr class="dropdown-divider"></li>
+                  <li><h6 class="dropdown-header small">Strumenti di sviluppo</h6></li>
+                  <li>
+                    <a class="dropdown-item" href="{% url 'flower_proxy' %}" target="_blank">{% bs_icon "diagram-3" size="14" extra_classes="me-2 opacity-75" %}Flower</a>
+                  </li>
+                  <li>
+                    <a class="dropdown-item" href="{% url 'mailpit_proxy' %}" target="_blank">{% bs_icon "envelope-open" size="14" extra_classes="me-2 opacity-75" %}Mailpit</a>
+                  </li>
                 </ul>
               </li>
             {% endif %}
