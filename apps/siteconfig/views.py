@@ -374,8 +374,9 @@ class TestEmailView(RuoloRequiredMixin, View):
             msg.send()
             messages.success(request, f"Email di test inviata a {request.user.email}.")
         except Exception as exc:
-            messages.error(request, f"Errore nell'invio: {exc}")
-        return redirect("siteconfig:impostazioni")
+            messages.error(request, f"Errore nell'invio email: {exc}")
+        from django.urls import reverse
+        return redirect(reverse("siteconfig:impostazioni") + "#email")
 
 
 GMAIL_SMTP_SCOPES = [

@@ -174,10 +174,8 @@
               {% if impostazioni.smtp_use_gmail_oauth and impostazioni.smtp_gmail_account %}
                 <a href="{% url 'siteconfig:gmail_smtp_oauth_init' %}"
                    class="btn btn-outline-primary btn-sm">Cambia account</a>
-                <form method="post" action="{% url 'siteconfig:gmail_smtp_oauth_disconnect' %}">
-                  {% csrf_token %}
-                  <button type="submit" class="btn btn-outline-danger btn-sm">Scollega</button>
-                </form>
+                {# Questo form viene chiuso prima del </form> della sezione email per evitare annidamento #}
+                <button type="submit" form="form-gmail-disconnect" class="btn btn-outline-danger btn-sm">Scollega</button>
               {% else %}
                 <a href="{% url 'siteconfig:gmail_smtp_oauth_init' %}"
                    class="btn btn-outline-primary btn-sm">
@@ -215,31 +213,38 @@
         </div>
       </div>
 
-      {# ── Test invio ──────────────────────────────────────────────────── #}
-      <div class="border-top pt-3 mt-3">
-        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-          <div>
-            <span class="small fw-semibold text-muted">Test invio mail</span>
-            <div class="text-muted small">
-              Invia una mail di test a <strong>{{ request.user.email }}</strong>
-              usando il backend SMTP/provider configurato (ignora la modalità simulato).
-            </div>
-          </div>
-          <form method="post" action="{% url 'siteconfig:test_email' %}">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-outline-info btn-sm">
-              {% bs_icon "send" size="14" extra_classes="me-1" %}Invia test
-            </button>
-          </form>
-        </div>
-      </div>
-
       <div class="d-flex justify-content-end mt-3 pt-3 border-top">
         <button type="submit" class="btn btn-primary btn-sm">
           {% bs_icon "check-lg" size="14" extra_classes="me-1" %}Salva posta elettronica
         </button>
       </div>
     </form>
+
+    {# Gmail disconnect — form separato collegato al pulsante tramite attributo form= #}
+    {% if impostazioni.smtp_use_gmail_oauth %}
+    <form id="form-gmail-disconnect" method="post" action="{% url 'siteconfig:gmail_smtp_oauth_disconnect' %}">
+      {% csrf_token %}
+    </form>
+    {% endif %}
+
+    {# Test invio — form separato (i form annidati in HTML5 sono invalidi) #}
+    <div class="border-top pt-3 mt-3">
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div>
+          <span class="small fw-semibold text-muted">Test invio mail</span>
+          <div class="text-muted small">
+            Invia una mail di test a <strong>{{ request.user.email }}</strong>
+            usando il backend SMTP/provider configurato (ignora la modalità simulato).
+          </div>
+        </div>
+        <form method="post" action="{% url 'siteconfig:test_email' %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-info btn-sm">
+            {% bs_icon "send" size="14" extra_classes="me-1" %}Invia test
+          </button>
+        </form>
+      </div>
+    </div>
   </div>
 </div>
 

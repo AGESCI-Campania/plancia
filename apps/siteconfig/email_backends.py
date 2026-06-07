@@ -150,7 +150,7 @@ class GmailOAuth2Backend(SmtpBackend):
             conn.ehlo()
             auth_string = f"user={creds.account_email}\1auth=Bearer {access_token}\1\1"
             auth_b64 = base64.b64encode(auth_string.encode("ascii")).decode("ascii")
-            conn.auth("XOAUTH2", lambda challenge: auth_b64)
+            conn.auth("XOAUTH2", lambda challenge=None: auth_b64)
             self.connection = conn
             return True
         except Exception:
