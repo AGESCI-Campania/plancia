@@ -231,6 +231,7 @@ class _TeeBackend(BaseEmailBackend):
             try:
                 sent = max(sent, backend.send_messages(messages) or 0)
             except Exception:
+                logger.exception("_TeeBackend: errore backend %s", backend.__class__.__name__)
                 if not self.fail_silently:
                     raise
         return sent
@@ -277,7 +278,9 @@ def get_connection_per_tipo(tipo: str = "standard", fail_silently: bool = False)
 
     if imp.email_mode == EmailMode.SIMULATO_PIU_INVIO:
         file_conn = FileBackend(file_path=str(settings.EMAIL_FILE_PATH), fail_silently=True)
-        return _TeeBackend([file_conn, real], fail_silently=fail_silently)
+        # L'invio reale è best-effort: gli errori vengono loggati ma non propagati
+        # (il file simulato viene sempre scritto).
+        return _TeeBackend([file_conn, real], fail_silently=True)
 
     return real
 

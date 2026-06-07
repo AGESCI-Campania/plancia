@@ -45,6 +45,7 @@ class ImpostazioniView(RuoloRequiredMixin, UpdateView):
             kwargs["link_formset"] = FooterLinkFormSet(instance=self.get_object())
         ctx = super().get_context_data(**kwargs)
         from apps.editions.models import Edizione
+        from apps.exports.models import LogTaskExport
         ctx["edizioni_import"] = Edizione.objects.order_by("-anno")
         db_map = {t.chiave: t for t in MailTemplate.objects.all()}
         ctx["mail_template_righe"] = [
@@ -55,6 +56,7 @@ class ImpostazioniView(RuoloRequiredMixin, UpdateView):
             }
             for chiave in TAG_REGISTRY
         ]
+        ctx["log_export"] = LogTaskExport.objects.all()[:50]
         return ctx
 
     def post(self, request, *args, **kwargs):
@@ -280,6 +282,43 @@ class MailTemplateDeleteView(RuoloRequiredMixin, View):
         tpl = get_object_or_404(MailTemplate, chiave=chiave)
         tpl.delete()
         messages.success(request, f"Template «{chiave}» eliminato — verrà usato il file di default.")
+        return redirect("siteconfig:impostazioni")
+
+
+class TestEmailView(RuoloRequiredMixin, View):
+    """Invia un'email di test all'utente corrente per verificare la configurazione SMTP."""
+
+    ruoli_ammessi = (Ruolo.ADMIN, Ruolo.SEGRETERIA, Ruolo.INCARICATO_EG)
+
+    def post(self, request):
+        from django.core.mail import EmailMessage
+
+        from apps.siteconfig.email_backends import _smtp_backend, _transazionale_backend
+        from apps.siteconfig.models import BackendPosta, Impostazioni
+
+        imp = Impostazioni.get()
+        try:
+            # Testa sempre il backend reale (non SIMULATO/MAILPIT)
+            backend_key = imp.email_backend_standard
+            if backend_key == BackendPosta.TRANSAZIONALE:
+                conn = _transazionale_backend(imp, fail_silently=False)
+            else:
+                conn = _smtp_backend(imp, fail_silently=False)
+
+            msg = EmailMessage(
+                subject=f"Test invio email — {imp.titolo or 'Plancia'}",
+                body=(
+                    "Questo è un messaggio di test inviato dalle impostazioni di Plancia.\n"
+                    "Se lo ricevi, la configurazione email funziona correttamente."
+                ),
+                from_email=imp.from_email,
+                to=[request.user.email],
+                connection=conn,
+            )
+            msg.send()
+            messages.success(request, f"Email di test inviata a {request.user.email}.")
+        except Exception as exc:
+            messages.error(request, f"Errore nell'invio: {exc}")
         return redirect("siteconfig:impostazioni")
 
 

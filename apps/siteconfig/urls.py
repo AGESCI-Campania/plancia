@@ -7,6 +7,7 @@ app_name = "siteconfig"
 
 urlpatterns = [
     path("", views.ImpostazioniView.as_view(), name="impostazioni"),
+    path("test-email/", views.TestEmailView.as_view(), name="test_email"),
     path("pagine/<str:slug>/", views.PaginaStaticaEditView.as_view(), name="pagina_edit"),
     path("gmail-smtp/oauth/", views.GmailSMTPOAuthInitView.as_view(), name="gmail_smtp_oauth_init"),
     path("gmail-smtp/oauth/callback/", views.GmailSMTPOAuthCallbackView.as_view(), name="gmail_smtp_oauth_callback"),
