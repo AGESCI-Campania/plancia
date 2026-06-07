@@ -555,9 +555,11 @@ class DiarioPdfView(DiarioAccessMixin, View):
                 while not done:
                     _, done = dl.next_chunk()
                 buf.seek(0)
+                content = buf.read()
                 nome = cache.nome or f"Diario_{diario.squadriglia.nome}_{diario.edizione.anno}.pdf"
-                response = HttpResponse(buf.read(), content_type="application/pdf")
+                response = HttpResponse(content, content_type="application/pdf")
                 response["Content-Disposition"] = f'attachment; filename="{nome}"'
+                response["Content-Length"] = len(content)
                 return response
             except Exception:
                 # Cache corrotta o file rimosso da Drive: rigenera
@@ -571,6 +573,7 @@ class DiarioPdfView(DiarioAccessMixin, View):
                 nome = f"Diario_{diario.squadriglia.nome}_{diario.edizione.anno}.pdf"
                 response = HttpResponse(pdf, content_type="application/pdf")
                 response["Content-Disposition"] = f'attachment; filename="{nome}"'
+                response["Content-Length"] = len(pdf)
                 return response
             except Exception as exc:
                 messages.error(request, f"Errore nella generazione del PDF: {exc}")
