@@ -70,9 +70,13 @@ class ImpostazioniView(RuoloRequiredMixin, View):
         return render(request, self.template_name, self._build_context(imp))
 
     def post(self, request, *args, **kwargs):
+        import logging
         from django.core.cache import cache
 
+        log = logging.getLogger("siteconfig.views")
         sezione = request.POST.get("sezione", "")
+        log.warning("ImpostazioniView POST sezione=%r", sezione)
+
         if sezione not in SEZIONE_FORM:
             messages.error(request, "Sezione non valida.")
             return redirect("siteconfig:impostazioni")
@@ -86,6 +90,7 @@ class ImpostazioniView(RuoloRequiredMixin, View):
         if sezione == "footer":
             link_formset = FooterLinkFormSet(request.POST, instance=imp)
 
+        log.warning("ImpostazioniView POST valid=%s errors=%s", form.is_valid(), form.errors)
         if form.is_valid():
             update_fields = list(form_class.Meta.fields)
 
