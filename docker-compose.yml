@@ -61,6 +61,16 @@ services:
       MP_WEBROOT: /mailadmin
     restart: unless-stopped
 
+  flower:
+    build: .
+    # Dashboard Celery. Accessibile su /celery/ tramite proxy Django (solo Admin).
+    # Profilo "flower": avviare con COMPOSE_PROFILES=flower docker compose --env-file .env.prod up -d
+    command: uv run celery -A config flower --url_prefix=celery --port=5555 --address=0.0.0.0
+    env_file: [.env.prod]
+    depends_on: [redis]
+    profiles: ["flower"]
+    restart: unless-stopped
+
   nginx:
     image: nginx:1.27
     profiles: ["proxy-nginx"]

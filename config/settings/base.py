@@ -321,6 +321,7 @@ LOG_DIR = BASE_DIR / "logs"
 # In nginx-docker mode: mailpit e web sono nella stessa rete compose.
 # In nginx-host/apache-host mode: impostare http://localhost:8025 (porta esposta su loopback).
 MAILPIT_INTERNAL_URL = env.str("MAILPIT_INTERNAL_URL", default="http://mailpit:8025")
+FLOWER_INTERNAL_URL = env.str("FLOWER_INTERNAL_URL", default="http://flower:5555")
 MAILPIT_SMTP_HOST = env.str("MAILPIT_SMTP_HOST", default="mailpit")
 MAILPIT_SMTP_PORT = env.int("MAILPIT_SMTP_PORT", default=1025)
 

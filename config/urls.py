@@ -5,7 +5,7 @@ from django.urls import include, path
 
 from apps.editions.views import HomeView
 from apps.notifications.webhooks import AnymailWebhookDispatchView
-from apps.siteconfig.views import MailpitProxyView, PaginaStaticaPublicView
+from apps.siteconfig.views import FlowerProxyView, MailpitProxyView, PaginaStaticaPublicView
 
 urlpatterns = [
     path("", HomeView.as_view(), name="home"),
@@ -29,6 +29,8 @@ urlpatterns = [
     path("termini/", PaginaStaticaPublicView.as_view(), {"slug": "termini"}, name="pagina_termini"),
     path("mailadmin/", MailpitProxyView.as_view(), name="mailpit_proxy"),
     path("mailadmin/<path:path>", MailpitProxyView.as_view(), name="mailpit_proxy_path"),
+    path("celery/", FlowerProxyView.as_view(), name="flower_proxy"),
+    path("celery/<path:path>", FlowerProxyView.as_view(), name="flower_proxy_path"),
 ]
 
 if settings.DEBUG:

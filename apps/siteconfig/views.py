@@ -585,6 +585,67 @@ class PaginaStaticaEditView(RuoloRequiredMixin, View):
 
 
 @method_decorator(csrf_exempt, name="dispatch")
+@method_decorator(csrf_exempt, name="dispatch")
+class FlowerProxyView(View):
+    """Proxy verso Flower (dashboard Celery) accessibile su /celery/.
+
+    Solo Admin. Flower deve essere avviato con il profilo 'flower':
+      COMPOSE_PROFILES=flower docker compose --env-file .env.prod up -d
+    """
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            from django.contrib.auth.views import redirect_to_login
+            return redirect_to_login(request.get_full_path())
+        if not (request.user.is_staff_plancia or request.user.is_superuser):
+            from django.http import HttpResponseForbidden
+            return HttpResponseForbidden("Accesso riservato agli amministratori.")
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request, path=""):
+        return self._proxy(request, path)
+
+    def post(self, request, path=""):
+        return self._proxy(request, path)
+
+    def _proxy(self, request, path):
+        import urllib.error
+        import urllib.request
+        from urllib.parse import urlencode
+
+        from django.http import HttpResponse
+
+        flower_base = getattr(settings, "FLOWER_INTERNAL_URL", "http://flower:5555").rstrip("/")
+        target_path = f"/celery/{path}" if path else "/celery/"
+        target_url = flower_base + target_path
+        if request.GET:
+            target_url += "?" + urlencode(request.GET)
+
+        headers = {}
+        for name in ("Accept", "Accept-Encoding", "X-Requested-With"):
+            if name in request.headers:
+                headers[name] = request.headers[name]
+
+        try:
+            req = urllib.request.Request(target_url, headers=headers)
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                content = resp.read()
+                content_type = resp.headers.get("Content-Type", "text/html")
+                return HttpResponse(content, status=resp.status, content_type=content_type)
+        except urllib.error.HTTPError as e:
+            return HttpResponse(e.read(), status=e.code)
+        except Exception as e:
+            return HttpResponse(
+                "<h1>Flower non raggiungibile</h1>"
+                f"<pre>{e}</pre>"
+                "<p>Avvia Flower con il profilo <code>flower</code>:<br>"
+                "<code>COMPOSE_PROFILES=flower docker compose --env-file .env.prod up -d</code></p>",
+                status=503,
+                content_type="text/html",
+            )
+
+
+@method_decorator(csrf_exempt, name="dispatch")
 class MailpitProxyView(View):
     """Proxy verso Mailpit per il debug delle email in produzione.
 
