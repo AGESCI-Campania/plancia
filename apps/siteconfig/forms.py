@@ -110,7 +110,10 @@ class EmailForm(forms.ModelForm):
         cd = super().clean()
         provider = cd.get("email_provider", EmailProvider.SMTP)
         mode = cd.get("email_mode", "simulato")
-        if mode == "reale" and provider == EmailProvider.SMTP and not cd.get("smtp_host"):
+        # Con Gmail OAuth attivo, smtp_host non è renderizzato nell'HTML e non è necessario
+        # (Gmail OAuth sostituisce host/user/password per smtp.gmail.com).
+        gmail_oauth_attivo = bool(self.instance and self.instance.smtp_use_gmail_oauth)
+        if mode == "reale" and provider == EmailProvider.SMTP and not cd.get("smtp_host") and not gmail_oauth_attivo:
             self.add_error("smtp_host", "SMTP host obbligatorio per l'invio reale via SMTP.")
         if mode == "reale" and provider != EmailProvider.SMTP and not cd.get("email_provider_api_key"):
             self.add_error(
