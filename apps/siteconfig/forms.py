@@ -90,6 +90,22 @@ class EmailForm(forms.ModelForm):
             ),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # smtp_port è PositiveIntegerField (required=True di default) ma viene
+        # nascosto nell'HTML quando Gmail OAuth è attivo. Senza required=False
+        # il form fallisce silenziosamente con il campo vuoto nel POST.
+        self.fields["smtp_port"].required = False
+
+    def clean_smtp_port(self):
+        # Se smtp_port arriva vuoto (campo nascosto), preserva il valore esistente
+        value = self.cleaned_data.get("smtp_port")
+        if value is None:
+            if self.instance and self.instance.pk:
+                return self.instance.smtp_port
+            return 587
+        return value
+
     def clean(self):
         cd = super().clean()
         provider = cd.get("email_provider", EmailProvider.SMTP)
