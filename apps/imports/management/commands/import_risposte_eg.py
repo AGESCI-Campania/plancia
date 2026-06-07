@@ -19,6 +19,12 @@ Uso:
   uv run python manage.py import_risposte_eg /percorso/file.xlsx --edizione 1
   uv run python manage.py import_risposte_eg /percorso/file.xlsx \\
     --importa-foto --foto-folder-id <DRIVE_FOLDER_ID> --foto-account <EMAIL>
+  uv run python manage.py import_risposte_eg --versione
+
+Opzione --importa-foto:
+  Scarica ogni immagine da Drive, la ridimensiona secondo Impostazioni.allegati_max_px
+  (default 1024px, JPEG quality 85) e la carica nella cartella allegati del diario.
+  Il file sorgente non viene mai modificato.
 """
 from __future__ import annotations
 
@@ -365,7 +371,7 @@ class Command(BaseCommand):
     help = "Importa diari da Excel Jotform 'EG - Diario della Specialità di Squadriglia'."
 
     def add_arguments(self, parser):
-        parser.add_argument("file", help="Percorso del file Excel (.xlsx)")
+        parser.add_argument("file", nargs="?", help="Percorso del file Excel (.xlsx)")
         parser.add_argument(
             "--edizione", type=int, default=None,
             help="PK dell'edizione target (default: edizione aperta più recente).",
@@ -394,8 +400,22 @@ class Command(BaseCommand):
             "--foto-account",
             help="Email account Google Drive (deve essere in DriveCredenziali).",
         )
+        parser.add_argument(
+            "--versione", action="store_true",
+            help="Stampa la versione dell'applicazione e il commit corrente, poi esce.",
+        )
 
     def handle(self, *args, **options):
+        if options["versione"]:
+            from django.conf import settings
+            versione = getattr(settings, "APP_VERSION", "?")
+            commit = getattr(settings, "APP_COMMIT", "?")
+            self.stdout.write(f"{versione} ({commit})")
+            return
+
+        if not options["file"]:
+            raise CommandError("Fornisci il percorso del file Excel oppure usa --versione.")
+
         import openpyxl
 
         from apps.editions.models import Edizione, StatoEdizione
@@ -534,7 +554,13 @@ class Command(BaseCommand):
 
     def _importa_foto(self, wb, edizione, folder_id, account_email,
                       dry_run, verbosity):
+        import io
+
+        from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
+
         from apps.diaries.models import Allegato, StatoSync
+        from apps.diaries.views import _resize_immagine
+        from apps.siteconfig.models import Impostazioni
         from apps.storage_drive.models import DriveCredenziali
         from apps.storage_drive.service import _build_drive_service, assicura_cartelle_diario
 
@@ -546,8 +572,10 @@ class Command(BaseCommand):
                 "Connetti prima l'account tramite /impostazioni/ o /edizioni/<pk>/modifica/."
             ) from None
 
+        max_px: int = Impostazioni.get().allegati_max_px or 1024
         service = _build_drive_service(cred)
         modulo_map = self._build_filename_modulo_map(wb)
+        self.stdout.write(f"  Ridimensionamento immagini: max {max_px}px.")
         self.stdout.write(
             f"\n→ Foto Drive (sorgente: {folder_id}, account: {account_email})…"
         )
@@ -637,24 +665,42 @@ class Command(BaseCommand):
                     )
                     continue
 
-                # Copia il file nella dest. Il file sorgente NON viene mai modificato/spostato/eliminato.
+                # Download → resize → upload.
+                # Il file sorgente NON viene mai modificato/spostato/eliminato.
                 try:
-                    copied = service.files().copy(
-                        fileId=f["id"],
-                        body={"name": filename, "parents": [dest_folder_id]},
+                    buf = io.BytesIO()
+                    dl = MediaIoBaseDownload(
+                        buf, service.files().get_media(fileId=f["id"])
+                    )
+                    done = False
+                    while not done:
+                        _, done = dl.next_chunk()
+                    buf.seek(0)
+
+                    # Usa un oggetto file-like con .name per _resize_immagine
+                    buf.name = filename
+                    buf.content_type = mime
+                    resized_bytes, new_mime, new_name = _resize_immagine(buf, max_px)
+
+                    media = MediaIoBaseUpload(
+                        io.BytesIO(resized_bytes), mimetype=new_mime, resumable=False
+                    )
+                    uploaded = service.files().create(
+                        body={"name": new_name, "parents": [dest_folder_id]},
+                        media_body=media,
                         fields="id,name,size,mimeType",
                     ).execute()
                 except Exception as exc:
-                    self.stdout.write(self.style.ERROR(f"    Errore copia {filename}: {exc}"))
+                    self.stdout.write(self.style.ERROR(f"    Errore upload {filename}: {exc}"))
                     continue
 
                 Allegato.objects.create(
                     diario=diario,
                     modulo=modulo,
-                    nome=copied.get("name", filename),
-                    mime=copied.get("mimeType", ""),
-                    dimensione=int(copied.get("size", 0) or 0),
-                    drive_file_id=copied["id"],
+                    nome=uploaded.get("name", new_name),
+                    mime=uploaded.get("mimeType", new_mime),
+                    dimensione=int(uploaded.get("size", 0) or 0),
+                    drive_file_id=uploaded["id"],
                     stato_sync=StatoSync.CARICATO,
                     caricato_da=None,
                 )
