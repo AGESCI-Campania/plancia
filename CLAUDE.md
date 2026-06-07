@@ -184,6 +184,23 @@ docker compose --env-file .env.prod logs web --tail=30
 
 Backup: `deploy/backup.sh` via cron (`deploy/crontab.example`).
 
+## PDF diari
+
+PDF = moduli 1–5 (CSQ) + Relazione finale CRP (modulo 6). Mai l'esito della valutazione.
+Accessibile solo a CRP, Incaricati EG e Admin — non al Capo Squadriglia.
+
+- **`genera_pdf_diario(diario, include_relazione=True)`** in `apps/exports/service.py`
+- **Lock anti-duplicati**: chiave Redis `pdf_task_lock:{diario_pk}` (TTL 30 min); impostata
+  in `DiarioPdfView.get()`, rilasciata in `finally` nel task.
+- **Log**: `LogTaskExport` (model `apps/exports/models.py`); visibile in Impostazioni.
+- **Compressione immagini**: `_compress_image_for_pdf()` riduce a 480px prima dell'embedding.
+- **Errori**: notifica email al richiedente e agli Admin con traceback.
+
+## Allegati
+
+- Resize automatico al caricamento: `_resize_immagine()` in `apps/diaries/views.py`
+- Dimensione configurabile: `Impostazioni.allegati_max_px` (default 1024px)
+
 ## Funzionalità da sviluppare (non ancora implementate)
 
 - **Generazione massiva PDF diari**: task Celery che genera i PDF di tutti i diari

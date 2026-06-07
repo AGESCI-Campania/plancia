@@ -117,6 +117,23 @@ Il diario passa in stato *Inviato* e da questo momento non è più modificabile
 
 ---
 
+## Scarica il PDF del diario
+
+Dalla pagina di dettaglio del diario (in stato *Inviato* o successivo) è disponibile
+il pulsante **"Scarica PDF"**. Il PDF include:
+
+- **Moduli 1–5** compilati dal Capo Squadriglia (anagrafica, presentazione, imprese, missione)
+- **Relazione finale** compilata dal Capo Reparto (modulo 6)
+
+La generazione del PDF avviene in background tramite un task asincrono: al termine ricevi
+una mail con il link per scaricarlo. Se il PDF è già stato generato in precedenza,
+viene servito direttamente dalla cache su Drive.
+
+> Il Capo Squadriglia **non ha accesso al PDF** — il documento è destinato al Capo Reparto,
+> alla Pattuglia GV e agli Incaricati EG. L'esito della valutazione non compare mai nel PDF.
+
+---
+
 ## Visibilità della valutazione
 
 La valutazione della Pattuglia GV e l'esito finale non sono visibili al Capo Reparto fino a quando

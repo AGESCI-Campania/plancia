@@ -566,12 +566,21 @@ def _allegato_json(a: Allegato) -> dict:
 
 
 class DiarioPdfView(DiarioAccessMixin, View):
-    """GET /diari/<pk>/pdf/ — serve il PDF dalla cache Drive o avvia la generazione async."""
+    """GET /diari/<pk>/pdf/ — serve il PDF dalla cache Drive o avvia la generazione async.
+
+    Il PDF include moduli 1–5 (CSQ) e la Relazione finale CRP (modulo 6).
+    Non accessibile ai Capi Squadriglia: il PDF è destinato a CRP, Incaricati e Admin.
+    """
 
     def get(self, request, pk):
         import io
 
         diario = self._get_diario(pk)
+
+        # CSQ non ha accesso al PDF (il diario è valutato dai capi, non da chi lo compila)
+        if request.user.ruolo == Ruolo.CSQ:
+            messages.error(request, "Il PDF del diario non è disponibile per il Capo Squadriglia.")
+            return redirect("diaries:detail", pk=pk)
 
         # 1. Controlla se esiste già un PDF in cache (DriveFile tipo=PDF)
         from apps.storage_drive.models import DriveFile, TipoFile
@@ -603,10 +612,8 @@ class DiarioPdfView(DiarioAccessMixin, View):
         # 2. Se Drive non configurato: genera sincrono (senza foto, veloce)
         if not diario.edizione.drive_oauth_account:
             try:
-                from apps.accounts.models import Ruolo
                 from apps.exports.service import genera_pdf_diario
-                include_rel = request.user.ruolo != Ruolo.CSQ
-                pdf = genera_pdf_diario(diario, include_relazione=include_rel)
+                pdf = genera_pdf_diario(diario, include_relazione=True)
                 nome = f"Diario_{diario.squadriglia.nome}_{diario.edizione.anno}.pdf"
                 response = HttpResponse(pdf, content_type="application/pdf")
                 response["Content-Disposition"] = f'attachment; filename="{nome}"'
@@ -617,7 +624,21 @@ class DiarioPdfView(DiarioAccessMixin, View):
                 return redirect("diaries:detail", pk=pk)
 
         # 3. Drive configurato ma nessuna cache: avvia task Celery asincrono
+        from django.core.cache import cache
+
         from apps.exports.tasks import _invia_mail_pdf, task_genera_pdf_diario
+
+        lock_key = f"pdf_task_lock:{diario.pk}"
+        if cache.get(lock_key):
+            messages.warning(
+                request,
+                "Il PDF è già in fase di generazione per questa squadriglia. "
+                "Riceverai una mail quando sarà pronto — non serve riavviare.",
+            )
+            return redirect("diaries:detail", pk=pk)
+
+        # Imposta il lock prima di avviare il task (TTL 30 min come sicurezza)
+        cache.set(lock_key, True, 1800)
         _invia_mail_pdf("diario_pdf_in_generazione", request.user.pk, diario)
         task_genera_pdf_diario.delay(diario.pk, request.user.pk)
         messages.info(

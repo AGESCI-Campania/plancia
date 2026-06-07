@@ -42,8 +42,8 @@ gestire i dispositivi TOTP e rigenerare i codici di recupero.
 ### Obbligo MFA per Segreteria e Incaricati EG
 
 Per impostazione predefinita la MFA è obbligatoria anche per **Segreteria** e
-**Incaricati EG**. Un Admin può renderla facoltativa per questi ruoli in
-**Impostazioni → Stato e diagnostica → MFA obbligatoria per Segreteria e Incaricati EG**.
+**Incaricati EG**. Un Admin può renderla facoltativa in
+**Impostazioni → Sicurezza → MFA obbligatoria per Segreteria e Incaricati EG**.
 
 - **Attivato** (default): Segreteria e Incaricati EG devono configurare la MFA al primo accesso.
 - **Disattivato**: Segreteria e Incaricati EG possono accedere senza MFA. Per gli Admin resta sempre obbligatoria.
@@ -197,6 +197,75 @@ di prova da un diario completato e controllando che compaia nella cartella Drive
 - Lo scope richiesto è `https://www.googleapis.com/auth/drive` (accesso completo al
   Drive dell'account autorizzato). Considera di usare un account Google dedicato
   (es. `archivio@agescicampania.it`) per limitare l'esposizione dei file personali.
+
+---
+
+## Pagina Impostazioni
+
+La pagina **Impostazioni** (`/impostazioni/`) è divisa in sezioni indipendenti, ognuna
+con il proprio pulsante **Salva**. Un errore in una sezione non blocca il salvataggio
+delle altre.
+
+![Impostazioni piattaforma](screenshots/16_impostazioni.png)
+
+| Sezione | Contenuto |
+|---|---|
+| **Identità** | Titolo e sottotitolo della piattaforma |
+| **Footer** | Testo HTML del footer (supporta `{{ titolo }}`, `{{ versione }}`, `{{ commit }}`); link laterali |
+| **Posta elettronica** | Modalità invio, backend SMTP / provider transazionale, Gmail OAuth2, test invio |
+| **Sicurezza** | MFA, protezione brute-force (axes) |
+| **Allegati** | Dimensione massima immagini in upload |
+| **Diagnostica** | Manutenzione, debug-toolbar, log; link a Flower e Mailpit |
+
+### Sezione Posta elettronica
+
+![Impostazioni email](screenshots/32_impostazioni_email.png)
+
+- **Modalità invio**: *Invio reale*, *Simulato*, *Simulato + invio reale*, *Mailpit*.
+  In modalità *Simulato + invio reale* le email vengono scritte sia su file che inviate
+  davvero — utile per testare in produzione senza rischiare.
+- **Test SMTP** / **Test provider transazionale**: invia un'email di prova alla tua
+  casella usando il rispettivo backend (ignora la modalità simulato).
+- **Gmail OAuth2**: se collegato, i campi SMTP manuali vengono nascosti e sostituiti
+  dall'autenticazione OAuth2.
+
+### Sezione Sicurezza
+
+![Impostazioni sicurezza](screenshots/33_impostazioni_sicurezza.png)
+
+- **Tentativi prima del blocco** (default 5): dopo quanti tentativi falliti l'IP viene bloccato.
+- **Minuti di blocco automatico** (default 10): il blocco si scioglie automaticamente.
+  0 = blocco permanente fino allo sblocco manuale.
+- **Scadenza tentativi** (default attivo): i tentativi falliti scadono dopo il periodo
+  di blocco e non vengono più conteggiati.
+- **IP bloccati**: lista degli IP attualmente bloccati con possibilità di sblocco singolo
+  o massivo.
+
+### Sezione Allegati
+
+![Impostazioni allegati](screenshots/35_impostazioni_allegati.png)
+
+- **Dimensione massima immagini**: lato maggiore in pixel. Al caricamento, le immagini
+  più grandi vengono ridimensionate e salvate come JPEG quality 85.
+  Il valore si applica agli allegati, non alle immagini nel footer o nei template email.
+
+### Log generazione PDF/Excel
+
+Nella parte bassa della pagina Impostazioni è presente il log degli ultimi 50 task
+di generazione PDF/Excel con stato (completato/errore), messaggio e traceback completo
+(apribile in un modale). Gli errori generano automaticamente una notifica all'utente
+richiedente e agli Admin.
+
+### Dashboard Celery (Flower)
+
+Nella sezione **Diagnostica** c'è il link alla **dashboard Flower** (`/celery/`),
+accessibile solo agli staff. Flower mostra i task attivi, la coda, i worker e la
+cronologia delle esecuzioni in tempo reale.
+
+Per avviare Flower (facoltativo, profilo separato):
+```bash
+COMPOSE_PROFILES=flower docker compose --env-file .env.prod up -d
+```
 
 ---
 

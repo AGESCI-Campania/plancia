@@ -8,10 +8,13 @@ from celery import shared_task
 @shared_task
 def task_genera_pdf_diario(diario_pk: int, utente_pk: int | None = None) -> dict:
     """Genera il PDF del diario, lo carica su Drive e notifica l'utente per email."""
+    from django.core.cache import cache
+
     from apps.diaries.models import Diario
     from apps.exports.models import LogTaskExport
     from apps.exports.service import genera_pdf_diario
 
+    lock_key = f"pdf_task_lock:{diario_pk}"
     diario_str = f"diario pk={diario_pk}"
     utente_str = f"pk={utente_pk}" if utente_pk else ""
 
@@ -21,6 +24,7 @@ def task_genera_pdf_diario(diario_pk: int, utente_pk: int | None = None) -> dict
         ).get(pk=diario_pk)
         diario_str = str(diario.squadriglia)
     except Diario.DoesNotExist:
+        cache.delete(lock_key)
         LogTaskExport.objects.create(
             tipo=LogTaskExport.Tipo.PDF, stato=LogTaskExport.Stato.ERRORE,
             messaggio="Diario non trovato",
@@ -29,16 +33,15 @@ def task_genera_pdf_diario(diario_pk: int, utente_pk: int | None = None) -> dict
         )
         return {"ok": False, "error": "Diario non trovato"}
 
-    include_relazione = True  # default: task asincrono include tutto tranne CSQ
     if utente_pk:
-        from apps.accounts.models import Ruolo, User
+        from apps.accounts.models import User
         u = User.objects.filter(pk=utente_pk).first()
         if u:
             utente_str = f"{u.get_full_name()} <{u.email}>"
-            include_relazione = u.ruolo != Ruolo.CSQ
 
+    # PDF = moduli CSQ (1–5) + relazione CRP (6). Mai la valutazione.
     try:
-        genera_pdf_diario(diario, include_relazione=include_relazione)
+        genera_pdf_diario(diario, include_relazione=True)
     except Exception as exc:
         traceback_str = tb_module.format_exc()
         LogTaskExport.objects.create(
@@ -49,6 +52,8 @@ def task_genera_pdf_diario(diario_pk: int, utente_pk: int | None = None) -> dict
         )
         _notifica_errore_pdf(utente_pk, diario, str(exc), traceback_str)
         return {"ok": False, "error": str(exc)}
+    finally:
+        cache.delete(lock_key)
 
     drive_ok = False
     if diario.edizione.drive_oauth_account:

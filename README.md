@@ -346,5 +346,41 @@ pandoc --defaults pandoc-defaults.yaml \
 
 I PDF sono esclusi dal repository (artefatti generati).
 
+## Changelog
+
+### v1.10.0 (07/06/2026)
+
+**PDF diari**
+- Il PDF include ora la **Relazione finale del Capo Reparto** (modulo 6)
+- Accessibile solo a CRP, Incaricati EG e Admin (non al Capo Squadriglia)
+- Compressione immagini nel PDF (480px) — riduzione dimensione ~80%
+- Lock anti-duplicati: impossibile avviare due task paralleli per lo stesso diario
+- Errori task: notifica all'utente richiedente e agli Admin con traceback; log in Impostazioni
+
+**Allegati**
+- Resize automatico al caricamento (default 1024px, configurabile in Impostazioni → Allegati)
+- Conversione automatica in JPEG quality 85
+
+**Impostazioni**
+- Form per sezione con salvataggio indipendente (fix: la validazione email non bloccava più il salvataggio di altre sezioni)
+- Nuova sezione **Sicurezza**: MFA + protezione brute-force (tentativi, cooloff, scadenza tentativi)
+- Sblocco IP in Impostazioni (lista IP bloccati con sblocco singolo o massivo)
+- Nuova sezione **Allegati**: dimensione massima immagini
+- Fix Gmail OAuth2: i campi SMTP manuali vengono nascosti quando OAuth è attivo
+- Tag template nel footer: `{{ titolo }}`, `{{ sottotitolo }}`, `{{ versione }}`, `{{ commit }}`
+- Bottoni **Test SMTP** e **Test provider transazionale** con feedback errore inline
+- Fix XOAUTH2 doppia codifica (errore Gmail 501 Cannot Decode)
+- Fix formato data "Aggiornato il" (lettere a/l/e interpretate come codici Django)
+
+**Monitoraggio**
+- **Flower** (dashboard Celery): avviabile con `COMPOSE_PROFILES=flower docker compose up -d`; accessibile su `/celery/` per gli staff
+- Comandi console per ispezione task: `celery inspect active`, `celery inspect stats`
+
+**Deploy**
+- Documentato il processo deploy corretto: `build --no-cache` + `up -d` (non `restart`)
+- Gunicorn timeout 30s → 120s
+
+---
+
 ## Licenza
 [MIT](LICENSE) — Copyright © 2026 Andrea Bruno.
