@@ -288,7 +288,36 @@
   </div>
 </div>
 
-{# ── 5. Stato e diagnostica ─────────────────────────────────────────── #}
+{# ── 5. Allegati ────────────────────────────────────────────────────── #}
+<div class="card mb-4 shadow-sm" id="allegati">
+  <div class="card-header d-flex align-items-center gap-2">
+    {% bs_icon "image" size="20" extra_classes="text-success" %}
+    <span class="fw-semibold">Allegati</span>
+  </div>
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="sezione" value="allegati">
+      <div class="row g-3 mb-3">
+        {% include "siteconfig/_campo.html" with field=form_allegati.allegati_max_px col="col-md-3" %}
+        <div class="col-md-9 d-flex align-items-end">
+          <p class="text-muted small mb-1">
+            Le immagini caricate come allegati vengono ridimensionate a questo numero di pixel
+            sul lato maggiore (JPEG, qualità 85). Il PDF include le immagini a 480&nbsp;px
+            per ridurre la dimensione del file.
+          </p>
+        </div>
+      </div>
+      <div class="d-flex justify-content-end">
+        <button type="submit" class="btn btn-primary btn-sm">
+          {% bs_icon "check-lg" size="14" extra_classes="me-1" %}Salva allegati
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── 6. Stato e diagnostica ─────────────────────────────────────────── #}
 <div class="card mb-4 shadow-sm" id="diagnostica">
   <div class="card-header d-flex align-items-center gap-2">
     {% bs_icon "sliders" size="20" extra_classes="text-warning" %}

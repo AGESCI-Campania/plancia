@@ -29,14 +29,16 @@ def task_genera_pdf_diario(diario_pk: int, utente_pk: int | None = None) -> dict
         )
         return {"ok": False, "error": "Diario non trovato"}
 
+    include_relazione = True  # default: task asincrono include tutto tranne CSQ
     if utente_pk:
-        from apps.accounts.models import User
+        from apps.accounts.models import Ruolo, User
         u = User.objects.filter(pk=utente_pk).first()
         if u:
             utente_str = f"{u.get_full_name()} <{u.email}>"
+            include_relazione = u.ruolo != Ruolo.CSQ
 
     try:
-        genera_pdf_diario(diario)
+        genera_pdf_diario(diario, include_relazione=include_relazione)
     except Exception as exc:
         traceback_str = tb_module.format_exc()
         LogTaskExport.objects.create(

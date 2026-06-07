@@ -126,6 +126,15 @@ class SicurezzaForm(forms.ModelForm):
         }
 
 
+class AllegatiForm(forms.ModelForm):
+    class Meta:
+        model = Impostazioni
+        fields = ["allegati_max_px"]
+        widgets = {
+            "allegati_max_px": forms.NumberInput(attrs={**_ctrl, "min": "256", "max": "4096"}),
+        }
+
+
 class DiagnosticaForm(forms.ModelForm):
     class Meta:
         model = Impostazioni
@@ -143,6 +152,7 @@ SEZIONE_FORM: dict[str, type[forms.ModelForm]] = {
     "footer": FooterForm,
     "email": EmailForm,
     "sicurezza": SicurezzaForm,
+    "allegati": AllegatiForm,
     "diagnostica": DiagnosticaForm,
 }
 
@@ -151,6 +161,7 @@ SEZIONE_LABEL: dict[str, str] = {
     "footer": "Footer",
     "email": "Posta elettronica",
     "sicurezza": "Sicurezza",
+    "allegati": "Allegati",
     "diagnostica": "Diagnostica",
 }
 

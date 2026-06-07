@@ -519,6 +519,41 @@ _MIME_CONSENTITI = {"image/jpeg", "image/png", "image/webp", "image/heic", "imag
 _MAX_BYTES = 20 * 1024 * 1024  # 20 MB
 
 
+def _resize_immagine(file_obj, max_px: int) -> tuple[bytes, str, str]:
+    """Ridimensiona l'immagine al lato maggiore max_px usando Pillow.
+
+    Restituisce (bytes_resized, new_mime, new_nome).
+    Se Pillow non riesce ad aprire il file (es. HEIC senza plugin), restituisce l'originale.
+    """
+    import io
+    import os
+
+    from PIL import Image, UnidentifiedImageError
+
+    nome_orig = getattr(file_obj, "name", "foto.jpg")
+
+    try:
+        file_obj.seek(0)
+        img = Image.open(file_obj)
+        img.load()
+    except (UnidentifiedImageError, Exception):
+        file_obj.seek(0)
+        return file_obj.read(), getattr(file_obj, "content_type", "image/jpeg"), nome_orig
+
+    if img.mode not in ("RGB", "L"):
+        img = img.convert("RGB")
+
+    w, h = img.size
+    if max(w, h) > max_px:
+        ratio = max_px / max(w, h)
+        img = img.resize((int(w * ratio), int(h * ratio)), Image.LANCZOS)
+
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=85, optimize=True)
+    nome_base = os.path.splitext(nome_orig)[0]
+    return buf.getvalue(), "image/jpeg", f"{nome_base}.jpg"
+
+
 def _allegato_json(a: Allegato) -> dict:
     return {
         "id": a.pk,
@@ -568,8 +603,10 @@ class DiarioPdfView(DiarioAccessMixin, View):
         # 2. Se Drive non configurato: genera sincrono (senza foto, veloce)
         if not diario.edizione.drive_oauth_account:
             try:
+                from apps.accounts.models import Ruolo
                 from apps.exports.service import genera_pdf_diario
-                pdf = genera_pdf_diario(diario)
+                include_rel = request.user.ruolo != Ruolo.CSQ
+                pdf = genera_pdf_diario(diario, include_relazione=include_rel)
                 nome = f"Diario_{diario.squadriglia.nome}_{diario.edizione.anno}.pdf"
                 response = HttpResponse(pdf, content_type="application/pdf")
                 response["Content-Disposition"] = f'attachment; filename="{nome}"'
@@ -658,14 +695,22 @@ class AllegatoUploadView(DiarioAccessMixin, View):
         if file.size > _MAX_BYTES:
             return JsonResponse({"error": "File troppo grande (max 20 MB)"}, status=400)
 
+        # Ridimensiona l'immagine alla dimensione configurata in Impostazioni
+        from django.core.files.base import ContentFile
+
+        from apps.siteconfig.models import Impostazioni
+        max_px = Impostazioni.get().allegati_max_px or 1024
+        img_bytes, img_mime, img_nome = _resize_immagine(file, max_px)
+        resized = ContentFile(img_bytes, name=img_nome)
+
         drive_configurato = bool(diario.edizione.drive_oauth_account)
         allegato = Allegato.objects.create(
             diario=diario,
             modulo=modulo,
-            nome=file.name,
-            mime=file.content_type,
-            dimensione=file.size,
-            file=file,
+            nome=img_nome,
+            mime=img_mime,
+            dimensione=len(img_bytes),
+            file=resized,
             caricato_da=request.user,
             stato_sync=StatoSync.IN_CODA if drive_configurato else StatoSync.LOCALE,
         )

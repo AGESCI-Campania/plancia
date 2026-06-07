@@ -23,11 +23,37 @@ def _get_pdf_template_html() -> str:
         return path.read_text(encoding="utf-8")
 
 
-def _fetch_foto_drive(allegati, max_count: int = 6, budget_sec: float = 18.0) -> list[dict]:
-    """Scarica le immagini da Drive e restituisce lista di {nome, src} con data URI base64.
+def _compress_image_for_pdf(raw: bytes, mime: str, max_px: int = 480) -> tuple[bytes, str]:
+    """Ridimensiona e comprime l'immagine per l'embedding nel PDF.
 
-    Limita il numero di immagini (max_count) e il tempo totale (budget_sec) per non
-    eccedere il timeout del worker gunicorn (30s).
+    Le immagini nel template sono 120×90pt (~250×188px a 150dpi).
+    480px sul lato maggiore è il doppio della risoluzione di stampa — ottima qualità,
+    dimensione file ridotta dell'80-90% rispetto agli originali.
+    """
+    import io
+
+    from PIL import Image, UnidentifiedImageError
+
+    try:
+        img = Image.open(io.BytesIO(raw))
+        img.load()
+        if img.mode not in ("RGB", "L"):
+            img = img.convert("RGB")
+        w, h = img.size
+        if max(w, h) > max_px:
+            ratio = max_px / max(w, h)
+            img = img.resize((int(w * ratio), int(h * ratio)), Image.LANCZOS)
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=82, optimize=True)
+        return buf.getvalue(), "image/jpeg"
+    except (UnidentifiedImageError, Exception):
+        return raw, mime  # formato non supportato: usa l'originale
+
+
+def _fetch_foto_drive(allegati, max_count: int = 6, budget_sec: float = 60.0) -> list[dict]:
+    """Scarica le immagini da Drive, le comprime per il PDF e restituisce {nome, src} base64.
+
+    Limita il numero di immagini (max_count) e il tempo totale (budget_sec).
     """
     import base64
     import io
@@ -38,7 +64,7 @@ def _fetch_foto_drive(allegati, max_count: int = 6, budget_sec: float = 18.0) ->
 
     for a in allegati[:max_count]:
         if time.monotonic() >= deadline:
-            break  # budget esaurito: le immagini rimanenti vengono saltate
+            break
         if not a.drive_file_id or not a.mime.startswith("image/"):
             continue
         try:
@@ -57,15 +83,21 @@ def _fetch_foto_drive(allegati, max_count: int = 6, budget_sec: float = 18.0) ->
                     break
                 _, done = dl.next_chunk()
             else:
-                b64 = base64.b64encode(buf.getvalue()).decode()
-                foto.append({"nome": a.nome, "src": f"data:{a.mime};base64,{b64}"})
+                raw = buf.getvalue()
+                compressed, out_mime = _compress_image_for_pdf(raw, a.mime)
+                b64 = base64.b64encode(compressed).decode()
+                foto.append({"nome": a.nome, "src": f"data:{out_mime};base64,{b64}"})
         except Exception:
             pass  # immagine non disponibile: la saltiamo nel PDF
     return foto
 
 
-def genera_pdf_diario(diario) -> bytes:
-    """Genera il PDF del diario. Il template non include Relazione né Valutazione (docs §15)."""
+def genera_pdf_diario(diario, include_relazione: bool = False) -> bytes:
+    """Genera il PDF del diario.
+
+    include_relazione: se True include la Relazione finale CRP (modulo 6).
+    Non passare True per i Capi Squadriglia — docs §15.
+    """
     import weasyprint
 
     from apps.diaries.models import Allegato
@@ -73,7 +105,6 @@ def genera_pdf_diario(diario) -> bytes:
 
     imp = Impostazioni.get()
 
-    # Prepara lista imprese con allegati fotografici pre-caricati
     imprese = list(diario.imprese.prefetch_related("posti_azione", "esiti_specialita"))
     all_foto = list(Allegato.objects.filter(
         diario=diario, mime__startswith="image/"
@@ -90,7 +121,10 @@ def genera_pdf_diario(diario) -> bytes:
         [a for a in all_foto if a.modulo == "missione"]
     ) if missione else []
 
-    # Raccolta dati moduli (mai relazione/valutazione nel PDF del CSQ — docs sez. 15)
+    relazione_finale = None
+    if include_relazione:
+        relazione_finale = getattr(diario, "relazione_finale", None)
+
     context = {
         "diario": diario,
         "anagrafica": getattr(diario, "anagrafica", None),
@@ -98,7 +132,7 @@ def genera_pdf_diario(diario) -> bytes:
         "imprese": imprese,
         "missione": missione,
         "missione_foto": missione_foto,
-        # relazione e valutazione deliberatamente escluse
+        "relazione_finale": relazione_finale,
         "titolo_piattaforma": imp.titolo,
         "sottotitolo_piattaforma": imp.sottotitolo,
     }

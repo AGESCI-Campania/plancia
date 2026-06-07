@@ -127,6 +127,16 @@ class Impostazioni(models.Model):
         ),
     )
 
+    # Allegati
+    allegati_max_px = models.PositiveIntegerField(
+        default=1024,
+        verbose_name="dimensione massima immagini (px)",
+        help_text=(
+            "Lato maggiore in pixel delle immagini caricate come allegati. "
+            "Le immagini più grandi vengono ridimensionate automaticamente al salvataggio."
+        ),
+    )
+
     # Stato piattaforma / diagnostica
     manutenzione = models.BooleanField(default=False)
     debug_diagnostico = models.BooleanField(default=False)  # logging verboso (NON ribalta settings.DEBUG)

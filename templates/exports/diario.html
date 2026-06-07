@@ -175,8 +175,41 @@
   {% endif %}
 {% endif %}
 
-{# === FINE PDF SQUADRIGLIA === #}
-{# La Relazione finale CRP e la Valutazione PGV/Incaricato NON compaiono mai in questo PDF. #}
+{% if relazione_finale %}
+<div class="page-break"></div>
+<h2>Relazione finale del Capo Reparto</h2>
+
+{% if relazione_finale.sintesi_impresa_1 %}
+  <h3>Sintesi 1ª impresa</h3>
+  <div class="sezione">{{ relazione_finale.sintesi_impresa_1|linebreaksbr }}</div>
+{% endif %}
+
+{% if relazione_finale.sintesi_impresa_2 %}
+  <h3>Sintesi 2ª impresa</h3>
+  <div class="sezione">{{ relazione_finale.sintesi_impresa_2|linebreaksbr }}</div>
+{% endif %}
+
+{% if relazione_finale.sintesi_missione %}
+  <h3>Sintesi missione</h3>
+  <div class="sezione">{{ relazione_finale.sintesi_missione|linebreaksbr }}</div>
+{% endif %}
+
+{% if relazione_finale.considerazioni %}
+  <h3>Considerazioni finali</h3>
+  <div class="sezione">{{ relazione_finale.considerazioni|linebreaksbr }}</div>
+{% endif %}
+
+{% if relazione_finale.specialita_conquistata is not None %}
+  <div class="sezione">
+    <span class="label">Specialità: </span>
+    {% if relazione_finale.specialita_conquistata %}
+      <span class="badge-conquistata">Conquistata</span>
+    {% else %}
+      <span class="badge-non_conquistata">Non conquistata</span>
+    {% endif %}
+  </div>
+{% endif %}
+{% endif %}
 
 <div class="footer">{{ titolo_piattaforma }} — {{ diario.edizione }} — generato da Plancia</div>
 </body>
