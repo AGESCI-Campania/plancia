@@ -361,12 +361,12 @@
   <div class="d-flex align-items-center gap-3">
     <img src="{% static 'images/icons/icon-192x192.png' %}" width="40" height="40"
          style="border-radius:8px;" alt="">
-    <div>
+    <div id="pwa-banner-text">
       <div class="fw-semibold small">Installa Plancia</div>
       <div class="small opacity-75">Aggiungi alla schermata Home per accesso rapido</div>
     </div>
   </div>
-  <div class="d-flex gap-2 flex-shrink-0">
+  <div class="d-flex gap-2 flex-shrink-0" id="pwa-banner-actions-android">
     <button id="pwa-install-btn" class="btn btn-sm btn-light text-nowrap fw-semibold">
       {% bs_icon "download" size="13" extra_classes="me-1" %}Installa
     </button>
@@ -374,44 +374,68 @@
       Non ora
     </button>
   </div>
+  <div class="d-none gap-2 flex-shrink-0" id="pwa-banner-actions-ios">
+    <button id="pwa-ios-dismiss" class="btn btn-sm btn-outline-light text-nowrap">
+      Ho capito
+    </button>
+  </div>
 </div>
 <script>
 (function(){
   var DISMISS_KEY = 'pwaInstallDismissed';
   var banner = document.getElementById('pwa-install-banner');
-  var installBtn = document.getElementById('pwa-install-btn');
-  var dismissBtn = document.getElementById('pwa-install-dismiss');
   var deferredPrompt = null;
 
   if (localStorage.getItem(DISMISS_KEY)) return;
+  if (window.navigator.standalone) return; // già installata su iOS
 
+  var isIos = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+  var isSafari = /safari/i.test(navigator.userAgent) && !/chrome|crios|fxios/i.test(navigator.userAgent);
+
+  function show(ios) {
+    if (ios) {
+      document.getElementById('pwa-banner-text').querySelector('.small.opacity-75').textContent =
+        'Tocca   poi "Aggiungi a Home"';
+      document.getElementById('pwa-banner-actions-android').classList.add('d-none');
+      var iosActions = document.getElementById('pwa-banner-actions-ios');
+      iosActions.classList.remove('d-none');
+      iosActions.classList.add('d-flex');
+    }
+    banner.classList.remove('d-none');
+    banner.classList.add('d-flex');
+  }
+
+  function dismiss() {
+    localStorage.setItem(DISMISS_KEY, '1');
+    banner.classList.add('d-none');
+    banner.classList.remove('d-flex');
+  }
+
+  // iOS Safari: nessun beforeinstallprompt, mostra istruzioni manuali
+  if (isIos && isSafari) {
+    show(true);
+    document.getElementById('pwa-ios-dismiss').addEventListener('click', dismiss);
+    return;
+  }
+
+  // Android / Chrome: beforeinstallprompt
   window.addEventListener('beforeinstallprompt', function(e) {
     e.preventDefault();
     deferredPrompt = e;
-    banner.classList.remove('d-none');
-    banner.classList.add('d-flex');
+    show(false);
   });
 
-  installBtn.addEventListener('click', function() {
+  document.getElementById('pwa-install-btn').addEventListener('click', function() {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
     deferredPrompt.userChoice.then(function(result) {
-      if (result.outcome === 'accepted') {
-        banner.classList.add('d-none');
-      }
+      if (result.outcome === 'accepted') banner.classList.add('d-none');
       deferredPrompt = null;
     });
   });
 
-  dismissBtn.addEventListener('click', function() {
-    localStorage.setItem(DISMISS_KEY, '1');
-    banner.classList.add('d-none');
-    banner.classList.remove('d-flex');
-  });
-
-  window.addEventListener('appinstalled', function() {
-    banner.classList.add('d-none');
-  });
+  document.getElementById('pwa-install-dismiss').addEventListener('click', dismiss);
+  window.addEventListener('appinstalled', function() { banner.classList.add('d-none'); });
 })();
 </script>
 
