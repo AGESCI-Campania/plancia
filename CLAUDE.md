@@ -199,12 +199,18 @@ docker compose --env-file .env.prod build --no-cache web worker beat
 
 # 3. Ricrea i container con le nuove immagini (l'entrypoint applica le migrate automaticamente)
 docker compose --env-file .env.prod up -d web worker beat
+
+# 4. Aggiorna i file statici sull'host (SEMPRE — il bind mount ./staticfiles sovrascrive
+#    il collectstatic baked nell'immagine, quindi va rieseguito sul container attivo)
+docker compose --env-file .env.prod run --rm web uv run python manage.py collectstatic --noinput
 ```
 
 **Importante:**
 - Usare sempre `up -d` (non `restart`): `restart` riavvia i container con la vecchia immagine senza ricrearli.
 - `build` senza `--no-cache` può usare layer in cache e non includere nuovi file (es. migrazioni).
 - Le migrate vengono applicate automaticamente dall'entrypoint al primo avvio del container.
+- **`collectstatic` va eseguito sempre** (step 4): `./staticfiles` è un bind mount sull'host che
+  persiste tra i deploy e sovrascrive i file statici baked nell'immagine.
 
 ### Verifica post-deploy
 ```bash
