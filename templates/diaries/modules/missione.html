@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load bootstrap_icons %}
 {% block title %}Missione — {{ diario }} — Plancia{% endblock %}
 
 {% block content %}
@@ -26,35 +27,71 @@
       {{ form.data }}
     </div>
     <div class="col-12">
-      <label class="form-label fw-semibold">{{ form.descrizione_svolgimento.label }}</label>
+      <label class="form-label fw-semibold">
+        {{ form.descrizione_svolgimento.label }}
+        <span class="ms-1" data-bs-toggle="tooltip"
+              title="Descrizione e svolgimento della Missione; che obiettivi vi sono stati dati; quali le tecniche usate; quali competenze ha richiesto la missione e come vi siete divisi i posti d'azione; eventuali problemi, ecc.">
+          {% bs_icon "question-circle" size="14" extra_classes="text-muted" %}
+        </span>
+      </label>
       {{ form.descrizione_svolgimento }}
     </div>
   </div>
 
-  <h5 class="border-bottom pb-1 mb-3">Posti d'azione</h5>
-  {{ posti_fs.management_form }}
-  {% for pf in posti_fs %}
-    <div class="row g-2 mb-2 align-items-center">
-      {{ pf.id }}
-      <div class="col">{{ pf.descrizione }}</div>
-      {% if pf.instance.pk %}
-        <div class="col-auto">
-          <div class="form-check">{{ pf.DELETE }}
-            <label class="form-check-label small text-danger">Elimina</label>
-          </div>
-        </div>
-      {% endif %}
-    </div>
-  {% endfor %}
-
-  <div class="mt-4 d-flex gap-2">
+  <div class="mt-2 d-flex gap-2">
     <button type="submit" class="btn btn-primary">Salva</button>
     <a href="{% url 'diaries:detail' diario.pk %}" class="btn btn-outline-secondary">Annulla</a>
   </div>
 </form>
 
+{# ── Foto allegate ─────────────────────────────────────────────────────── #}
+{% if allegati %}
+<div class="mt-4">
+  <h5 class="border-bottom pb-1 mb-3">Foto allegate</h5>
+  <div class="d-flex flex-wrap gap-2">
+    {% for a in allegati %}
+      <div class="position-relative" style="width:110px;">
+        {% if a.mime|slice:":6" == "image/" %}
+          <a href="{% url 'diaries:allegati_preview' diario.pk a.pk %}" target="_blank" rel="noopener">
+            <img src="{% url 'diaries:allegati_preview' diario.pk a.pk %}"
+                 loading="lazy"
+                 style="width:110px;height:90px;object-fit:cover;border-radius:6px;border:1px solid #dee2e6"
+                 alt="{{ a.nome }}">
+          </a>
+        {% else %}
+          <div class="d-flex flex-column align-items-center justify-content-center text-muted text-center"
+               style="width:110px;height:90px;border-radius:6px;border:1px solid #dee2e6;background:#f8f9fa;font-size:.65rem;padding:4px;word-break:break-all">
+            {% bs_icon "file-earmark" size="22" extra_classes="mb-1 text-secondary" %}
+            {{ a.nome|slice:":22" }}
+          </div>
+        {% endif %}
+        {% if puo_eliminare_allegati %}
+          <form method="post" action="{% url 'diaries:allegati_elimina' diario.pk a.pk %}"
+                onsubmit="return confirm('Eliminare questa foto?');"
+                style="position:absolute;top:2px;right:2px;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger btn-sm p-0 d-flex align-items-center justify-content-center"
+                    style="width:22px;height:22px;" title="Elimina foto">
+              {% bs_icon "x" size="14" %}
+            </button>
+          </form>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
 <div class="mt-4"
      data-foto-base-url="{% url 'diaries:allegati_list' diario.pk %}"
      data-foto-modulo="missione"
      data-foto-can-edit="1"></div>
+
+<script>
+(function () {
+  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+    new bootstrap.Tooltip(el);
+  });
+})();
+</script>
 {% endblock %}

@@ -217,11 +217,10 @@ def _import_riga_eg(row: tuple, edizione, dry_run: bool, verbosity: int) -> tupl
                 ruolo_raw = b.get("ruolo", "").lower()
                 sentiero_raw = b.get("sentiero", "").lower()
                 nome_completo = b.get("nome", "").strip()
-                parti = nome_completo.split(" ", 1)
                 MembroSq.objects.create(
                     presentazione=pres,
-                    nome=parti[0] if parti else nome_completo,
-                    cognome=parti[1] if len(parti) > 1 else "",
+                    nome=nome_completo,
+                    cognome="",
                     ruolo=_RUOLO_MAP.get(ruolo_raw, "altro"),
                     sentiero=_SENTIERO_MAP.get(sentiero_raw, "non_specificato"),
                 )
@@ -284,40 +283,46 @@ def _import_impresa(diario, numero: int, row: tuple,
     url_video = _primo_url(_val(row, col_video))
     if not url_video:
         url_video = _primo_url(_val(row, col_foto))
+    # Non importare link Jotform (sono URL temporanei, non contenuto utile)
+    if url_video and url_video.startswith("https://www.jotform.com"):
+        url_video = ""
     imp.link_esterno = url_video[:199] if url_video else ""
     imp.save()
 
-    # Posti d'azione
+    # Posti d'azione: "Nome: chi, Posto d'azione: cosa"
     PostoAzione.objects.filter(impresa=imp).delete()
     for b in _parse_blocchi(_val(row, col_posti)):
-        posto = b.get("posto d'azione", b.get("posto", "")).strip()
-        nome  = b.get("nome", "").strip()
-        if posto:
-            desc = f"{nome} — {posto}" if nome else posto
-            PostoAzione.objects.create(impresa=imp, descrizione=desc[:300])
+        cosa = b.get("posto d'azione", b.get("posto", "")).strip()
+        chi  = b.get("nome", "").strip()
+        if cosa:
+            PostoAzione.objects.create(impresa=imp, chi=chi[:200], cosa=cosa[:300])
 
-    # Specialità individuali
+    # Specialità individuali: "Specialità: nome, Nome: chi, Conquistata: stato"
     EsitoSpecialita.objects.filter(impresa=imp, tipo=TipoEsito.SPECIALITA).delete()
     for b in _parse_blocchi(_val(row, col_specialita)):
-        nome  = b.get("specialità", b.get("nome", "")).strip()
+        specialita_nome = b.get("specialità", "").strip()
+        chi = b.get("nome", "").strip() if specialita_nome else ""
+        nome = specialita_nome or b.get("nome", "").strip()
         stato_raw = b.get("conquistata", "").strip().lower()
         stato = _STATO_SPECIALITA_MAP.get(stato_raw, "in_cammino")
         if nome:
             EsitoSpecialita.objects.create(
                 impresa=imp, tipo=TipoEsito.SPECIALITA,
-                nome=nome, stato=stato,
+                chi=chi, nome=nome, stato=stato,
             )
 
-    # Brevetti
+    # Brevetti: "Brevetto: nome, Nome: chi, Conquistata: stato"
     EsitoSpecialita.objects.filter(impresa=imp, tipo=TipoEsito.BREVETTO).delete()
     for b in _parse_blocchi(_val(row, col_brevetti)):
-        nome  = b.get("brevetto", b.get("nome", "")).strip()
+        brevetto_nome = b.get("brevetto", "").strip()
+        chi = b.get("nome", "").strip() if brevetto_nome else ""
+        nome = brevetto_nome or b.get("nome", "").strip()
         stato_raw = b.get("conquistata", "").strip().lower()
         stato = _STATO_SPECIALITA_MAP.get(stato_raw, "in_cammino")
         if nome:
             EsitoSpecialita.objects.create(
                 impresa=imp, tipo=TipoEsito.BREVETTO,
-                nome=nome, stato=stato,
+                chi=chi, nome=nome, stato=stato,
             )
 
 
@@ -706,7 +711,7 @@ class Command(BaseCommand):
                 )
                 importati += 1
                 if verbosity >= 2:
-                    self.stdout.write(f"    {filename} → {modulo} (copiato: {copied['id']})")
+                    self.stdout.write(f"    {filename} → {modulo} (caricato: {uploaded['id']})")
 
             ok += 1
             dr = " (dry-run)" if dry_run else ""

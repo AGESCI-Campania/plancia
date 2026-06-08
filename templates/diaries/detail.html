@@ -68,12 +68,10 @@
       {% with imp1=imprese|first %}
         {% include "diaries/_modulo_stato.html" with ok=imp1 label="1ª Impresa" url_name="diaries:impresa" pk=diario.pk extra_arg=1 %}
       {% endwith %}
+      {% include "diaries/_modulo_stato.html" with ok=has_imp2 label="2ª Impresa" url_name="diaries:impresa" pk=diario.pk extra_arg=2 %}
       {% if diario.tipo == 'nuovo' %}
-        {% include "diaries/_modulo_stato.html" with ok=has_imp2 label="2ª Impresa" url_name="diaries:impresa" pk=diario.pk extra_arg=2 %}
         {% include "diaries/_modulo_stato.html" with ok=has_missione label="Missione" url_name="diaries:missione" pk=diario.pk %}
       {% else %}
-        <div class="col"><a href="{% url 'diaries:impresa' diario.pk 2 %}" class="text-decoration-none">
-          <div class="p-2 rounded bg-light border text-muted small">2ª Impresa (opz.)</div></a></div>
         <div class="col"><a href="{% url 'diaries:missione' diario.pk %}" class="text-decoration-none">
           <div class="p-2 rounded bg-light border text-muted small">Missione (opz.)</div></a></div>
       {% endif %}

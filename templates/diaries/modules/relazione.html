@@ -23,22 +23,46 @@
   {% csrf_token %}
   <div class="row g-3">
     <div class="col-12">
-      <label class="form-label fw-semibold">{{ form.sintesi_impresa_1.label }}</label>
+      <label class="form-label fw-semibold">
+        {{ form.sintesi_impresa_1.label }}
+        <span class="ms-1" data-bs-toggle="tooltip"
+              title="Sintesi del percorso fatto dalla Squadriglia durante la prima impresa (oggetto, tempi, luoghi, cambiamenti che ti aspettavi in fase progettuale, obiettivi raggiunti, eventuali problematiche).">
+          {% bs_icon "question-circle" size="14" extra_classes="text-muted" %}
+        </span>
+      </label>
       {{ form.sintesi_impresa_1 }}
     </div>
     <div class="col-12">
-      <label class="form-label fw-semibold">{{ form.sintesi_impresa_2.label }}</label>
+      <label class="form-label fw-semibold">
+        {{ form.sintesi_impresa_2.label }}
+        <span class="ms-1" data-bs-toggle="tooltip"
+              title="Sintesi del percorso fatto dalla Squadriglia durante la seconda impresa (oggetto, tempi, luoghi, cambiamenti che ti aspettavi in fase progettuale, obiettivi raggiunti, eventuali problematiche).">
+          {% bs_icon "question-circle" size="14" extra_classes="text-muted" %}
+        </span>
+      </label>
       {{ form.sintesi_impresa_2 }}
     </div>
     <div class="col-12">
-      <label class="form-label fw-semibold">{{ form.sintesi_missione.label }}</label>
+      <label class="form-label fw-semibold">
+        {{ form.sintesi_missione.label }}
+        <span class="ms-1" data-bs-toggle="tooltip"
+              title="Sintesi del percorso fatto dalla Squadriglia durante la missione (obiettivi, tempi, luoghi, cambiamenti, obiettivi raggiunti, eventuali problematiche).">
+          {% bs_icon "question-circle" size="14" extra_classes="text-muted" %}
+        </span>
+      </label>
       {{ form.sintesi_missione }}
     </div>
     <div class="col-12">
-      <label class="form-label fw-semibold">{{ form.considerazioni.label }}</label>
+      <label class="form-label fw-semibold">
+        {{ form.considerazioni.label }}
+        <span class="ms-1" data-bs-toggle="tooltip"
+              title="Alla fine del percorso verso la specialità, le competenze acquisite hanno avuto una ricaduta concreta nella vita di squadriglia/reparto o sono rimaste fini a se stesse? Nella conquista della specialità, i membri della squadriglia hanno acquisito specialità individuali/brevetti di competenza?">
+          {% bs_icon "question-circle" size="14" extra_classes="text-muted" %}
+        </span>
+      </label>
       {{ form.considerazioni }}
     </div>
-    <div class="col-md-4">
+    <div class="col-md-6">
       <label class="form-label fw-semibold">{{ form.specialita_conquistata.label }}</label>
       {{ form.specialita_conquistata }}
     </div>
@@ -49,4 +73,12 @@
     <a href="{% url 'diaries:detail' diario.pk %}" class="btn btn-outline-secondary">Annulla</a>
   </div>
 </form>
+
+<script>
+(function () {
+  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+    new bootstrap.Tooltip(el);
+  });
+})();
+</script>
 {% endblock %}

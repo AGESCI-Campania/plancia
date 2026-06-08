@@ -14,7 +14,6 @@ from apps.diaries.forms import (
     MembroSqFormSet,
     MissioneForm,
     PostoAzioneFormSet,
-    PostoAzioneMissioneFormSet,
     PresentazioneForm,
     RelazioneFinaleForm,
     SpecialitaFormSet,
@@ -224,7 +223,7 @@ class AnagraficaUpdateView(DiarioAccessMixin, View):
         from django.shortcuts import render
 
         diario, anagrafica = self._setup(pk)
-        form = AnagraficaForm(instance=anagrafica, utente=request.user)
+        form = AnagraficaForm(instance=anagrafica, utente=request.user, diario=diario)
         return render(request, self.template_name, {"form": form, "diario": diario})
 
     def post(self, request, pk):
@@ -232,12 +231,57 @@ class AnagraficaUpdateView(DiarioAccessMixin, View):
 
         diario, anagrafica = self._setup(pk)
         self._inizia_se_necessario(diario)
-        form = AnagraficaForm(request.POST, instance=anagrafica, utente=request.user)
+        form = AnagraficaForm(
+            request.POST, instance=anagrafica, utente=request.user, diario=diario
+        )
         if form.is_valid():
             form.save()
+
+            # Salva tipo diario
+            diario.tipo = form.cleaned_data["tipo_diario"]
+            diario.save(update_fields=["tipo"])
+
+            # Rinomina squadriglia se cambiata
+            nuovo_nome = form.cleaned_data.get("squadriglia_nome", "").strip()
+            if nuovo_nome and nuovo_nome != diario.squadriglia.nome:
+                self._rinomina_squadriglia(diario, nuovo_nome)
+
             messages.success(request, "Anagrafica salvata.")
             return redirect("diaries:detail", pk=pk)
         return render(request, self.template_name, {"form": form, "diario": diario})
+
+    @staticmethod
+    def _rinomina_squadriglia(diario, nuovo_nome: str) -> None:
+        """Rinomina la squadriglia nel DB e le cartelle Drive di tutti i suoi diari."""
+        import contextlib
+
+        squadriglia = diario.squadriglia
+        squadriglia.nome = nuovo_nome
+        squadriglia.save(update_fields=["nome"])
+
+        if not diario.edizione.drive_oauth_account:
+            return
+
+        try:
+            from apps.diaries.service import calcola_nome_cartella_diario
+            from apps.storage_drive.service import _build_drive_service, _get_credenziali
+
+            credenziali = _get_credenziali(diario.edizione)
+            service = _build_drive_service(credenziali)
+            nuovo_nome_cartella = calcola_nome_cartella_diario(diario)
+
+            for folder_id in filter(None, [
+                diario.drive_folder_allegati_id,
+                diario.drive_folder_output_id,
+            ]):
+                with contextlib.suppress(Exception):
+                    service.files().update(
+                        fileId=folder_id,
+                        body={"name": nuovo_nome_cartella},
+                        fields="id",
+                    ).execute()
+        except Exception:
+            pass  # Drive non critico: il rename DB è già avvenuto
 
 
 # ---------------------------------------------------------------------------
@@ -298,6 +342,23 @@ class ImpresaUpdateView(DiarioAccessMixin, View):
         impresa, _ = Impresa.objects.get_or_create(diario=diario, numero=numero)
         return diario, impresa
 
+    def _ctx(self, diario, impresa, numero, form, posti_fs, specialita_fs, brevetti_fs):
+        modulo_key = f"impresa_{numero}"
+        allegati = list(diario.allegati.filter(modulo=modulo_key))
+        puo_eliminare = diario.stato in (
+            StatoDiario.NON_INIZIATO, StatoDiario.IN_COMPILAZIONE, StatoDiario.RELAZIONE_FINALE,
+        )
+        return {
+            "form": form,
+            "posti_fs": posti_fs,
+            "specialita_fs": specialita_fs,
+            "brevetti_fs": brevetti_fs,
+            "diario": diario,
+            "numero": numero,
+            "allegati": allegati,
+            "puo_eliminare_allegati": puo_eliminare,
+        }
+
     def get(self, request, pk, numero):
         from django.shortcuts import render
 
@@ -314,18 +375,8 @@ class ImpresaUpdateView(DiarioAccessMixin, View):
             queryset=impresa.esiti_specialita.filter(tipo=TipoEsito.BREVETTO),
             prefix="brevetti",
         )
-        return render(
-            request,
-            self.template_name,
-            {
-                "form": form,
-                "posti_fs": posti_fs,
-                "specialita_fs": specialita_fs,
-                "brevetti_fs": brevetti_fs,
-                "diario": diario,
-                "numero": numero,
-            },
-        )
+        return render(request, self.template_name,
+                      self._ctx(diario, impresa, numero, form, posti_fs, specialita_fs, brevetti_fs))
 
     def post(self, request, pk, numero):
         from django.shortcuts import render
@@ -358,18 +409,8 @@ class ImpresaUpdateView(DiarioAccessMixin, View):
             brevetti_fs.save()
             messages.success(request, f"{numero}ª impresa salvata.")
             return redirect("diaries:detail", pk=pk)
-        return render(
-            request,
-            self.template_name,
-            {
-                "form": form,
-                "posti_fs": posti_fs,
-                "specialita_fs": specialita_fs,
-                "brevetti_fs": brevetti_fs,
-                "diario": diario,
-                "numero": numero,
-            },
-        )
+        return render(request, self.template_name,
+                      self._ctx(diario, impresa, numero, form, posti_fs, specialita_fs, brevetti_fs))
 
 
 # ---------------------------------------------------------------------------
@@ -387,15 +428,24 @@ class MissioneUpdateView(DiarioAccessMixin, View):
         missione, _ = Missione.objects.get_or_create(diario=diario)
         return diario, missione
 
+    def _ctx(self, diario, form):
+        allegati = list(diario.allegati.filter(modulo="missione"))
+        puo_eliminare = diario.stato in (
+            StatoDiario.NON_INIZIATO, StatoDiario.IN_COMPILAZIONE, StatoDiario.RELAZIONE_FINALE,
+        )
+        return {
+            "form": form,
+            "diario": diario,
+            "allegati": allegati,
+            "puo_eliminare_allegati": puo_eliminare,
+        }
+
     def get(self, request, pk):
         from django.shortcuts import render
 
         diario, missione = self._setup(pk)
         form = MissioneForm(instance=missione)
-        posti_fs = PostoAzioneMissioneFormSet(instance=missione)
-        return render(
-            request, self.template_name, {"form": form, "posti_fs": posti_fs, "diario": diario}
-        )
+        return render(request, self.template_name, self._ctx(diario, form))
 
     def post(self, request, pk):
         from django.shortcuts import render
@@ -403,15 +453,11 @@ class MissioneUpdateView(DiarioAccessMixin, View):
         diario, missione = self._setup(pk)
         self._inizia_se_necessario(diario)
         form = MissioneForm(request.POST, instance=missione)
-        posti_fs = PostoAzioneMissioneFormSet(request.POST, instance=missione)
-        if form.is_valid() and posti_fs.is_valid():
+        if form.is_valid():
             form.save()
-            posti_fs.save()
             messages.success(request, "Missione salvata.")
             return redirect("diaries:detail", pk=pk)
-        return render(
-            request, self.template_name, {"form": form, "posti_fs": posti_fs, "diario": diario}
-        )
+        return render(request, self.template_name, self._ctx(diario, form))
 
 
 # ---------------------------------------------------------------------------
@@ -752,9 +798,21 @@ class AllegatoUploadView(DiarioAccessMixin, View):
 class AllegatoDeleteView(DiarioAccessMixin, View):
     """POST /diari/<pk>/allegati/<allegato_pk>/elimina/  →  {ok: true}"""
 
+    def _puo_eliminare(self, diario) -> bool:
+        user = self.request.user
+        if user.is_superuser or user.is_staff_plancia:
+            return True
+        stato = diario.stato
+        if stato in (StatoDiario.NON_INIZIATO, StatoDiario.IN_COMPILAZIONE):
+            return user.ruolo == Ruolo.CSQ
+        # Fino a quando il CRP non ha ancora inviato il diario completo
+        if stato == StatoDiario.RELAZIONE_FINALE:
+            return user.ruolo in (Ruolo.CSQ, Ruolo.CRP)
+        return False
+
     def post(self, request, pk, allegato_pk):
         diario = self._get_diario(pk)
-        if not self._puo_editare(diario):
+        if not self._puo_eliminare(diario):
             return JsonResponse({"error": "Non autorizzato"}, status=403)
         allegato = get_object_or_404(Allegato, pk=allegato_pk, diario=diario)
         if allegato.file:

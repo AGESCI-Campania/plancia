@@ -148,7 +148,11 @@ class Diario(models.Model):
 
     @property
     def moduli_csq_completi(self) -> bool:
-        """True quando tutti i moduli obbligatori CSQ sono compilati."""
+        """True quando tutti i moduli obbligatori CSQ sono compilati.
+
+        Entrambe le imprese (1ª e 2ª) sono obbligatorie per tutti i tipi.
+        La missione è obbligatoria solo per tipo=NUOVO.
+        """
         try:
             ana = self.anagrafica
         except Anagrafica.DoesNotExist:
@@ -159,13 +163,12 @@ class Diario(models.Model):
             return False
         if not (ana and pres):
             return False
-        has_impresa1 = self.imprese.filter(numero=1).exists()
-        if not has_impresa1:
+        if not self.imprese.filter(numero=1).exists():
+            return False
+        if not self.imprese.filter(numero=2).exists():
             return False
         if self.tipo == TipoDiario.NUOVO:
-            has_impresa2 = self.imprese.filter(numero=2).exists()
-            has_missione = hasattr(self, "missione")
-            return has_impresa2 and has_missione
+            return hasattr(self, "missione")
         return True
 
     @property
@@ -259,20 +262,26 @@ class Anagrafica(models.Model):
     diario = models.OneToOneField(
         Diario, on_delete=models.CASCADE, related_name="anagrafica"
     )
-    # Campi referente CRP (read-only per CSQ/CRP — solo Segreteria/Admin/IABR editano email)
-    crp_nome = models.CharField(max_length=120, blank=True, verbose_name="nome CRP")
-    crp_cognome = models.CharField(max_length=120, blank=True, verbose_name="cognome CRP")
-    crp_email = models.EmailField(blank=True, verbose_name="email CRP")
-    crp_cell = models.CharField(max_length=30, blank=True, verbose_name="cellulare CRP")
+    # Campi referente Capo Reparto (email solo staff)
+    crp_nome = models.CharField(max_length=120, blank=True, verbose_name="nome Capo Reparto")
+    crp_cognome = models.CharField(max_length=120, blank=True, verbose_name="cognome Capo Reparto")
+    crp_email = models.EmailField(blank=True, verbose_name="email Capo Reparto")
+    crp_cell = models.CharField(max_length=30, blank=True, verbose_name="cellulare Capo Reparto")
+
+    # Campi referente Capo Squadriglia
+    csq_nome = models.CharField(max_length=120, blank=True, verbose_name="nome Capo Squadriglia")
+    csq_cognome = models.CharField(max_length=120, blank=True, verbose_name="cognome Capo Squadriglia")
+    csq_email = models.EmailField(blank=True, verbose_name="email Capo Squadriglia")
+    csq_cell = models.CharField(max_length=30, blank=True, verbose_name="cellulare Capo Squadriglia")
 
     # Specialità e partecipazione
     specialita = models.CharField(
         max_length=120, blank=True, verbose_name="specialità di squadriglia",
         choices=[("", "— Scegli —")] + [(s, s) for s in SPECIALITA_SQUADRIGLIA],
     )
-    partecipa_evento = models.BooleanField(default=True, verbose_name="partecipa all'evento GV")
+    partecipa_evento = models.BooleanField(default=True, verbose_name="partecipa all'evento Guidoncini Verdi")
 
-    # Preseminazione da import Evento (docs §14)
+    # Precompilazione da import Evento (docs §14)
     desc_prima_impresa = models.TextField(blank=True, verbose_name="descrizione 1ª impresa (da import)")
     desc_seconda_impresa = models.TextField(blank=True, verbose_name="descrizione 2ª impresa (da import)")
     tecniche = models.TextField(blank=True, verbose_name="tecniche da acquisire (da import)")
@@ -328,8 +337,8 @@ class MembroSq(models.Model):
     presentazione = models.ForeignKey(
         Presentazione, on_delete=models.CASCADE, related_name="membri"
     )
-    nome = models.CharField(max_length=60)
-    cognome = models.CharField(max_length=60)
+    nome = models.CharField(max_length=120)
+    cognome = models.CharField(max_length=60, blank=True, default="")
     ruolo = models.CharField(
         max_length=20, blank=True, verbose_name="ruolo in squadriglia",
         choices=RuoloSq.choices,
@@ -339,12 +348,12 @@ class MembroSq(models.Model):
     )
 
     class Meta:
-        ordering = ["cognome", "nome"]
+        ordering = ["nome"]
         verbose_name = "membro squadriglia"
         verbose_name_plural = "membri squadriglia"
 
     def __str__(self) -> str:
-        return f"{self.cognome} {self.nome}"
+        return self.nome
 
 
 # ---------------------------------------------------------------------------
@@ -390,14 +399,17 @@ class PostoAzione(models.Model):
     """Posto d'azione legato a un'impresa."""
 
     impresa = models.ForeignKey(Impresa, on_delete=models.CASCADE, related_name="posti_azione")
-    descrizione = models.CharField(max_length=300)
+    chi = models.CharField(max_length=200, blank=True, verbose_name="chi")
+    cosa = models.CharField(max_length=300, blank=True, verbose_name="cosa")
+    # Mantenuto per compatibilità con i dati pre-migrazione; non più usato nell'UI
+    descrizione = models.CharField(max_length=300, blank=True, default="")
 
     class Meta:
         verbose_name = "posto d'azione"
         verbose_name_plural = "posti d'azione"
 
     def __str__(self) -> str:
-        return self.descrizione[:60]
+        return f"{self.chi} — {self.cosa}"[:60] if self.chi or self.cosa else self.descrizione[:60]
 
 
 class EsitoSpecialita(models.Model):
@@ -410,6 +422,7 @@ class EsitoSpecialita(models.Model):
         max_length=20, choices=TipoEsito.choices, default=TipoEsito.SPECIALITA,
         verbose_name="tipo",
     )
+    chi = models.CharField(max_length=120, blank=True, verbose_name="chi")
     nome = models.CharField(max_length=120, verbose_name="nome")
     stato = models.CharField(
         max_length=20, choices=StatoSpecialita.choices, default=StatoSpecialita.IN_CAMMINO

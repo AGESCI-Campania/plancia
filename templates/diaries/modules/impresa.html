@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load bootstrap_icons %}
 {% block title %}{{ numero }}ª Impresa — {{ diario }} — Plancia{% endblock %}
 
 {% block content %}
@@ -30,82 +31,234 @@
       {{ form.data_fine }}
     </div>
     <div class="col-12">
-      <label class="form-label fw-semibold">{{ form.perche.label }}</label>
+      <label class="form-label fw-semibold">
+        {{ form.perche.label }}
+        <span class="ms-1" data-bs-toggle="tooltip"
+              title="Descriveteci perché avete deciso di fare questa impresa: cosa vi piaceva, cosa vi ha spinto a farla, ecc.">
+          {% bs_icon "question-circle" size="14" extra_classes="text-muted" %}
+        </span>
+      </label>
       {{ form.perche }}
     </div>
     <div class="col-12">
-      <label class="form-label fw-semibold">{{ form.come.label }}</label>
+      <label class="form-label fw-semibold">
+        {{ form.come.label }}
+        <span class="ms-1" data-bs-toggle="tooltip"
+              title="Come avete progettato il vostro lavoro, come avete acquisito le competenze necessarie e quali sono, come vi siete divisi i posti d'azione in squadriglia, ecc.">
+          {% bs_icon "question-circle" size="14" extra_classes="text-muted" %}
+        </span>
+      </label>
       {{ form.come }}
     </div>
     <div class="col-12">
-      <label class="form-label fw-semibold">{{ form.cosa.label }}</label>
+      <label class="form-label fw-semibold">
+        {{ form.cosa.label }}
+        <span class="ms-1" data-bs-toggle="tooltip"
+              title="Quello che avete fatto per realizzare l'impresa, dove l'avete realizzata e tutte le informazioni utili per poterci far comprendere il vostro lavoro.">
+          {% bs_icon "question-circle" size="14" extra_classes="text-muted" %}
+        </span>
+      </label>
       {{ form.cosa }}
     </div>
     <div class="col-12">
-      <label class="form-label">{{ form.link_esterno.label }}</label>
+      <label class="form-label">
+        {{ form.link_esterno.label }}
+        <span class="ms-1" data-bs-toggle="tooltip"
+              title="Se avete realizzato un video o avete del materiale da condividere, inserite qui il link a YouTube / OneDrive / Google Drive / ecc. per poterlo visionare.">
+          {% bs_icon "question-circle" size="14" extra_classes="text-muted" %}
+        </span>
+      </label>
       {{ form.link_esterno }}
-      <div class="form-text">URL a video o materiale esterno (opzionale)</div>
     </div>
   </div>
 
-  <h5 class="border-bottom pb-1 mb-3">Posti d'azione</h5>
+  {# ── Posti d'azione ─────────────────────────────────────────────────── #}
+  <h5 class="border-bottom pb-1 mb-2">Posti d'azione</h5>
+  <p class="text-muted small mb-2">Per ogni posto d'azione indicate chi lo ha svolto e cosa ha fatto.</p>
   {{ posti_fs.management_form }}
-  {% for pf in posti_fs %}
-    <div class="row g-2 mb-2 align-items-center">
-      {{ pf.id }}
-      <div class="col">{{ pf.descrizione }}</div>
-      {% if pf.instance.pk %}
-        <div class="col-auto">
-          <div class="form-check">{{ pf.DELETE }}
-            <label class="form-check-label small text-danger">Elimina</label>
-          </div>
+  <div class="row g-2 mb-1 d-none d-md-flex">
+    <div class="col-md-4"><span class="form-label small fw-semibold">Chi</span></div>
+    <div class="col-md-6"><span class="form-label small fw-semibold">Cosa</span></div>
+    <div class="col-md-2"></div>
+  </div>
+  <div id="posti-container">
+    {% for pf in posti_fs %}
+      <div class="formset-row row g-2 mb-2 align-items-center">
+        {{ pf.id }}
+        <div class="col-md-4">{{ pf.chi }}{% for e in pf.chi.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}</div>
+        <div class="col-md-6">{{ pf.cosa }}{% for e in pf.cosa.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}</div>
+        <div class="col-md-2 text-end">
+          {% if pf.instance.pk %}
+            {{ pf.DELETE }}
+            <label class="form-check-label small text-danger" for="{{ pf.DELETE.id_for_label }}" title="Elimina">{% bs_icon "trash" size="14" %}</label>
+          {% endif %}
         </div>
-      {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+  <template id="empty-posto-form">
+    <div class="formset-row row g-2 mb-2 align-items-center">
+      <div style="display:none">{{ posti_fs.empty_form.id }}</div>
+      <div class="col-md-4">{{ posti_fs.empty_form.chi }}</div>
+      <div class="col-md-6">{{ posti_fs.empty_form.cosa }}</div>
+      <div class="col-md-2"></div>
     </div>
-  {% endfor %}
+  </template>
+  <button type="button" class="btn btn-outline-secondary btn-sm mb-4" data-add-to="posti-container" data-tmpl="empty-posto-form" data-prefix="{{ posti_fs.prefix }}">
+    {% bs_icon "plus-lg" size="14" extra_classes="me-1" %}Aggiungi posto d'azione
+  </button>
 
-  <h5 class="border-bottom pb-1 mb-3 mt-4">Specialità individuali</h5>
+  {# ── Specialità individuali ─────────────────────────────────────────── #}
+  <h5 class="border-bottom pb-1 mb-2 mt-2">Specialità individuali</h5>
+  <p class="text-muted small mb-2">Specialità individuali conquistate, non conquistate o in cammino durante questa impresa.</p>
   {{ specialita_fs.management_form }}
-  {% for sf in specialita_fs %}
-    <div class="row g-2 mb-2 align-items-center">
-      {{ sf.id }}{{ sf.tipo }}
-      <div class="col-md-7">{{ sf.nome }}</div>
-      <div class="col-md-3">{{ sf.stato }}</div>
-      {% if sf.instance.pk %}
-        <div class="col-auto">
-          <div class="form-check">{{ sf.DELETE }}
-            <label class="form-check-label small text-danger">Elimina</label>
-          </div>
+  <div class="row g-2 mb-1 d-none d-md-flex">
+    <div class="col-md-3"><span class="form-label small fw-semibold">Chi</span></div>
+    <div class="col-md-5"><span class="form-label small fw-semibold">Specialità</span></div>
+    <div class="col-md-2"><span class="form-label small fw-semibold">Stato</span></div>
+    <div class="col-md-2"></div>
+  </div>
+  <div id="specialita-container">
+    {% for sf in specialita_fs %}
+      <div class="formset-row row g-2 mb-2 align-items-center">
+        {{ sf.id }}{{ sf.tipo }}
+        <div class="col-md-3">{{ sf.chi }}</div>
+        <div class="col-md-5">{{ sf.nome }}</div>
+        <div class="col-md-2">{{ sf.stato }}</div>
+        <div class="col-md-2 text-end">
+          {% if sf.instance.pk %}
+            {{ sf.DELETE }}
+            <label class="form-check-label small text-danger" for="{{ sf.DELETE.id_for_label }}" title="Elimina">{% bs_icon "trash" size="14" %}</label>
+          {% endif %}
         </div>
-      {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+  <template id="empty-specialita-form">
+    <div class="formset-row row g-2 mb-2 align-items-center">
+      <div style="display:none">{{ specialita_fs.empty_form.id }}{{ specialita_fs.empty_form.tipo }}</div>
+      <div class="col-md-3">{{ specialita_fs.empty_form.chi }}</div>
+      <div class="col-md-5">{{ specialita_fs.empty_form.nome }}</div>
+      <div class="col-md-2">{{ specialita_fs.empty_form.stato }}</div>
+      <div class="col-md-2"></div>
     </div>
-  {% endfor %}
+  </template>
+  <button type="button" class="btn btn-outline-secondary btn-sm mb-4" data-add-to="specialita-container" data-tmpl="empty-specialita-form" data-prefix="{{ specialita_fs.prefix }}">
+    {% bs_icon "plus-lg" size="14" extra_classes="me-1" %}Aggiungi specialità
+  </button>
 
-  <h5 class="border-bottom pb-1 mb-3 mt-4">Brevetti di competenza</h5>
+  {# ── Brevetti di competenza ─────────────────────────────────────────── #}
+  <h5 class="border-bottom pb-1 mb-2">Brevetti di competenza</h5>
+  <p class="text-muted small mb-2">Brevetti di competenza conquistati, non conquistati o in cammino durante questa impresa.</p>
   {{ brevetti_fs.management_form }}
-  {% for bf in brevetti_fs %}
-    <div class="row g-2 mb-2 align-items-center">
-      {{ bf.id }}{{ bf.tipo }}
-      <div class="col-md-7">{{ bf.nome }}</div>
-      <div class="col-md-3">{{ bf.stato }}</div>
-      {% if bf.instance.pk %}
-        <div class="col-auto">
-          <div class="form-check">{{ bf.DELETE }}
-            <label class="form-check-label small text-danger">Elimina</label>
-          </div>
+  <div class="row g-2 mb-1 d-none d-md-flex">
+    <div class="col-md-3"><span class="form-label small fw-semibold">Chi</span></div>
+    <div class="col-md-5"><span class="form-label small fw-semibold">Brevetto</span></div>
+    <div class="col-md-2"><span class="form-label small fw-semibold">Stato</span></div>
+    <div class="col-md-2"></div>
+  </div>
+  <div id="brevetti-container">
+    {% for bf in brevetti_fs %}
+      <div class="formset-row row g-2 mb-2 align-items-center">
+        {{ bf.id }}{{ bf.tipo }}
+        <div class="col-md-3">{{ bf.chi }}</div>
+        <div class="col-md-5">{{ bf.nome }}</div>
+        <div class="col-md-2">{{ bf.stato }}</div>
+        <div class="col-md-2 text-end">
+          {% if bf.instance.pk %}
+            {{ bf.DELETE }}
+            <label class="form-check-label small text-danger" for="{{ bf.DELETE.id_for_label }}" title="Elimina">{% bs_icon "trash" size="14" %}</label>
+          {% endif %}
         </div>
-      {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+  <template id="empty-brevetto-form">
+    <div class="formset-row row g-2 mb-2 align-items-center">
+      <div style="display:none">{{ brevetti_fs.empty_form.id }}{{ brevetti_fs.empty_form.tipo }}</div>
+      <div class="col-md-3">{{ brevetti_fs.empty_form.chi }}</div>
+      <div class="col-md-5">{{ brevetti_fs.empty_form.nome }}</div>
+      <div class="col-md-2">{{ brevetti_fs.empty_form.stato }}</div>
+      <div class="col-md-2"></div>
     </div>
-  {% endfor %}
+  </template>
+  <button type="button" class="btn btn-outline-secondary btn-sm mb-4" data-add-to="brevetti-container" data-tmpl="empty-brevetto-form" data-prefix="{{ brevetti_fs.prefix }}">
+    {% bs_icon "plus-lg" size="14" extra_classes="me-1" %}Aggiungi brevetto
+  </button>
 
-  <div class="mt-4 d-flex gap-2">
+  <div class="mt-2 d-flex gap-2">
     <button type="submit" class="btn btn-primary">Salva</button>
     <a href="{% url 'diaries:detail' diario.pk %}" class="btn btn-outline-secondary">Annulla</a>
   </div>
 </form>
 
+{# ── Foto allegate ─────────────────────────────────────────────────────── #}
+{% if allegati %}
+<div class="mt-4">
+  <h5 class="border-bottom pb-1 mb-3">Foto allegate</h5>
+  <div class="d-flex flex-wrap gap-2">
+    {% for a in allegati %}
+      <div class="position-relative" style="width:110px;">
+        {% if a.mime|slice:":6" == "image/" %}
+          <a href="{% url 'diaries:allegati_preview' diario.pk a.pk %}" target="_blank" rel="noopener">
+            <img src="{% url 'diaries:allegati_preview' diario.pk a.pk %}"
+                 loading="lazy"
+                 style="width:110px;height:90px;object-fit:cover;border-radius:6px;border:1px solid #dee2e6"
+                 alt="{{ a.nome }}">
+          </a>
+        {% else %}
+          <div class="d-flex flex-column align-items-center justify-content-center text-muted text-center"
+               style="width:110px;height:90px;border-radius:6px;border:1px solid #dee2e6;background:#f8f9fa;font-size:.65rem;padding:4px;word-break:break-all">
+            {% bs_icon "file-earmark" size="22" extra_classes="mb-1 text-secondary" %}
+            {{ a.nome|slice:":22" }}
+          </div>
+        {% endif %}
+        {% if puo_eliminare_allegati %}
+          <form method="post" action="{% url 'diaries:allegati_elimina' diario.pk a.pk %}"
+                onsubmit="return confirm('Eliminare questa foto?');"
+                style="position:absolute;top:2px;right:2px;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger btn-sm p-0 d-flex align-items-center justify-content-center"
+                    style="width:22px;height:22px;" title="Elimina foto">
+              {% bs_icon "x" size="14" %}
+            </button>
+          </form>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
 <div class="mt-4"
      data-foto-base-url="{% url 'diaries:allegati_list' diario.pk %}"
      data-foto-modulo="impresa_{{ numero }}"
      data-foto-can-edit="1"></div>
+
+<script>
+(function () {
+  // Tooltip
+  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+    new bootstrap.Tooltip(el);
+  });
+
+  // Aggiungi riga generica per tutti i formset della pagina
+  document.querySelectorAll('[data-add-to]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var containerId = btn.dataset.addTo;
+      var tmplId = btn.dataset.tmpl;
+      var prefix = btn.dataset.prefix;
+      var totalId = 'id_' + prefix + '-TOTAL_FORMS';
+      var totalEl = document.getElementById(totalId);
+      var idx = parseInt(totalEl.value);
+      var tmpl = document.getElementById(tmplId);
+      var html = tmpl.innerHTML.replace(/__prefix__/g, idx);
+      var wrap = document.createElement('div');
+      wrap.innerHTML = html;
+      document.getElementById(containerId).appendChild(wrap.firstElementChild);
+      totalEl.value = idx + 1;
+    });
+  });
+})();
+</script>
 {% endblock %}
