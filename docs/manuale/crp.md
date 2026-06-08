@@ -97,15 +97,19 @@ la propria parte, il modulo 6 risulta bloccato.
 
 Compila:
 
-- **Sintesi 1ª impresa** — lettura del lavoro svolto
-- **Sintesi 2ª impresa** — se presente
-- **Sintesi missione**
-- **Considerazioni finali** — valutazione complessiva del cammino della squadriglia
-- **Specialità conquistata** — Sì / No / Non ancora deciso
+- **Sintesi 1ª impresa** — percorso fatto dalla squadriglia (oggetto, tempi, luoghi, obiettivi raggiunti, eventuali problematiche)
+- **Sintesi 2ª impresa** — come sopra, se presente
+- **Sintesi missione** — percorso durante la missione, se presente
+- **Considerazioni finali** — le competenze acquisite hanno avuto ricaduta concreta? I membri hanno conquistato specialità/brevetti?
+- **Ritieni che la specialità di squadriglia sia stata conquistata?** — Sì / No / Non ancora deciso
+
+I campi hanno suggerimenti (tooltip ⓘ) che guidano la compilazione.
 
 ![Relazione finale](screenshots/11_relazione_finale.png)
 
 > Questo modulo è riservato. Il Capo Squadriglia non può vederlo né accedervi in nessuna circostanza.
+
+> Puoi eliminare le foto allegate alle imprese e alla missione finché non hai ancora inviato il diario allo staff.
 
 ---
 
@@ -127,7 +131,8 @@ il pulsante **"Scarica PDF"**. Il PDF include:
 
 La generazione del PDF avviene in background tramite un task asincrono: al termine ricevi
 una mail con il link per scaricarlo. Se il PDF è già stato generato in precedenza,
-viene servito direttamente dalla cache su Drive.
+viene servito direttamente dalla cache su Drive. Ogni rigenerazione sostituisce il file
+precedente su Drive (la cartella di output mantiene sempre una sola versione).
 
 > Il Capo Squadriglia **non ha accesso al PDF** — il documento è destinato al Capo Reparto,
 > alla Pattuglia GV e agli Incaricati EG. L'esito della valutazione non compare mai nel PDF.

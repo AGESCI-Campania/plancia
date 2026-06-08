@@ -50,6 +50,9 @@ Dopo il login, la home page mostra l'edizione attiva con un riepilogo dello stat
 ## Lista diari
 
 Dalla voce **Diari** nella barra di navigazione accedi all'elenco dei diari della tua squadriglia.
+I filtri in cima alla tabella (Zona, Gruppo, Specialità, Stato, Tipo) sono **a cascata**: selezionando
+un valore, gli altri menu si aggiornano automaticamente mostrando solo le opzioni presenti nei
+diari ancora visibili.
 
 ![Lista diari](screenshots/03_diari_lista.png)
 
@@ -68,22 +71,49 @@ Quando tutti i moduli obbligatori sono completati, compare il pulsante **"Invia 
 
 ## Modulo 1 — Anagrafica
 
-Inserisci i dati del Capo Reparto di riferimento e seleziona la **specialità di squadriglia** dal menu a tendina (12 specialità ufficiali del regolamento E/G, Allegato 3).
+### Nome squadriglia e tipo partecipazione
 
-Il campo **Partecipa all'evento GV** indica se la squadriglia sarà presente all'evento finale.
+Puoi modificare il **nome della squadriglia** direttamente dal modulo: la modifica aggiorna
+anche i nomi delle cartelle su Google Drive (allegati e output).
+
+Seleziona il **tipo di partecipazione**:
+- **Nuovo** — la squadriglia partecipa ai Guidoncini Verdi per la prima volta
+- **Rinnovo** — la squadriglia ha già conquistato la specialità in edizioni precedenti
+
+> Per i diari di tipo **Rinnovo** la 2ª impresa e la missione sono facoltative.
+> Per i diari di tipo **Nuovo** sono tutti e tre obbligatori per poter inviare.
+
+### Dati Capo Reparto e Capo Squadriglia
+
+Compila nome, cognome, email e cellulare del **Capo Reparto** e del **Capo Squadriglia**.
+L'email è modificabile solo dallo staff; il resto è editabile da tutti.
+
+### Specialità e partecipazione
+
+Seleziona la **specialità di squadriglia** dal menu (12 specialità ufficiali, Allegato 3 del
+regolamento E/G) e indica se la squadriglia **partecipa all'evento Guidoncini Verdi**.
+
+### Note da import (precompilazione)
+
+La sezione finale mostra le descrizioni delle imprese e le tecniche precompilate dall'import
+Evento effettuato dalla Segreteria. Questi campi sono **in sola lettura** — non modificabili.
 
 ![Modulo Anagrafica](screenshots/05_modulo_anagrafica.png)
-
-> Le note da import (descrizione imprese, tecniche) vengono precompilate dall'import Evento effettuato dalla Segreteria — sono in sola lettura.
 
 ---
 
 ## Modulo 2 — Presentazione squadriglia
 
-Descrivi brevemente cosa sa fare la tua squadriglia, poi inserisci l'elenco dei **membri** con:
+Descrivi brevemente cosa sa fare la tua squadriglia, poi inserisci l'elenco dei **membri**.
 
+Per ogni membro indica:
+- **Nome e cognome** (un unico campo)
 - **Ruolo**: Capo Squadriglia, Vice Capo Squadriglia, Squadrigliere, Tutti gli altri
 - **Sentiero**: Scoperta, Competenza o Responsabilità
+
+Il modulo mostra inizialmente tre righe (Capo Squadriglia, Vice Capo Squadriglia,
+Squadrigliere). Usa il pulsante **"Aggiungi membro"** per inserire ulteriori membri.
+Il pulsante con l'icona cestino sulla destra elimina la riga corrispondente.
 
 ![Modulo Presentazione](screenshots/06_modulo_presentazione.png)
 
@@ -91,20 +121,36 @@ Descrivi brevemente cosa sa fare la tua squadriglia, poi inserisci l'elenco dei 
 
 ## Modulo 3 — 1ª Impresa
 
-Compila il titolo, le date e descrivi l'impresa secondo i tre campi:
+Compila il titolo, le date e descrivi l'impresa nei tre campi:
 
-- **Perché**: motivazione e obiettivi
-- **Come**: modalità e attività svolte
-- **Cosa**: risultati e prodotti dell'impresa
+- **Perché** — descrivete perché avete scelto questa impresa: cosa vi piaceva, cosa vi ha spinto a farla
+- **Come** — come avete progettato il lavoro, le competenze acquisite, come vi siete divisi i posti d'azione
+- **Cosa** — cosa avete fatto, dove, tutte le informazioni utili a far comprendere il vostro lavoro
 
-Aggiungi i **Posti d'azione** della squadriglia per questa impresa.
+Se avete un video o materiale da condividere (YouTube, OneDrive, Google Drive…) inserite il link nel campo **Link esterno**.
 
-Nella sezione **Specialità individuali** seleziona le specialità (Allegato 2) che i ragazzi
-stanno conquistando con questa impresa, indicando lo stato (**In cammino** / **Conquistata** /
-**Non conquistata**). Nella sezione **Brevetti di competenza** fai lo stesso per i brevetti
-(Allegato 4).
+### Posti d'azione
 
-Puoi allegare **foto** dell'impresa direttamente dalla pagina.
+Ogni posto d'azione ha due campi:
+- **Chi** — il nome del membro che lo ha svolto
+- **Cosa** — la descrizione del posto d'azione
+
+Usa il pulsante **"Aggiungi posto d'azione"** per inserire più righe.
+
+### Specialità individuali e Brevetti di competenza
+
+Per ogni specialità o brevetto indica:
+- **Chi** — il membro della squadriglia
+- **Specialità / Brevetto** — dal menu a tendina (elenco ufficiale Allegato 2 o 4)
+- **Stato** — In cammino / Conquistata / Non conquistata
+
+Usa i pulsanti **"Aggiungi specialità"** e **"Aggiungi brevetto"** per inserire più voci.
+
+### Foto
+
+Sotto al modulo trovi le foto già allegate con la possibilità di eliminarle (fino a quando
+il Capo Reparto non ha inviato il diario). Per aggiungere nuove foto usa la sezione caricamento
+che compare a fondo pagina.
 
 ![Modulo 1ª Impresa](screenshots/07_modulo_impresa1.png)
 
@@ -121,9 +167,11 @@ ma sempre compilabile.
 
 ## Modulo 5 — Missione
 
-Inserisci il titolo, la data e la descrizione dello svolgimento della missione.
-Aggiungi i **Posti d'azione** della squadriglia durante la missione.
-Puoi allegare foto anche qui.
+Inserisci il titolo, la data e la **descrizione dello svolgimento** della missione: obiettivi
+ricevuti, tecniche usate, competenze richieste, eventuali problemi incontrati.
+
+Puoi allegare foto anche qui; le foto caricate sono visibili con possibilità di eliminazione
+fino all'invio del diario da parte del Capo Reparto.
 
 ![Modulo Missione](screenshots/09_modulo_missione.png)
 

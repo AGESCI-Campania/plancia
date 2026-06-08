@@ -84,7 +84,18 @@ Context processor `impostazioni` inietta `Impostazioni` (singleton) in ogni temp
 - **`AssegnazionePGV`** ha FK verso `Valutazione` (non `Diario`); `related_name="assegnazioni_pgv"`
   è su `Valutazione` — usare `valutazione.assegnazioni_pgv`.
 - **`select_related("utente")`** (non `"user"`) nel queryset Socio: il reverse accessor è `utente`.
-- **`Anagrafica`**: non ha `email_contatto` né `cell_contatto` (rimossi — migrazione `0004`).
+- **`Anagrafica`**: ha `crp_*` e `csq_*` (nome, cognome, email, cell). Non ha `email_contatto` né
+  `cell_contatto` (rimossi — migrazione `0004`). `tipo_diario` non è un campo di Anagrafica: sta
+  su `Diario.tipo`; in `AnagraficaForm` è gestito come campo extra non-model, salvato nella view.
+- **`PostoAzione`**: i campi attivi sono `chi` (max 200) e `cosa` (max 300). Il vecchio campo
+  `descrizione` esiste ancora per compatibilità (blank=True) ma non è più usato nell'UI né
+  nell'import. La migrazione `0009` ha già diviso i dati esistenti.
+- **`EsitoSpecialita`**: ha il campo `chi` (max 120, blank=True) per indicare il membro della
+  squadriglia a cui è associata la specialità o il brevetto.
+- **`MembroSq`**: `cognome` è blank=True/default="" — l'UI usa solo `nome` (campo unico "Nome e
+  cognome"). L'ordinamento è su `["nome"]`. Non usare `cognome` in nuove funzionalità.
+- **`Diario.moduli_csq_completi`**: per NUOVO richiede impresa1 + impresa2 + missione; per
+  RINNOVO richiede solo impresa1 (impresa2 e missione sono facoltative).
 - **`Socio.provvisorio`**: CRP creati automaticamente da `import_squadriglie` quando l'email non
   corrisponde; codice socio `tmpNNNNN`. Vengono sostituiti dalla riconciliazione import.
 
@@ -117,6 +128,12 @@ Context processor `impostazioni` inietta `Impostazioni` (singleton) in ogni temp
   Stesso pattern per `GmailSMTPOAuth*View`.
 - **`Edizione.cartelle_configurate`** blocca **irreversibilmente** `drive_folder_allegati_id`,
   `drive_folder_output_id` e `cartella_diario_format` una volta valorizzati tutti e tre.
+- **`carica_pdf_diario`** (in `storage_drive/service.py`): chiama sempre
+  `genera_pdf_diario(diario, include_relazione=True)` e, prima di caricare il nuovo file,
+  elimina il `DriveFile` precedente da Drive (un solo PDF per diario nella cartella di output).
+- **Rinomina cartelle**: `AnagraficaUpdateView._rinomina_squadriglia` usa
+  `service.files().update(fileId=folder_id, body={"name": nuovo_nome})` per rinominare le
+  cartelle Drive quando si cambia il nome della squadriglia dall'anagrafica.
 
 ### Email
 - **Dual backend**: `email_backend_standard` (sistema/inviti singoli) vs `email_backend_massivo`
@@ -130,7 +147,7 @@ Context processor `impostazioni` inietta `Impostazioni` (singleton) in ogni temp
 ## Regole di dominio
 - **Visibilità**: Relazione finale e Valutazione mai visibili al Capo Squadriglia; Valutazione non
   visibile finché non pubblicata. Protezione a tre livelli: UI, view, queryset.
-- **Rinnovo**: moduli 4–5 facoltativi (Capo Squadriglia decide); obbligatori solo se Nuovo.
+- **Rinnovo**: modulo 4 (2ª impresa) e modulo 5 (missione) facoltativi; obbligatori solo se Nuovo.
 - **`IN_REVISIONE`** solo per Approvata/Non approvata proposte da Pattuglia GV (richiedono conferma
   Incaricato). *Maggiori informazioni* non passa da `IN_REVISIONE`.
 - **Incaricati EG**: modificano qualunque decisione fino alla pubblicazione.

@@ -216,7 +216,7 @@ Pagina `/impostazioni/` organizzata in sezioni:
 | Sezione | Contenuto |
 |---|---|
 | **Identità** | Titolo · Sottotitolo (visualizzati nella navbar) |
-| **Footer** | Testo rich text · Fino a 5 link tipizzati con etichetta opzionale |
+| **Footer** | Testo rich text · Fino a 4 link tipizzati con etichetta opzionale · link Manuale fisso come ultimo elemento |
 | **Posta elettronica** | Modalità email · Provider · API key · SMTP · Gmail OAuth2 · Test invio |
 | **Sicurezza** | MFA obbligatoria · Protezione brute-force axes · IP bloccati |
 | **Allegati** | Dimensione massima immagini upload (default 1024px) |
@@ -354,6 +354,60 @@ pandoc --defaults pandoc-defaults.yaml \
 I PDF sono esclusi dal repository (artefatti generati).
 
 ## Changelog
+
+### v1.12.0 (08/06/2026)
+
+**Revisione completa UI Diario di Bordo (moduli 1–6)**
+
+*Modulo 1 — Anagrafica*
+- Aggiunti campi Capo Squadriglia (nome, cognome, email, cell) editabili
+- Campo nome squadriglia editabile: rinomina anche le cartelle su Google Drive
+- Selezione tipo partecipazione (Nuovo / Rinnovo) nella sezione Specialità
+- Sezione "Note da import (precompilazione)" sempre in sola lettura
+- Tooltip esplicativi su tutti i campi
+- Abbreviazioni CRP/GV eliminate dall'UI → "Capo Reparto", "Guidoncini Verdi"
+
+*Modulo 2 — Presentazione squadriglia*
+- Membri: solo nome (rimosso il campo cognome separato)
+- 3 righe iniziali preimpostate (Capo Squadriglia, Vice, Squadrigliere)
+- Pulsante "Aggiungi membro" per inserire righe aggiuntive
+
+*Moduli 3/4 — Imprese*
+- Posti d'azione suddivisi in **Chi** e **Cosa** (migrazione automatica dei dati esistenti)
+- Specialità individuali e brevetti di competenza: campo **Chi** per indicare il membro
+- Pulsanti "Aggiungi riga" per posti d'azione, specialità e brevetti
+- Anteprima foto con pulsante di eliminazione (disponibile fino all'invio del Capo Reparto)
+- Tooltip con descrizioni dettagliate per Perché, Come, Cosa, Link esterno
+- Pulizia automatica dei link Jotform presenti nei diari esistenti
+
+*Modulo 5 — Missione*
+- Rimossa sezione "Posti d'azione" (non prevista per la missione)
+- Anteprima foto con pulsante di eliminazione
+- Tooltip su "Descrizione svolgimento"
+
+*Modulo 6 — Relazione finale (Capo Reparto)*
+- Label "Specialità conquistata" → "Ritieni che la specialità di squadriglia sia stata conquistata?"
+- Tooltip con descrizioni dettagliate per tutti i campi
+
+**Dettaglio diario**
+- Card Anagrafica: mostra dati CSQ, tipo partecipazione, precompilazione da import
+- Card Presentazione: membri con solo nome
+- Card Imprese: posti d'azione con Chi in grassetto, specialità/brevetti con Chi
+- Card Missione: rimossa sezione posti d'azione
+
+**Lista diari — filtri a cascata**
+- I menu a tendina (Zona, Gruppo, Specialità, Stato, Tipo) si aggiornano in tempo reale
+  mostrando solo le opzioni presenti nelle righe visibili dopo i filtri attivi
+
+**PDF e Google Drive**
+- Fix: `carica_pdf_diario` ora include sempre la Relazione finale (modulo 6)
+- Drive: prima di caricare un PDF/Excel, l'eventuale versione precedente viene eliminata automaticamente — la cartella di output mantiene solo l'ultima versione
+
+**Footer**
+- Link "Manuale" spostato dalla navbar al footer come ultimo elemento fisso
+- Link sociali: massimo 4 (era 5)
+
+---
 
 ### v1.10.0 (07/06/2026)
 
