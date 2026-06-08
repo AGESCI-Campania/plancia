@@ -26,7 +26,7 @@ dependencies = [
     "requests>=2.32",
     "django-tinymce>=4.1",
     "django-hijack>=3.6",
-    "django-agesci-campania-theme==1.2.0",
+    "django-agesci-campania-theme==1.2.4",
     "selenium>=4.44.0",
     "webdriver-manager>=4.1.1",
     "django-bootstrap-icons>=0.9.0",
