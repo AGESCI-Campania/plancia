@@ -66,7 +66,12 @@ _STATO_SPECIALITA_MAP = {
 def _val(row: tuple, idx: int) -> str:
     """Restituisce il valore della colonna (1-based) come stringa pulita."""
     v = row[idx - 1]
-    return str(v).strip() if v is not None else ""
+    if v is None:
+        return ""
+    # openpyxl legge celle numeriche (es. telefoni) come float: 3288682706.0 → "3288682706"
+    if isinstance(v, float) and v.is_integer():
+        v = int(v)
+    return str(v).strip()
 
 
 def _date(row: tuple, idx: int) -> date | None:
