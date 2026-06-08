@@ -1,6 +1,7 @@
 # apps/siteconfig/urls.py
 from django.urls import path
 
+from apps.exports.views import TaskProgressoView
 from apps.siteconfig import views
 
 app_name = "siteconfig"
@@ -22,4 +23,5 @@ urlpatterns = [
     path("mail/<str:chiave>/copia/", views.MailTemplateCopiaView.as_view(), name="mail_template_copia"),
     path("mail/<str:chiave>/elimina/", views.MailTemplateDeleteView.as_view(), name="mail_template_elimina"),
     path("mail/upload-immagine/", views.MailTemplateImageUploadView.as_view(), name="mail_image_upload"),
+    path("task-progresso/<str:task_id>/", TaskProgressoView.as_view(), name="task_progresso"),
 ]

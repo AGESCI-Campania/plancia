@@ -1,17 +1,28 @@
 # Guida — Incaricato EG
 
-L'Incaricato EG supervisiona l'intera valutazione: assegna i diari alla PGV, conferma o
-modifica le proposte e pubblica gli esiti ufficiali.
+L'Incaricato EG supervisiona l'intera valutazione: può valutare direttamente o coinvolgere
+la Pattuglia GV, confermare o modificare le proposte e pubblicare gli esiti ufficiali.
 
 > L'Incaricato EG deve configurare l'**autenticazione a due fattori (MFA)** al primo accesso.
 
 ---
 
-## Flusso di valutazione
+## Flussi di valutazione
 
+Per ogni diario l'Incaricato sceglie caso per caso il flusso più adatto:
+
+**Flusso diretto** (senza Pattuglia GV):
+```
+Diario inviato → Valutazione Incaricato → Pubblicazione
+```
+
+**Flusso con Pattuglia GV**:
 ```
 Diario inviato → Assegnazione PGV → Proposta PGV → Revisione Incaricato → Pubblicazione
 ```
+
+Entrambi i flussi sono disponibili contemporaneamente su ogni diario e non richiedono
+configurazioni preventive.
 
 ---
 
@@ -35,27 +46,36 @@ con il loro stato attuale (Inviato, In valutazione, Approvato, ecc.).
 
 ---
 
-## Assegnazione diari alla PGV
+## Valutazione diretta
 
-Quando un diario è in stato *Inviato*, entra nel dettaglio di valutazione
-(`Gestione → Valutazione`) e usa il campo **Assegna PGV** per scegliere
-il membro della pattuglia che lo valuterà.
+Per valutare direttamente (senza coinvolgere la Pattuglia GV), entra nel dettaglio
+di valutazione del diario (`Gestione → Valutazione`) e compila il modulo
+**Valuta direttamente**: scegli l'esito e aggiungi eventuali note.
 
+Il form è disponibile anche quando il diario è ancora in stato *Inviato*: il sistema
+avvia automaticamente la fase di valutazione al momento della conferma.
 
-![Assegna PGV al diario](screenshots/27_assegna_pgv.png)
-
-Il diario passa in stato *In valutazione* e diventa visibile al membro PGV assegnato.
+![Valutazione diretta](screenshots/27_valutazione_diretta.png)
 
 ---
 
-## Conferma o modifica della proposta PGV
+## Flusso con Pattuglia GV
 
-Quando la PGV inserisce una proposta *Approvato* o *Non approvato*, il diario entra in stato
-**In revisione**. L'Incaricato può:
+### Assegnazione
 
-- **Confermare** la proposta (il diario resta in *Approvato* o *Non approvato* in attesa di
-  pubblicazione)
-- **Modificare** la decisione prima della pubblicazione
+Usa il campo **Assegnazioni Pattuglia GV** nella pagina di valutazione per scegliere
+il membro della pattuglia che valuterà il diario. Puoi assegnare più membri.
+
+### Proposta in revisione
+
+Quando la PGV inserisce una proposta *Approvata* o *Non approvata*, il diario entra
+in stato **In revisione**. Nella pagina di valutazione compare la card gialla
+**Proposta Pattuglia in attesa** con i pulsanti **Conferma proposta** e **Rigetta proposta**.
+
+Se preferisci sovrascrivere la proposta e valutare direttamente, espandi la sezione
+*Ignora proposta e valuta direttamente* nella stessa card.
+
+![Proposta in revisione](screenshots/27_valutazione_revisione.png)
 
 ---
 

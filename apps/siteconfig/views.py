@@ -401,9 +401,15 @@ class CachePdfView(RuoloRequiredMixin, View):
             (ed, bool(cache.get(lock_key_massivo(ed.pk))))
             for ed in edizioni_disponibili
         ]
+        edizioni_in_corso = [
+            {"edizione": ed, "task_id": cache.get(f"pdf_massivo_task_id:{ed.pk}")}
+            for ed in edizioni_disponibili
+            if cache.get(lock_key_massivo(ed.pk)) and cache.get(f"pdf_massivo_task_id:{ed.pk}")
+        ]
         return render(request, self.template_name, {
             "cache_per_edizione": cache_per_edizione,
             "edizioni_con_lock": edizioni_con_lock,
+            "edizioni_in_corso": edizioni_in_corso,
         })
 
     def post(self, request):

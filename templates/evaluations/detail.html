@@ -53,7 +53,40 @@
 
     <!-- Azioni -->
     <div class="col-md-6">
-      {% if puo_valutare_direttamente and not diario.pubblicato_at %}
+      {% if puo_confermare and valutazione.stato == 'in_revisione' %}
+        <div class="card mb-3 border-warning">
+          <div class="card-header bg-warning text-dark"><strong>Proposta Pattuglia in attesa</strong></div>
+          <div class="card-body">
+            <p>Proposta: <strong>{{ valutazione.get_proposta_esito_display }}</strong></p>
+            <div class="d-flex gap-2 mb-3">
+              <form method="post" action="{% url 'evaluations:conferma' diario.pk %}">
+                {% csrf_token %}
+                <button class="btn btn-success btn-sm">Conferma proposta</button>
+              </form>
+              <form method="post" action="{% url 'evaluations:rigetta' diario.pk %}">
+                {% csrf_token %}
+                <button class="btn btn-outline-danger btn-sm">Rigetta proposta</button>
+              </form>
+            </div>
+            <details>
+              <summary class="text-muted small" style="cursor:pointer;">Ignora proposta e valuta direttamente</summary>
+              <form class="mt-2" method="post" action="{% url 'evaluations:valuta' diario.pk %}">
+                {% csrf_token %}
+                <div class="mb-2">
+                  <select name="esito" class="form-select form-select-sm" required>
+                    <option value="">— Scegli esito —</option>
+                    {% for val, label in esiti %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+                  </select>
+                </div>
+                <div class="mb-2">
+                  <textarea name="note" class="form-control form-control-sm" rows="2" placeholder="Note (opzionale)"></textarea>
+                </div>
+                <button class="btn btn-secondary btn-sm">Valuta direttamente</button>
+              </form>
+            </details>
+          </div>
+        </div>
+      {% elif puo_valutare_direttamente and not diario.pubblicato_at %}
         <div class="card mb-3">
           <div class="card-header"><strong>Valuta direttamente</strong></div>
           <div class="card-body">
@@ -92,25 +125,6 @@
               </div>
               <button class="btn btn-primary btn-sm">Proponi</button>
             </form>
-          </div>
-        </div>
-      {% endif %}
-
-      {% if puo_confermare and valutazione.stato == 'in_revisione' %}
-        <div class="card mb-3 border-warning">
-          <div class="card-header bg-warning text-dark"><strong>Proposta in revisione</strong></div>
-          <div class="card-body">
-            <p>Proposta Pattuglia: <strong>{{ valutazione.get_proposta_esito_display }}</strong></p>
-            <div class="d-flex gap-2">
-              <form method="post" action="{% url 'evaluations:conferma' diario.pk %}">
-                {% csrf_token %}
-                <button class="btn btn-success btn-sm">Conferma</button>
-              </form>
-              <form method="post" action="{% url 'evaluations:rigetta' diario.pk %}">
-                {% csrf_token %}
-                <button class="btn btn-outline-danger btn-sm">Rigetta</button>
-              </form>
-            </div>
           </div>
         </div>
       {% endif %}

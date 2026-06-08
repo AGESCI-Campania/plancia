@@ -86,9 +86,12 @@ class ValutaDirettamenteView(RuoloRequiredMixin, View):
 
     def post(self, request, diario_pk):
         diario = get_object_or_404(Diario, pk=diario_pk)
-        if diario.stato not in (StatoDiario.IN_VALUTAZIONE, StatoDiario.IN_REVISIONE):
+        if diario.stato not in (StatoDiario.INVIATO, StatoDiario.IN_VALUTAZIONE, StatoDiario.IN_REVISIONE):
             messages.error(request, "Il diario non è in stato valutabile.")
             return redirect("evaluations:detail", diario_pk=diario.pk)
+
+        if diario.stato == StatoDiario.INVIATO:
+            diario.avvia_valutazione()
 
         esito = request.POST.get("esito")
         note = request.POST.get("note", "")

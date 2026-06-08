@@ -172,7 +172,8 @@ docs/        specifica di progetto
 | **diaries** — moduli_csq_completi | 8 | ✅ pass | Logica NUOVO/RINNOVO |
 | **diaries** — eliminazione allegati | 5 | ✅ pass | Permessi per stato e ruolo |
 | **diaries** — dilazione e nuovi campi | 8 | ✅ pass | Context dilazione, PostoAzione chi+cosa, chi specialità |
-| **Totale** | **138** | **✅ 138/138** | `uv run pytest` — 2026-06-08 (v1.13.0) |
+| **evaluations** — flussi di valutazione | 3 | ✅ pass | Flusso diretto da INVIATO, override proposta PGV |
+| **Totale** | **141** | **✅ 141/141** | `uv run pytest` — 2026-06-08 (v1.14.0) |
 
 I test Selenium (12) usano **Django LiveServer** + **Selenium 4** con ChromeDriver scaricato
 automaticamente da Selenium Manager. Coprono:

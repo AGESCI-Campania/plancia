@@ -121,6 +121,10 @@ Context processor `impostazioni` inietta `Impostazioni` (singleton) in ogni temp
 - Modulo 6: solo in `RELAZIONE_FINALE` (Capo Reparto).
 - **Non** usare `moduli_csq_completi` come guardia — usare `stato == RELAZIONE_FINALE`.
 - Cambio referenti: `_STATI_PRIMA_INVIO = (NON_INIZIATO, IN_COMPILAZIONE, RELAZIONE_FINALE)`.
+- **Flusso valutazione**: `ValutaDirettamenteView` accetta anche `INVIATO` e chiama
+  `diario.avvia_valutazione()` automaticamente — non serve più che l'edizione transiti prima.
+  Se c'è una proposta PGV `IN_REVISIONE`, l'Incaricato può comunque sovrascriverla con
+  `valuta_direttamente()`. Test in `apps/evaluations/tests/test_flussi.py`.
 
 ### Drive e OAuth
 - **PKCE obbligatorio** (da ottobre 2024): `DriveOAuthInitView` genera `code_verifier/challenge`,
@@ -223,6 +227,9 @@ Accessibile solo a CRP, Incaricati EG e Admin — non al Capo Squadriglia.
 - **Generazione massiva**: `task_genera_pdf_massivo` in `apps/exports/tasks.py`; lock Redis
   `pdf_task_lock_massivo:{edizione_pk}` (TTL 2h). Blocca i PDF singoli durante la generazione.
   UI in `/impostazioni/cache-pdf/`.
+- **Progress bar**: il task chiama `self.update_state(state="PROGRESS", meta={progresso, completati, totale})`
+  ad ogni diario; il task_id è salvato in Redis `pdf_massivo_task_id:{edizione_pk}`. Endpoint polling:
+  `GET /impostazioni/task-progresso/<task_id>/` → JSON. JS nella pagina cache-pdf fa polling ogni 2s.
 
 ## Allegati
 

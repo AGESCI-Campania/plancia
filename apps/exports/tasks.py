@@ -295,6 +295,10 @@ def task_genera_pdf_massivo(self, edizione_pk: int, utente_pk: int | None = None
 
     totale = len(diari)
 
+    # Salva task_id in Redis per il polling del progresso dalla UI
+    cache.set(f"pdf_massivo_task_id:{edizione_pk}", self.request.id, 7200)
+    self.update_state(state="PROGRESS", meta={"progresso": 0, "completati": 0, "totale": totale})
+
     log_avvio = LogTaskExport.objects.create(
         tipo=LogTaskExport.Tipo.PDF_MASSIVO,
         stato=LogTaskExport.Stato.OK,
@@ -351,6 +355,12 @@ def task_genera_pdf_massivo(self, edizione_pk: int, utente_pk: int | None = None
                     edizione_pk=edizione_pk, edizione_str=edizione_str,
                     utente_pk=utente_pk, utente_str=utente_str,
                 )
+
+            self.update_state(state="PROGRESS", meta={
+                "progresso": i * 100 // totale,
+                "completati": i,
+                "totale": totale,
+            })
 
             # Email di progresso ogni 10
             if i % 10 == 0 and utente and utente.email:
