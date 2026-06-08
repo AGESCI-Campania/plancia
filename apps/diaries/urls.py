@@ -47,7 +47,7 @@ urlpatterns = [
     path(
         "<int:pk>/allegati/<int:allegato_pk>/elimina/",
         AllegatoDeleteView.as_view(),
-        name="allegati_delete",
+        name="allegati_elimina",
     ),
     path(
         "<int:pk>/allegati/<int:allegato_pk>/preview/",
