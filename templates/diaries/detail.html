@@ -101,9 +101,30 @@
     {% if has_anagrafica %}
     <div class="card-body row g-2 small">
       <div class="col-sm-4"><strong>Capo Reparto:</strong> {{ diario.anagrafica.crp_cognome }} {{ diario.anagrafica.crp_nome }}</div>
-      <div class="col-sm-4"><strong>Email:</strong> {{ diario.anagrafica.crp_email|default:"—" }}</div>
+      <div class="col-sm-4"><strong>Email Capo Reparto:</strong> {{ diario.anagrafica.crp_email|default:"—" }}</div>
+      <div class="col-sm-4"><strong>Cell. Capo Reparto:</strong> {{ diario.anagrafica.crp_cell|default:"—" }}</div>
+      {% if diario.anagrafica.csq_nome or diario.anagrafica.csq_cognome %}
+      <div class="col-sm-4"><strong>Capo Squadriglia:</strong> {{ diario.anagrafica.csq_cognome }} {{ diario.anagrafica.csq_nome }}</div>
+      <div class="col-sm-4"><strong>Email Capo Squadriglia:</strong> {{ diario.anagrafica.csq_email|default:"—" }}</div>
+      <div class="col-sm-4"><strong>Cell. Capo Squadriglia:</strong> {{ diario.anagrafica.csq_cell|default:"—" }}</div>
+      {% endif %}
       <div class="col-sm-4"><strong>Specialità:</strong> {{ diario.anagrafica.specialita|default:"—" }}</div>
-      <div class="col-sm-4"><strong>Partecipa evento:</strong> {{ diario.anagrafica.partecipa_evento|yesno:"Sì,No" }}</div>
+      <div class="col-sm-4"><strong>Tipo:</strong> {{ diario.get_tipo_display }}</div>
+      <div class="col-sm-4"><strong>Partecipa evento Guidoncini Verdi:</strong> {{ diario.anagrafica.partecipa_evento|yesno:"Sì,No" }}</div>
+      {% if diario.anagrafica.desc_prima_impresa or diario.anagrafica.desc_seconda_impresa or diario.anagrafica.tecniche %}
+      <div class="col-12 mt-1 pt-1 border-top">
+        <p class="text-muted mb-1 fw-semibold" style="font-size:.72rem;text-transform:uppercase">Precompilazione da import</p>
+        {% if diario.anagrafica.desc_prima_impresa %}
+          <p class="mb-1"><strong>1ª impresa:</strong> {{ diario.anagrafica.desc_prima_impresa }}</p>
+        {% endif %}
+        {% if diario.anagrafica.desc_seconda_impresa %}
+          <p class="mb-1"><strong>2ª impresa:</strong> {{ diario.anagrafica.desc_seconda_impresa }}</p>
+        {% endif %}
+        {% if diario.anagrafica.tecniche %}
+          <p class="mb-0"><strong>Tecniche:</strong> {{ diario.anagrafica.tecniche }}</p>
+        {% endif %}
+      </div>
+      {% endif %}
     </div>
     {% else %}
     <div class="card-body text-muted fst-italic">Non ancora compilato.</div>
@@ -124,7 +145,7 @@
       <p class="fw-semibold mb-1">Membri ({{ diario.presentazione.membri.count }}):</p>
       <div class="d-flex flex-wrap gap-1">
         {% for m in diario.presentazione.membri.all %}
-          <span class="badge bg-light text-dark border">{{ m.cognome }} {{ m.nome }} — {{ m.get_ruolo_display }} — {{ m.get_sentiero_display }}</span>
+          <span class="badge bg-light text-dark border">{{ m.nome }} — {{ m.get_ruolo_display }} — {{ m.get_sentiero_display }}</span>
         {% endfor %}
       </div>
     </div>
@@ -173,7 +194,9 @@
           <p class="text-muted mb-1 fw-semibold" style="font-size:.72rem;text-transform:uppercase">Posti d'azione</p>
           <ul class="list-unstyled mb-0">
             {% for p in imp.posti_azione.all %}
-              <li>{% bs_icon "geo-alt" size="13" extra_classes="text-primary me-1" %}{{ p.descrizione }}</li>
+              <li>{% bs_icon "geo-alt" size="13" extra_classes="text-primary me-1" %}
+                {% if p.chi %}<strong>{{ p.chi }}</strong> — {% endif %}{{ p.cosa|default:p.descrizione }}
+              </li>
             {% endfor %}
           </ul>
         </div>
@@ -190,7 +213,7 @@
                   {% elif e.stato == 'non_conquistata' %}bg-danger
                   {% else %}bg-warning text-dark{% endif %}">{{ e.get_stato_display }}</span>
                 {% if e.tipo == 'brevetto' %}{% bs_icon "award" size="13" extra_classes="text-warning me-1" %}{% endif %}
-                {{ e.nome }}
+                {% if e.chi %}<strong>{{ e.chi }}</strong> — {% endif %}{{ e.nome }}
               </li>
             {% endfor %}
           </ul>
@@ -243,17 +266,6 @@
       </div>
       {% endif %}
 
-      {% if diario.missione.posti_azione.all %}
-      <div class="mb-2">
-        <p class="text-muted mb-1 fw-semibold" style="font-size:.72rem;text-transform:uppercase">Posti d'azione</p>
-        <ul class="list-unstyled mb-0">
-          {% for p in diario.missione.posti_azione.all %}
-            <li>{% bs_icon "geo-alt" size="13" extra_classes="text-primary me-1" %}{{ p.descrizione }}</li>
-          {% endfor %}
-        </ul>
-      </div>
-      {% endif %}
-
       {% with allegati=allegati_missione %}{% include "diaries/_allegati_modulo.html" %}{% endwith %}
     </div>
     {% else %}
@@ -278,7 +290,7 @@
     <div class="card-body small">
       <div class="row g-3">
         <div class="col-sm-6">
-          <p class="text-muted mb-1 fw-semibold" style="font-size:.72rem;text-transform:uppercase">Specialità conquistata</p>
+          <p class="text-muted mb-1 fw-semibold" style="font-size:.72rem;text-transform:uppercase">Specialità conquistata?</p>
           <p class="mb-0">{{ diario.relazione_finale.specialita_conquistata|yesno:"Sì,No,Non indicato" }}</p>
         </div>
         {% if diario.relazione_finale.sintesi_impresa_1 %}
