@@ -178,35 +178,80 @@
   var btnRst  = document.getElementById('d-reset');
   var noRes   = document.getElementById('d-no-result');
 
+  // Cache dei riferimenti alle righe (invariante anche dopo l'ordinamento)
+  var rows = Array.from(tbody.querySelectorAll('tr'));
+
+  // Descrizione dei filtri a select con l'attributo data corrispondente
+  var filters = [
+    { sel: selZona, attr: 'zona'       },
+    { sel: selGrp,  attr: 'gruppo'     },
+    { sel: selSpec, attr: 'specialita' },
+    { sel: selStat, attr: 'stato'      },
+    { sel: selTipo, attr: 'tipo'       },
+  ];
+
+  // Restituisce true se tr supera tutti i filtri (escludendo opzionalmente skipF)
+  function rowPasses(tr, skipF) {
+    var q = search.value.trim().toLowerCase();
+    if (q && !(tr.dataset.crp || '').toLowerCase().includes(q) &&
+             !(tr.dataset.csq || '').toLowerCase().includes(q)) return false;
+    for (var i = 0; i < filters.length; i++) {
+      if (filters[i] === skipF) continue;
+      var v = filters[i].sel.value;
+      if (v && (tr.dataset[filters[i].attr] || '') !== v) return false;
+    }
+    return true;
+  }
+
+  // Mostra/nasconde le opzioni di ogni select in base alle righe visibili
+  // Ogni select vede le opzioni presenti nelle righe che passano TUTTI gli
+  // altri filtri (escluso se stesso) → i filtri si restringono a cascata.
+  function updateOptions() {
+    filters.forEach(function (f) {
+      var current = f.sel.value;
+      var available = new Set();
+      rows.forEach(function (tr) {
+        if (rowPasses(tr, f)) {
+          var v = tr.dataset[f.attr];
+          if (v) available.add(v);
+        }
+      });
+      Array.from(f.sel.options).forEach(function (opt) {
+        if (!opt.value) return; // "— Tutti/Tutte —" sempre visibile
+        opt.hidden = !available.has(opt.value);
+      });
+      // Se il valore corrente non è più disponibile, resetta
+      if (current && !available.has(current)) {
+        f.sel.value = '';
+      }
+    });
+  }
+
   function applyFilters() {
-    var q    = search.value.trim().toLowerCase();
-    var zona = selZona.value.toLowerCase();
-    var grp  = selGrp.value.toLowerCase();
-    var spec = selSpec.value.toLowerCase();
-    var stat = selStat.value.toLowerCase();
-    var tipo = selTipo.value.toLowerCase();
-    var vis  = 0;
-    Array.from(tbody.querySelectorAll('tr')).forEach(function (tr) {
-      var ok =
-        (!zona || (tr.dataset.zona  || '').toLowerCase() === zona) &&
-        (!grp  || (tr.dataset.gruppo|| '').toLowerCase() === grp)  &&
-        (!spec || (tr.dataset.specialita || '').toLowerCase() === spec) &&
-        (!stat || (tr.dataset.stato || '').toLowerCase() === stat) &&
-        (!tipo || (tr.dataset.tipo  || '').toLowerCase() === tipo) &&
-        (!q    || (tr.dataset.crp   || '').toLowerCase().includes(q) ||
-                  (tr.dataset.csq   || '').toLowerCase().includes(q));
+    var vis = 0;
+    rows.forEach(function (tr) {
+      var ok = rowPasses(tr, null);
       tr.style.display = ok ? '' : 'none';
       if (ok) vis++;
     });
     noRes.classList.toggle('d-none', vis > 0);
   }
 
+  function applyAll() {
+    updateOptions(); // aggiorna opzioni disponibili nei select
+    applyFilters();  // mostra/nasconde righe
+  }
+
   [search, selZona, selGrp, selSpec, selStat, selTipo].forEach(function (el) {
-    el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', applyFilters);
+    el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', applyAll);
   });
+
   btnRst.addEventListener('click', function () {
-    search.value = ''; selZona.value = ''; selGrp.value = '';
-    selSpec.value = ''; selStat.value = ''; selTipo.value = '';
+    search.value = '';
+    filters.forEach(function (f) {
+      f.sel.value = '';
+      Array.from(f.sel.options).forEach(function (opt) { opt.hidden = false; });
+    });
     applyFilters();
   });
 
