@@ -226,6 +226,10 @@ def lock_key_massivo(edizione_pk: int) -> str:
     return f"pdf_massivo_lock:{edizione_pk}"
 
 
+def cancel_key_massivo(edizione_pk: int) -> str:
+    return f"pdf_massivo_cancella:{edizione_pk}"
+
+
 @shared_task(bind=True, max_retries=0)
 def task_genera_pdf_massivo(self, edizione_pk: int, utente_pk: int | None = None) -> dict:
     """Genera i PDF di tutti i diari pubblicabili di un'edizione.
@@ -318,9 +322,13 @@ def task_genera_pdf_massivo(self, edizione_pk: int, utente_pk: int | None = None
 
     completati: list[str] = []
     errori: list[str] = []
+    cancellato = False
 
     try:
         for i, diario in enumerate(diari, 1):
+            if cache.get(cancel_key_massivo(edizione_pk)):
+                cancellato = True
+                break
             try:
                 from apps.storage_drive.models import DriveFile, TipoFile
                 # Salta se cache già presente
@@ -373,11 +381,17 @@ def task_genera_pdf_massivo(self, edizione_pk: int, utente_pk: int | None = None
 
     finally:
         cache.delete(lock_key)
+        cache.delete(cancel_key_massivo(edizione_pk))
 
     # Email finale
-    riepilogo = (
+    intestazione = (
+        f"Generazione interrotta dall'utente per {edizione_str}.\n"
+        if cancellato else
         f"Generazione massiva completata per {edizione_str}.\n"
-        f"Completati: {len(completati)} / {totale}\n"
+    )
+    riepilogo = (
+        intestazione
+        + f"Completati: {len(completati)} / {totale}\n"
         f"Errori: {len(errori)}\n\n"
     )
     if completati:
@@ -404,8 +418,9 @@ def task_genera_pdf_massivo(self, edizione_pk: int, utente_pk: int | None = None
                 admin_emails,
             )
 
+    prefisso = "Interrotta: " if cancellato else "Completata: "
     LogTaskExport.objects.filter(pk=log_avvio.pk).update(
-        messaggio=f"Completata: {len(completati)} ok, {len(errori)} errori su {totale} diari",
+        messaggio=f"{prefisso}{len(completati)} ok, {len(errori)} errori su {totale} diari",
     )
 
     return {"ok": True, "totale": totale, "completati": len(completati), "errori": len(errori)}

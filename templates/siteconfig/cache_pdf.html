@@ -60,7 +60,19 @@
     <div class="mb-3" id="progresso-wrapper-{{ item.edizione.pk }}">
       <div class="d-flex justify-content-between align-items-center mb-1">
         <span class="small fw-semibold">{{ item.edizione }}</span>
-        <span class="small text-muted" id="progresso-testo-{{ item.edizione.pk }}">avvio…</span>
+        <div class="d-flex align-items-center gap-2">
+          <span class="small text-muted" id="progresso-testo-{{ item.edizione.pk }}">avvio…</span>
+          <form method="post" class="d-inline"
+                onsubmit="return confirm('Interrompere la generazione per {{ item.edizione }}?')">
+            {% csrf_token %}
+            <input type="hidden" name="azione" value="interrompi_massivo">
+            <input type="hidden" name="edizione_pk" value="{{ item.edizione.pk }}">
+            <button type="submit" class="btn btn-outline-danger btn-sm py-0 px-2"
+                    id="btn-interrompi-{{ item.edizione.pk }}">
+              {% bs_icon "stop-fill" size="13" extra_classes="me-1" %}Interrompi
+            </button>
+          </form>
+        </div>
       </div>
       <div class="progress" style="height:10px;">
         <div id="progresso-bar-{{ item.edizione.pk }}"

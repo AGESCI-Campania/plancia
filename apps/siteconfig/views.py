@@ -458,6 +458,16 @@ class CachePdfView(RuoloRequiredMixin, View):
                 "Durante la generazione i PDF singoli per questa edizione sono disabilitati.",
             )
 
+        elif azione == "interrompi_massivo":
+            from apps.exports.tasks import cancel_key_massivo
+            edizione_pk = request.POST.get("edizione_pk")
+            if edizione_pk:
+                cache.set(cancel_key_massivo(int(edizione_pk)), True, 3600)
+                messages.info(
+                    request,
+                    "Interruzione richiesta. Il task si fermerà dopo il diario in corso.",
+                )
+
         return redirect("siteconfig:cache_pdf")
 
 
