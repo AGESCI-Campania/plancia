@@ -191,7 +191,7 @@ class PaginaStatica(models.Model):
 
 
 class FooterLink(models.Model):
-    """Uno dei link (fino a 5) mostrati nella colonna destra del footer."""
+    """Uno dei link (fino a 4) mostrati nella colonna destra del footer."""
 
     impostazioni = models.ForeignKey(
         Impostazioni, on_delete=models.CASCADE, related_name="footer_links"

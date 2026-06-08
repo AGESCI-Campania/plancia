@@ -220,8 +220,8 @@ FooterLinkFormSet = inlineformset_factory(
     Impostazioni,
     FooterLink,
     form=FooterLinkForm,
-    extra=5,
-    max_num=5,
+    extra=4,
+    max_num=4,
     can_delete=True,
 )
 
