@@ -226,6 +226,8 @@ delle altre.
 
 ![Impostazioni email](screenshots/32_impostazioni_email.png)
 
+- **Nome mittente**: testo visualizzato come mittente (es. "Plancia AGESCI Campania"). Combinato
+  con il campo **Mittente (from)** produce il formato `Nome <email@dominio.it>`.
 - **Modalità invio**: *Invio reale*, *Simulato*, *Simulato + invio reale*, *Mailpit*.
   In modalità *Simulato + invio reale* le email vengono scritte sia su file che inviate
   davvero — utile per testare in produzione senza rischiare.
@@ -267,6 +269,8 @@ Da **Gestione → Cache PDF** (o dal link in Impostazioni → Strumenti) è poss
 - **Generazione massiva**: avvia un task Celery che genera i PDF di tutti i diari inviati
   dell'edizione selezionata, li carica su Drive e invia aggiornamenti via email ogni 10 diari.
   Durante la generazione i PDF singoli per quella edizione sono disabilitati.
+- **Interrompi**: ferma ordinatamente una generazione massiva in corso. Il task completa il
+  diario corrente e poi si arresta; il log riporta "Interrotta" con il conteggio parziale.
 
 > Durante una generazione massiva attiva il selettore mostra "(generazione in corso…)" e l'opzione
 > è disabilitata per evitare doppie esecuzioni. Il lock viene rilasciato automaticamente al termine o dopo 2 ore.

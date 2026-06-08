@@ -16,7 +16,7 @@ pubblicano l'esito; output in PDF ed Excel, file su Google Drive, frontend respo
 
 ## Stack
 Python ≥ 3.14 · Django ≥ 6.0 · PostgreSQL ≥ 17 · Redis + Celery · django-allauth (MFA, social) ·
-django-guardian · django-axes · django-pwa · Bootstrap 5 · django-agesci-campania-theme 1.1.0 ·
+django-guardian · django-axes · django-pwa · Bootstrap 5 · django-agesci-campania-theme 1.2.4 ·
 django-bootstrap-icons · WeasyPrint · openpyxl · Google Drive (OAuth).
 Gestione dipendenze con **uv**; ambiente opzionale con **mise**.
 
@@ -173,7 +173,7 @@ docs/        specifica di progetto
 | **diaries** — eliminazione allegati | 5 | ✅ pass | Permessi per stato e ruolo |
 | **diaries** — dilazione e nuovi campi | 8 | ✅ pass | Context dilazione, PostoAzione chi+cosa, chi specialità |
 | **evaluations** — flussi di valutazione | 3 | ✅ pass | Flusso diretto da INVIATO, override proposta PGV |
-| **Totale** | **141** | **✅ 141/141** | `uv run pytest` — 2026-06-08 (v1.14.0) |
+| **Totale** | **141** | **✅ 141/141** | `uv run pytest` — 2026-06-08 (v1.15.0) |
 
 I test Selenium (12) usano **Django LiveServer** + **Selenium 4** con ChromeDriver scaricato
 automaticamente da Selenium Manager. Coprono:
@@ -221,7 +221,7 @@ Pagina `/impostazioni/` organizzata in sezioni:
 |---|---|
 | **Identità** | Titolo · Sottotitolo (visualizzati nella navbar) |
 | **Footer** | Testo rich text · Fino a 4 link tipizzati con etichetta opzionale · link Manuale fisso come ultimo elemento |
-| **Posta elettronica** | Modalità email · Provider · API key · SMTP · Gmail OAuth2 · Test invio |
+| **Posta elettronica** | Nome mittente · Indirizzo from · Modalità email · Provider · API key · SMTP · Gmail OAuth2 · Test invio |
 | **Sicurezza** | MFA obbligatoria · Protezione brute-force axes · IP bloccati |
 | **Allegati** | Dimensione massima immagini upload (default 1024px) |
 | **Diagnostica** | Manutenzione · Debug toolbar · Link Flower/Mailpit |
@@ -232,6 +232,7 @@ Pagina `/impostazioni/` organizzata in sezioni:
 
 **Cache PDF** (`/impostazioni/cache-pdf/`): lista PDF in cache per edizione, invalidazione singola/massiva,
 generazione massiva con task Celery (email aggiornamento ogni 10 diari; blocca PDF singoli durante la generazione).
+Pulsante **Interrompi** per fermare ordinatamente una generazione in corso.
 
 **Log export** (`/impostazioni/log-export/`): storico task PDF/Excel con errori completi (traceback in modale).
 
@@ -358,6 +359,26 @@ pandoc --defaults pandoc-defaults.yaml \
 I PDF sono esclusi dal repository (artefatti generati).
 
 ## Changelog
+
+### v1.15.0 (08/06/2026)
+
+**Email — nome mittente**
+- Nuovo campo "Nome mittente" in Impostazioni → Posta elettronica: le email vengono inviate come `Nome <email@dominio.it>`
+
+**Cache PDF — interruzione generazione massiva**
+- Pulsante "Interrompi" nella pagina Cache PDF: ferma ordinatamente il task Celery dopo il diario in corso (flag cooperativo via Redis); il log riporta "Interrotta" con conteggio parziale
+
+**PWA — prompt di installazione**
+- Icone app (192×192, 512×512, apple-touch-icon 180×180) generate dall'emblema AGESCI Campania
+- Banner verde di installazione: su Android/Chrome gestisce `beforeinstallprompt`; su iOS Safari mostra istruzioni manuali (Share → Aggiungi a Home)
+
+**UI mobile — fix footer**
+- Aggiornamento `django-agesci-campania-theme` 1.1.0 → 1.2.4: layout viewport fisso limitato a ≥992px; su mobile il footer scorre con il contenuto
+
+**Deploy**
+- `collectstatic` va eseguito sull'host prima di `up -d` (il bind mount `./staticfiles` persiste tra i rebuild e sovrascrive i file statici baked nell'immagine)
+
+---
 
 ### v1.13.0 (08/06/2026)
 

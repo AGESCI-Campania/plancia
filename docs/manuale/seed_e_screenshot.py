@@ -510,12 +510,21 @@ def main():
              f"/diari/reparto/{reparto_pk}/cambia-crp/",            wait=1.2)
         logout(driver)
 
-        # ── 19–20, 30. Admin ─────────────────────────────────────
+        # ── 19–20, 30–40. Admin ──────────────────────────────────
         adm_email, adm_pw = ctx["admin"]
         login(driver, adm_email, adm_pw, totp_secret=totp.get(adm_email))
         shot(driver, "19_home_admin", "/")
         shot(driver, "20_utenti_admin", "/utenti/lista/",           wait=1)
         shot(driver, "30_mfa_impostazione", "/accounts/2fa/",      wait=1)
+        shot(driver, "31_mfa_impostazioni", "/impostazioni/#sicurezza", wait=1.5)
+        shot(driver, "32_impostazioni_email", "/impostazioni/#email",   wait=1.5)
+        shot(driver, "33_impostazioni_sicurezza", "/impostazioni/#sicurezza", wait=1.5)
+        shot(driver, "35_impostazioni_allegati", "/impostazioni/#allegati", wait=1.5)
+        shot(driver, "36_cache_pdf", "/impostazioni/cache-pdf/",    wait=1.5)
+        shot(driver, "37_log_export", "/impostazioni/log-export/",  wait=1.5)
+        shot(driver, "38_crea_staff", "/utenti/crea-staff/",        wait=1)
+        shot(driver, "39_navbar_gestione", "/",                     wait=1)
+        shot(driver, "40_pagine_legali", "/impostazioni/",          wait=1.5)
         logout(driver)
 
     finally:

@@ -17,7 +17,7 @@ documento prevale su questo file.
 
 ## Stack
 - Python **≥ 3.14**, Django **≥ 6.0**. PostgreSQL **≥ 17**. Redis + **Celery** per job asincroni.
-- **uv** per dipendenze/venv. **Bootstrap 5** via **`django-agesci-campania-theme` 1.1.0**.
+- **uv** per dipendenze/venv. **Bootstrap 5** via **`django-agesci-campania-theme` 1.2.4**.
   Icone SVG inline con **`django-bootstrap-icons`**. **WeasyPrint** (PDF), **openpyxl** (Excel).
 - Auth: **django-allauth** (email + social Google/Microsoft/Apple, **MFA**), **django-guardian**
   (object-level), **django-axes** (brute-force).
