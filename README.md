@@ -169,7 +169,10 @@ docs/        specifica di progetto
 | **diaries** — visibilità | 6 | ✅ pass | Accesso a moduli per ruolo |
 | **diaries** — cambio referenti | 29 | ✅ pass | CambiaCsqView, CambiaCrpView, bulk |
 | **diaries** — Selenium E2E | 15 | ✅ pass | Chrome headless, Tom Select, sessione |
-| **Totale** | **117** | **✅ 117/117** | `uv run pytest` — 2026-06-07 (v1.11.1) |
+| **diaries** — moduli_csq_completi | 8 | ✅ pass | Logica NUOVO/RINNOVO |
+| **diaries** — eliminazione allegati | 5 | ✅ pass | Permessi per stato e ruolo |
+| **diaries** — dilazione e nuovi campi | 8 | ✅ pass | Context dilazione, PostoAzione chi+cosa, chi specialità |
+| **Totale** | **138** | **✅ 138/138** | `uv run pytest` — 2026-06-08 (v1.13.0) |
 
 I test Selenium (12) usano **Django LiveServer** + **Selenium 4** con ChromeDriver scaricato
 automaticamente da Selenium Manager. Coprono:
@@ -354,6 +357,32 @@ pandoc --defaults pandoc-defaults.yaml \
 I PDF sono esclusi dal repository (artefatti generati).
 
 ## Changelog
+
+### v1.13.0 (08/06/2026)
+
+**Import Risposte EG — asincrono Celery**
+- Nuovo task `task_import_risposte_eg`: elabora il file xlsx in background, manda email agli Admin all'avvio e al completamento con l'output completo
+- Nuova card "4. Risposte EG" nella pagina Import con upload xlsx e selezione edizione
+
+**Template PDF aggiornato**
+- Dati generali: Capo Squadriglia con email e cell da Anagrafica.csq_* (se disponibili)
+- Presentazione: colonna unica "Nome e cognome" (rimosso cognome separato)
+- Imprese — Posti d'azione: tabella Chi / Cosa (con fallback su `descrizione` per dati pre-migrazione)
+- Imprese — Specialità/brevetti: colonna Chi aggiunta
+- Missione: rimossa sezione Posti d'azione
+
+**Fix**
+- Pulsante Dilazione nascosto quando `stato ≥ INVIATO` (CRP ha già inviato)
+- Eliminazione foto disponibile anche dal dettaglio diario (card Imprese e Missione)
+- Fix `timezone.utc` → `timezone.UTC` in `notifications/views.py` (Python 3.14 / Django 6 compat)
+
+**Test suite: 117 → 138 (+21)**
+- `TestModuliCsqCompleti`: 8 test per logica NUOVO/RINNOVO
+- `TestEliminazioneAllegati`: 5 test per permessi eliminazione per stato e ruolo
+- `TestDilazioneContext`: 4 test per context dilazione
+- `TestNuoviCampiModello`: 4 test per PostoAzione.chi+cosa, EsitoSpecialita.chi, MembroSq.nome, Anagrafica.csq_*
+
+---
 
 ### v1.12.0 (08/06/2026)
 

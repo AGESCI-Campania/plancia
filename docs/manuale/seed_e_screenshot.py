@@ -152,10 +152,19 @@ def seed():
             defaults=dict(
                 crp_nome="Mario", crp_cognome="Rossi",
                 crp_email="crp@plancia.it", crp_cell="3330000001",
+                csq_nome="Luca", csq_cognome="Bianchi",
+                csq_email="csq@plancia.it", csq_cell="3332222222",
                 specialita="Esplorazione",
                 partecipa_evento=True,
             ),
         )
+        # Aggiorna campi CSQ se mancanti
+        if not ana.csq_nome:
+            ana.csq_nome = "Luca"
+            ana.csq_cognome = "Bianchi"
+            ana.csq_email = "csq@plancia.it"
+            ana.csq_cell = "3332222222"
+            ana.save(update_fields=["csq_nome", "csq_cognome", "csq_email", "csq_cell"])
         from apps.diaries.models import SPECIALITA_SQUADRIGLIA
         if ana.specialita not in SPECIALITA_SQUADRIGLIA:
             ana.specialita = "Esplorazione"
@@ -167,11 +176,11 @@ def seed():
             defaults=dict(cosa_sappiamo_fare="Siamo una squadriglia affiatata con competenze in orientamento, campismo e tecniche di segnalazione."),
         )
         if not pres.membri.exists():
-            MembroSq.objects.create(presentazione=pres, nome="Luca", cognome="Bianchi", ruolo="csq", sentiero="responsabilita")
-            MembroSq.objects.create(presentazione=pres, nome="Sofia", cognome="Ferrari", ruolo="vcsq", sentiero="competenza")
-            MembroSq.objects.create(presentazione=pres, nome="Marco", cognome="Conti", ruolo="squadrigliere", sentiero="competenza")
-            MembroSq.objects.create(presentazione=pres, nome="Elena", cognome="Russo", ruolo="squadrigliere", sentiero="scoperta")
-            MembroSq.objects.create(presentazione=pres, nome="Davide", cognome="Marino", ruolo="squadrigliere", sentiero="scoperta")
+            MembroSq.objects.create(presentazione=pres, nome="Luca Bianchi", ruolo="csq", sentiero="responsabilita")
+            MembroSq.objects.create(presentazione=pres, nome="Sofia Ferrari", ruolo="vcsq", sentiero="competenza")
+            MembroSq.objects.create(presentazione=pres, nome="Marco Conti", ruolo="squadrigliere", sentiero="competenza")
+            MembroSq.objects.create(presentazione=pres, nome="Elena Russo", ruolo="squadrigliere", sentiero="scoperta")
+            MembroSq.objects.create(presentazione=pres, nome="Davide Marino", ruolo="squadrigliere", sentiero="scoperta")
 
         # Modulo 3 — 1ª Impresa
         imp1, _ = Impresa.objects.get_or_create(
@@ -185,12 +194,12 @@ def seed():
             ),
         )
         if not imp1.posti_azione.exists():
-            PostoAzione.objects.create(impresa=imp1, descrizione="Allestimento del campo base e preparazione dei pasti")
-            PostoAzione.objects.create(impresa=imp1, descrizione="Navigazione con bussola e mappa topografica")
+            PostoAzione.objects.create(impresa=imp1, chi="Luca Bianchi", cosa="Allestimento campo base e preparazione pasti")
+            PostoAzione.objects.create(impresa=imp1, chi="Marco Conti", cosa="Navigazione con bussola e mappa topografica")
         imp1.esiti_specialita.all().delete()
-        EsitoSpecialita.objects.create(impresa=imp1, tipo=TipoEsito.SPECIALITA, nome="Campeggiatore", stato="in_cammino")
-        EsitoSpecialita.objects.create(impresa=imp1, tipo=TipoEsito.SPECIALITA, nome="Topografo", stato="in_cammino")
-        EsitoSpecialita.objects.create(impresa=imp1, tipo=TipoEsito.BREVETTO, nome="Pioniere", stato="in_cammino")
+        EsitoSpecialita.objects.create(impresa=imp1, tipo=TipoEsito.SPECIALITA, chi="Luca Bianchi", nome="Campeggiatore", stato="in_cammino")
+        EsitoSpecialita.objects.create(impresa=imp1, tipo=TipoEsito.SPECIALITA, chi="Marco Conti", nome="Topografo", stato="in_cammino")
+        EsitoSpecialita.objects.create(impresa=imp1, tipo=TipoEsito.BREVETTO, chi="Sofia Ferrari", nome="Pioniere", stato="in_cammino")
 
         # Modulo 4 — 2ª Impresa
         imp2, _ = Impresa.objects.get_or_create(
@@ -204,12 +213,12 @@ def seed():
             ),
         )
         if not imp2.posti_azione.exists():
-            PostoAzione.objects.create(impresa=imp2, descrizione="Redazione degli articoli e impaginazione")
-            PostoAzione.objects.create(impresa=imp2, descrizione="Intervista a un ex-scout del gruppo")
+            PostoAzione.objects.create(impresa=imp2, chi="Elena Russo", cosa="Redazione degli articoli e impaginazione")
+            PostoAzione.objects.create(impresa=imp2, chi="Davide Marino", cosa="Intervista a un ex-scout del gruppo")
         imp2.esiti_specialita.all().delete()
-        EsitoSpecialita.objects.create(impresa=imp2, tipo=TipoEsito.SPECIALITA, nome="Redattore", stato="in_cammino")
-        EsitoSpecialita.objects.create(impresa=imp2, tipo=TipoEsito.SPECIALITA, nome="Fotografo", stato="conquistata")
-        EsitoSpecialita.objects.create(impresa=imp2, tipo=TipoEsito.BREVETTO, nome="Giornalista", stato="in_cammino")
+        EsitoSpecialita.objects.create(impresa=imp2, tipo=TipoEsito.SPECIALITA, chi="Elena Russo", nome="Redattore", stato="in_cammino")
+        EsitoSpecialita.objects.create(impresa=imp2, tipo=TipoEsito.SPECIALITA, chi="Davide Marino", nome="Fotografo", stato="conquistata")
+        EsitoSpecialita.objects.create(impresa=imp2, tipo=TipoEsito.BREVETTO, chi="Sofia Ferrari", nome="Giornalista", stato="in_cammino")
 
         # Modulo 5 — Missione
         miss, _ = Missione.objects.get_or_create(
@@ -220,11 +229,26 @@ def seed():
                 descrizione_svolgimento="La squadriglia ha prestato servizio durante la Sagra della Castagna di Montemarano, gestendo l'accoglienza visitatori, il servizio ai tavoli e la raccolta fondi per il centro di recupero animali locali.",
             ),
         )
-        if not miss.posti_azione.exists():
-            PostoAzioneMissione.objects.create(missione=miss, descrizione="Accoglienza e informazioni ai visitatori")
-            PostoAzioneMissione.objects.create(missione=miss, descrizione="Raccolta fondi per il canile municipale")
-
         print(f"   Diario {diario.pk} (Aquila, IN_COMPILAZIONE) — moduli CSQ presenti.")
+
+    print("→ Diario Aquila (RELAZIONE_FINALE) per screenshot CRP modulo 6…")
+    diario_relazione = None
+    if ed:
+        # Usa squadriglia4 o crea al volo per evitare conflitto unique_together
+        squadriglia4, _ = Squadriglia.objects.get_or_create(nome="Gufo", reparto=reparto)
+        diario_relazione, _ = Diario.objects.get_or_create(
+            squadriglia=squadriglia4,
+            edizione=ed,
+            defaults=dict(
+                csq=csq_socio, crp=crp_socio,
+                tipo=TipoDiario.NUOVO,
+                stato=StatoDiario.RELAZIONE_FINALE,
+            ),
+        )
+        if diario_relazione.stato != StatoDiario.RELAZIONE_FINALE:
+            diario_relazione.stato = StatoDiario.RELAZIONE_FINALE
+            diario_relazione.save(update_fields=["stato"])
+        print(f"   Diario {diario_relazione.pk} (Gufo, RELAZIONE_FINALE).")
 
     print("→ Diario Lepre (INVIATO) per screenshot Incaricato…")
     diario_inviato = None
@@ -276,6 +300,7 @@ def seed():
         "crp": ("crp@plancia.it", "test123"),
         "csq": ("csq@plancia.it", "test123"),
         "diario_pk": diario.pk if diario else None,
+        "diario_relazione_pk": diario_relazione.pk if diario_relazione else None,
         "diario_inviato_pk": diario_inviato.pk if diario_inviato else None,
         "diario_valutazione_pk": diario_valutazione.pk if diario_valutazione else None,
         "edizione_pk": ed.pk if ed else None,
@@ -412,12 +437,13 @@ def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     print("── Seed dati ───────────────────────────────────────────────")
     ctx = seed()
-    diario_pk            = ctx["diario_pk"]
-    diario_inviato_pk    = ctx["diario_inviato_pk"]
+    diario_pk             = ctx["diario_pk"]
+    diario_relazione_pk   = ctx.get("diario_relazione_pk")
+    diario_inviato_pk     = ctx["diario_inviato_pk"]
     diario_valutazione_pk = ctx["diario_valutazione_pk"]
-    edizione_pk          = ctx["edizione_pk"]
-    reparto_pk           = ctx["reparto_pk"]
-    totp                 = ctx.get("totp_secrets", {})
+    edizione_pk           = ctx["edizione_pk"]
+    reparto_pk            = ctx["reparto_pk"]
+    totp                  = ctx.get("totp_secrets", {})
 
     print("\n── Screenshot ──────────────────────────────────────────────")
     driver = make_driver()
@@ -443,11 +469,12 @@ def main():
         # ── 10–11, 21–23. Capo Reparto ───────────────────────────
         login(driver, *ctx["crp"])
         shot(driver, "10_home_crp", "/")
+        shot(driver, "21_lista_diari_crp",      "/diari/")
         if diario_pk:
-            shot(driver, "21_lista_diari_crp",      "/diari/")
             shot(driver, "22_dettaglio_diario_crp", f"/diari/{diario_pk}/")
             shot(driver, "23_cambia_csq",           f"/diari/{diario_pk}/cambia-csq/",    wait=1.5)
-            shot(driver, "11_relazione_finale",     f"/diari/{diario_pk}/relazione/",     wait=1.5)
+        if diario_relazione_pk:
+            shot(driver, "11_relazione_finale",     f"/diari/{diario_relazione_pk}/relazione/", wait=1.5)
         logout(driver)
 
         # ── 12–13, 24. Pattuglia GV ──────────────────────────────
@@ -473,7 +500,7 @@ def main():
         seg_email, seg_pw = ctx["segreteria"]
         login(driver, seg_email, seg_pw, totp_secret=totp.get(seg_email))
         shot(driver, "14_home_segreteria", "/")
-        shot(driver, "15_utenti_lista",    "/utenti/utenti/")
+        shot(driver, "15_utenti_lista",    "/utenti/lista/")
         shot(driver, "16_impostazioni",    "/impostazioni/",       wait=1.5)
         shot(driver, "17_import_storico",  "/import/")
         if edizione_pk:
@@ -487,7 +514,7 @@ def main():
         adm_email, adm_pw = ctx["admin"]
         login(driver, adm_email, adm_pw, totp_secret=totp.get(adm_email))
         shot(driver, "19_home_admin", "/")
-        shot(driver, "20_utenti_admin", "/utenti/utenti/",         wait=1)
+        shot(driver, "20_utenti_admin", "/utenti/lista/",           wait=1)
         shot(driver, "30_mfa_impostazione", "/accounts/2fa/",      wait=1)
         logout(driver)
 

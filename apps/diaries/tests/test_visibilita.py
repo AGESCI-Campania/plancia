@@ -112,6 +112,126 @@ class TestRelazioneFinaleVisibilita:
         assert response.status_code == 403
 
 
+class TestEliminazioneAllegati:
+    """puo_eliminare_allegati nel context del detail (docs sez. 5)."""
+
+    def test_csq_puo_eliminare_in_compilazione(self, diario, user_csq, client):
+        client.force_login(user_csq)
+        resp = client.get(f"/diari/{diario.pk}/")
+        assert resp.context["puo_eliminare_allegati"] is True
+
+    def test_csq_puo_eliminare_in_relazione_finale(self, diario, user_csq, client):
+        diario.stato = "relazione_finale"
+        diario.save()
+        client.force_login(user_csq)
+        resp = client.get(f"/diari/{diario.pk}/")
+        assert resp.context["puo_eliminare_allegati"] is True
+
+    def test_crp_puo_eliminare_in_relazione_finale(self, diario, user_crp, client):
+        diario.stato = "relazione_finale"
+        diario.save()
+        client.force_login(user_crp)
+        resp = client.get(f"/diari/{diario.pk}/")
+        assert resp.context["puo_eliminare_allegati"] is True
+
+    def test_csq_non_puo_eliminare_dopo_invio(self, diario, user_csq, client):
+        diario.stato = "inviato"
+        diario.save()
+        client.force_login(user_csq)
+        resp = client.get(f"/diari/{diario.pk}/")
+        assert resp.context["puo_eliminare_allegati"] is False
+
+    def test_crp_non_puo_eliminare_dopo_invio(self, diario, user_crp, client):
+        diario.stato = "inviato"
+        diario.save()
+        client.force_login(user_crp)
+        resp = client.get(f"/diari/{diario.pk}/")
+        assert resp.context["puo_eliminare_allegati"] is False
+
+
+class TestDilazioneContext:
+    """dilazione_form nel context: presente solo per staff prima dell'invio (docs sez. 4)."""
+
+    @pytest.fixture
+    def user_staff(self, db):
+        import json
+        from allauth.mfa.models import Authenticator
+        from apps.accounts.models import Ruolo, User
+        u = User.objects.create_user(
+            username="staff_dil", email="staff_dil@test.it", password="x",
+            ruolo=Ruolo.SEGRETERIA, is_staff=True,
+        )
+        Authenticator.objects.create(
+            user=u, type=Authenticator.Type.TOTP,
+            data=json.dumps({"secret": "AAAAAAAAAAAAAAAA"}),
+        )
+        return u
+
+    def test_staff_vede_dilazione_in_compilazione(self, diario, user_staff, client):
+        client.force_login(user_staff)
+        resp = client.get(f"/diari/{diario.pk}/")
+        assert "dilazione_form" in resp.context
+        assert resp.context["dilazione_form"] is not None
+
+    def test_staff_vede_dilazione_in_relazione_finale(self, diario, user_staff, client):
+        diario.stato = "relazione_finale"
+        diario.save()
+        client.force_login(user_staff)
+        resp = client.get(f"/diari/{diario.pk}/")
+        assert resp.context.get("dilazione_form") is not None
+
+    def test_staff_non_vede_dilazione_dopo_invio(self, diario, user_staff, client):
+        diario.stato = "inviato"
+        diario.save()
+        client.force_login(user_staff)
+        resp = client.get(f"/diari/{diario.pk}/")
+        assert resp.context.get("dilazione_form") is None
+
+    def test_csq_non_ha_dilazione(self, diario, user_csq, client):
+        client.force_login(user_csq)
+        resp = client.get(f"/diari/{diario.pk}/")
+        assert resp.context.get("dilazione_form") is None
+
+
+class TestNuoviCampiModello:
+    """Test per i nuovi campi del modello (migrazione 0008)."""
+
+    def test_posto_azione_chi_cosa(self, diario):
+        from apps.diaries.models import Impresa, PostoAzione
+        imp = Impresa.objects.create(diario=diario, numero=1)
+        pa = PostoAzione.objects.create(impresa=imp, chi="Mario Rossi", cosa="Campismo")
+        assert pa.chi == "Mario Rossi"
+        assert pa.cosa == "Campismo"
+        assert str(pa) == "Mario Rossi — Campismo"
+
+    def test_esito_specialita_chi(self, diario):
+        from apps.diaries.models import EsitoSpecialita, Impresa, TipoEsito
+        imp = Impresa.objects.create(diario=diario, numero=1)
+        es = EsitoSpecialita.objects.create(
+            impresa=imp, tipo=TipoEsito.SPECIALITA,
+            chi="Sofia Ferrari", nome="Fotografo", stato="in_cammino",
+        )
+        assert es.chi == "Sofia Ferrari"
+
+    def test_membro_sq_solo_nome(self, diario):
+        from apps.diaries.models import Presentazione, MembroSq
+        pres = Presentazione.objects.create(diario=diario)
+        m = MembroSq.objects.create(presentazione=pres, nome="Luca Bianchi", ruolo="csq")
+        assert m.nome == "Luca Bianchi"
+        assert m.cognome == ""
+        assert str(m) == "Luca Bianchi"
+
+    def test_anagrafica_csq_fields(self, diario):
+        from apps.diaries.models import Anagrafica
+        ana = Anagrafica.objects.create(
+            diario=diario,
+            csq_nome="Luca", csq_cognome="Bianchi",
+            csq_email="luca@test.it", csq_cell="3331112222",
+        )
+        assert ana.csq_nome == "Luca"
+        assert ana.csq_email == "luca@test.it"
+
+
 class TestScopingDiari:
     """Il CSQ vede solo il proprio diario; il CRP solo i diari del suo reparto."""
 

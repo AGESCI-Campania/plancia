@@ -135,6 +135,11 @@ Context processor `impostazioni` inietta `Impostazioni` (singleton) in ogni temp
   `service.files().update(fileId=folder_id, body={"name": nuovo_nome})` per rinominare le
   cartelle Drive quando si cambia il nome della squadriglia dall'anagrafica.
 
+### Compatibilità Python 3.14 / Django 6
+- **`timezone.utc`** non esiste più: usare `datetime.timezone.utc` oppure `timezone.UTC` (il modulo
+  `django.utils.timezone` espone `UTC` come alias). Nei view che costruiscono epoch sentinel usare
+  `timezone.datetime.min.replace(tzinfo=timezone.UTC)`.
+
 ### Email
 - **Dual backend**: `email_backend_standard` (sistema/inviti singoli) vs `email_backend_massivo`
   (inviti bulk). `get_connection_per_tipo(tipo)` in `email_backends.py`. `email_mode` sovrascrive tutto.

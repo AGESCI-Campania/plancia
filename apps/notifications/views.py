@@ -272,7 +272,7 @@ class GestioneInvitiView(RuoloRequiredMixin, View):
             )
             from django.utils import timezone
 
-            _epoch = timezone.datetime.min.replace(tzinfo=timezone.utc)
+            _epoch = timezone.datetime.min.replace(tzinfo=timezone.UTC)
 
             def _key(inv):
                 return inv.inviato_at or _epoch
