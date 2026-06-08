@@ -8,22 +8,36 @@
 </p>
 <div class="d-flex flex-wrap gap-2">
   {% for a in allegati %}
-    {% if a.mime|slice:":6" == "image/" %}
-      <a href="{% url 'diaries:allegati_preview' diario.pk a.pk %}"
-         target="_blank" rel="noopener" title="{{ a.nome }}">
-        <img src="{% url 'diaries:allegati_preview' diario.pk a.pk %}"
-             loading="lazy"
-             style="width:90px;height:90px;object-fit:cover;border-radius:6px;border:1px solid #dee2e6"
-             alt="{{ a.nome }}">
-      </a>
-    {% else %}
-      <a href="#" title="{{ a.nome }}"
-         class="d-flex flex-column align-items-center justify-content-center text-center text-muted text-decoration-none"
-         style="width:90px;height:90px;border-radius:6px;border:1px solid #dee2e6;background:#f8f9fa;font-size:.65rem;padding:6px;word-break:break-all">
-        {% bs_icon "file-earmark" size="22" extra_classes="mb-1 text-secondary" %}
-        {{ a.nome|slice:":22" }}
-      </a>
-    {% endif %}
+    <div class="position-relative" style="width:90px;">
+      {% if a.mime|slice:":6" == "image/" %}
+        <a href="{% url 'diaries:allegati_preview' diario.pk a.pk %}"
+           target="_blank" rel="noopener" title="{{ a.nome }}">
+          <img src="{% url 'diaries:allegati_preview' diario.pk a.pk %}"
+               loading="lazy"
+               style="width:90px;height:90px;object-fit:cover;border-radius:6px;border:1px solid #dee2e6"
+               alt="{{ a.nome }}">
+        </a>
+      {% else %}
+        <a href="#" title="{{ a.nome }}"
+           class="d-flex flex-column align-items-center justify-content-center text-center text-muted text-decoration-none"
+           style="width:90px;height:90px;border-radius:6px;border:1px solid #dee2e6;background:#f8f9fa;font-size:.65rem;padding:6px;word-break:break-all">
+          {% bs_icon "file-earmark" size="22" extra_classes="mb-1 text-secondary" %}
+          {{ a.nome|slice:":22" }}
+        </a>
+      {% endif %}
+      {% if puo_eliminare_allegati %}
+        <form method="post" action="{% url 'diaries:allegati_elimina' diario.pk a.pk %}"
+              onsubmit="return confirm('Eliminare questa foto?');"
+              style="position:absolute;top:2px;right:2px;">
+          {% csrf_token %}
+          <button type="submit"
+                  class="btn btn-danger btn-sm p-0 d-flex align-items-center justify-content-center"
+                  style="width:22px;height:22px;" title="Elimina foto">
+            {% bs_icon "x" size="14" %}
+          </button>
+        </form>
+      {% endif %}
+    </div>
   {% endfor %}
 </div>
 {% endif %}

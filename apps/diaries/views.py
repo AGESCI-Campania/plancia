@@ -201,6 +201,16 @@ class DiarioDetailView(DiarioAccessMixin, DetailView):
         ctx["allegati_impresa_2"] = [a for a in allegati_all if a.modulo == "impresa_2"]
         ctx["allegati_missione"] = [a for a in allegati_all if a.modulo == "missione"]
         ctx["puo_editare_relazione"] = self._puo_editare_relazione(diario)
+        # Eliminazione allegati: ammessa fino all'invio del diario allo staff
+        stato = diario.stato
+        if user.is_superuser or user.is_staff_plancia:
+            ctx["puo_eliminare_allegati"] = True
+        elif stato in (StatoDiario.NON_INIZIATO, StatoDiario.IN_COMPILAZIONE):
+            ctx["puo_eliminare_allegati"] = user.ruolo == Ruolo.CSQ
+        elif stato == StatoDiario.RELAZIONE_FINALE:
+            ctx["puo_eliminare_allegati"] = user.ruolo in (Ruolo.CSQ, Ruolo.CRP)
+        else:
+            ctx["puo_eliminare_allegati"] = False
         return ctx
 
 
