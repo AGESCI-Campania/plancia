@@ -150,8 +150,8 @@ class Diario(models.Model):
     def moduli_csq_completi(self) -> bool:
         """True quando tutti i moduli obbligatori CSQ sono compilati.
 
-        Entrambe le imprese (1ª e 2ª) sono obbligatorie per tutti i tipi.
-        La missione è obbligatoria solo per tipo=NUOVO.
+        NUOVO: 1ª impresa + 2ª impresa + missione obbligatori.
+        RINNOVO: 1ª impresa obbligatoria; 2ª impresa e missione facoltativi.
         """
         try:
             ana = self.anagrafica
@@ -163,12 +163,13 @@ class Diario(models.Model):
             return False
         if not (ana and pres):
             return False
-        if not self.imprese.filter(numero=1).exists():
-            return False
-        if not self.imprese.filter(numero=2).exists():
+        has_impresa1 = self.imprese.filter(numero=1).exists()
+        if not has_impresa1:
             return False
         if self.tipo == TipoDiario.NUOVO:
-            return hasattr(self, "missione")
+            has_impresa2 = self.imprese.filter(numero=2).exists()
+            has_missione = hasattr(self, "missione")
+            return has_impresa2 and has_missione
         return True
 
     @property

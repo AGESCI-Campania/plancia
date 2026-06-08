@@ -20,7 +20,7 @@
   {% csrf_token %}
   <div class="row g-3">
 
-    {# ── Squadriglia e tipo ─────────────────────────────────────────────── #}
+    {# ── Squadriglia ────────────────────────────────────────────────────── #}
     <div class="col-12"><h5 class="border-bottom pb-1">Squadriglia</h5></div>
     <div class="col-md-6">
       <label class="form-label fw-semibold">
@@ -32,17 +32,6 @@
       </label>
       {{ form.squadriglia_nome }}
       {% for e in form.squadriglia_nome.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
-    </div>
-    <div class="col-md-6">
-      <label class="form-label fw-semibold">
-        {{ form.tipo_diario.label }}
-        <span class="ms-1" data-bs-toggle="tooltip"
-              title="{{ form.tipo_diario.help_text }}">
-          {% bs_icon "question-circle" size="14" extra_classes="text-muted" %}
-        </span>
-      </label>
-      {{ form.tipo_diario }}
-      {% for e in form.tipo_diario.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
     </div>
 
     {# ── Capo Reparto ───────────────────────────────────────────────────── #}
@@ -91,9 +80,20 @@
 
     {# ── Specialità e partecipazione ────────────────────────────────────── #}
     <div class="col-12 mt-2"><h5 class="border-bottom pb-1">Specialità e partecipazione</h5></div>
-    <div class="col-md-8">
+    <div class="col-md-5">
       <label class="form-label">{{ form.specialita.label }}</label>
       {{ form.specialita }}
+    </div>
+    <div class="col-md-3">
+      <label class="form-label fw-semibold">
+        {{ form.tipo_diario.label }}
+        <span class="ms-1" data-bs-toggle="tooltip"
+              title="{{ form.tipo_diario.help_text }}">
+          {% bs_icon "question-circle" size="14" extra_classes="text-muted" %}
+        </span>
+      </label>
+      {{ form.tipo_diario }}
+      {% for e in form.tipo_diario.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
     </div>
     <div class="col-md-4 d-flex align-items-end">
       <div class="form-check mb-2">
