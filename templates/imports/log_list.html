@@ -109,6 +109,40 @@
           </div>
         </div>
 
+        {# --- Risposte EG --- #}
+        <div class="col-md-4 mt-3 mt-md-0">
+          <div class="card h-100 border-success">
+            <div class="card-header bg-light py-2 small fw-semibold">
+              {% bs_icon "journal-check" size="14" extra_classes="me-1 text-success" %} 4. Risposte EG <span class="badge bg-success fw-normal ms-1">xlsx</span>
+            </div>
+            <div class="card-body">
+              <p class="small text-muted mb-2">
+                Importa i diari dal file Excel del <strong>Jotform EG</strong>
+                (fogli "Risposte EG" e "Risposte staff"). L'elaborazione avviene in background;
+                gli amministratori riceveranno una mail al termine con il resoconto completo.
+              </p>
+              <form method="post" action="{% url 'siteconfig:lancia_import' 'risposte_eg' %}"
+                    enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="mb-2">
+                  <select name="edizione_pk" class="form-select form-select-sm">
+                    <option value="">— Edizione più recente aperta —</option>
+                    {% for ed in edizioni_import %}
+                      <option value="{{ ed.pk }}">{{ ed }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="mb-2">
+                  <input type="file" name="file" accept=".xlsx" class="form-control form-control-sm" required>
+                </div>
+                <button class="btn btn-outline-success btn-sm w-100">
+                  {% bs_icon "upload" size="14" extra_classes="me-1" %} Importa Risposte EG
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+
       </div>{# /row #}
     </div>
   </div>

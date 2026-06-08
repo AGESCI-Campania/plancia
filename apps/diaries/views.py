@@ -190,8 +190,8 @@ class DiarioDetailView(DiarioAccessMixin, DetailView):
         ctx["puo_cambiare_crp"] = (
             user.is_superuser or user.is_staff_plancia
         ) and diario.stato in _STATI_PRIMA_INVIO
-        # Dilazione (solo staff)
-        if user.is_staff_plancia or user.is_superuser:
+        # Dilazione (solo staff, solo prima dell'invio allo staff)
+        if (user.is_staff_plancia or user.is_superuser) and diario.stato in _STATI_PRIMA_INVIO:
             from apps.editions.forms import DilazioneForm
             ctx["dilazione_form"] = DilazioneForm()
         ctx["puo_pdf"] = diario.stato in _STATI_PDF

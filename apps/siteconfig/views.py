@@ -121,10 +121,10 @@ class ImpostazioniView(RuoloRequiredMixin, View):
 
 
 class LanciaImportView(RuoloRequiredMixin, View):
-    """Riceve il file CSV caricato dall'utente, lo salva su disco e accodail task Celery."""
+    """Riceve il file caricato dall'utente, lo salva su disco e accoda il task Celery."""
 
     ruoli_ammessi = (Ruolo.ADMIN, Ruolo.SEGRETERIA, Ruolo.INCARICATO_EG)
-    TRACCIATI_VALIDI = {"coca", "ragazzi", "squadriglie"}
+    TRACCIATI_VALIDI = {"coca", "ragazzi", "squadriglie", "risposte_eg"}
 
     def post(self, request, tracciato):
         if tracciato not in self.TRACCIATI_VALIDI:
@@ -133,10 +133,9 @@ class LanciaImportView(RuoloRequiredMixin, View):
 
         file_obj = request.FILES.get("file")
         if not file_obj:
-            messages.error(request, "Seleziona un file CSV prima di avviare l'import.")
+            messages.error(request, "Seleziona un file prima di avviare l'import.")
             return redirect("imports:log_list")
 
-        # Salva il file in MEDIA_ROOT/imports/tmp/ rendendolo accessibile al worker Celery
         import os
         import time
 
@@ -151,6 +150,22 @@ class LanciaImportView(RuoloRequiredMixin, View):
             for chunk in file_obj.chunks():
                 f.write(chunk)
 
+        # ── Risposte EG (xlsx, asincrono con email agli Admin) ──────────────
+        if tracciato == "risposte_eg":
+            edizione_pk = None
+            import contextlib
+            with contextlib.suppress(ValueError, TypeError):
+                edizione_pk = int(request.POST.get("edizione_pk", "")) or None
+            from apps.imports.tasks import task_import_risposte_eg
+            task_import_risposte_eg.delay(path, edizione_pk=edizione_pk)
+            messages.success(
+                request,
+                "Import Risposte EG avviato in background. "
+                "Gli amministratori riceveranno una mail con i risultati al termine.",
+            )
+            return redirect("imports:log_list")
+
+        # ── Import CSV standard ──────────────────────────────────────────────
         edizione_pk = None
         if tracciato == "squadriglie":
             try:

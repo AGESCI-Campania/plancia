@@ -48,11 +48,21 @@
   <span class="label">Specialità proposta:</span> {{ anagrafica.specialita|default:"—" }}
 </div>
 {% endif %}
-{% if diario.csq %}
+{% if anagrafica and anagrafica.csq_nome %}
+  <div class="sezione">
+    <span class="label">Capo Squadriglia:</span> {{ anagrafica.csq_cognome }} {{ anagrafica.csq_nome }}
+    {% if anagrafica.csq_email %} · {{ anagrafica.csq_email }}{% endif %}
+    {% if anagrafica.csq_cell %} · {{ anagrafica.csq_cell }}{% endif %}
+  </div>
+{% elif diario.csq %}
   <div class="sezione"><span class="label">Capo Squadriglia:</span> {{ diario.csq.cognome }} {{ diario.csq.nome }}</div>
 {% endif %}
 {% if anagrafica and anagrafica.crp_nome %}
-  <div class="sezione"><span class="label">Capo Reparto:</span> {{ anagrafica.crp_cognome }} {{ anagrafica.crp_nome }}</div>
+  <div class="sezione">
+    <span class="label">Capo Reparto:</span> {{ anagrafica.crp_cognome }} {{ anagrafica.crp_nome }}
+    {% if anagrafica.crp_email %} · {{ anagrafica.crp_email }}{% endif %}
+    {% if anagrafica.crp_cell %} · {{ anagrafica.crp_cell }}{% endif %}
+  </div>
 {% endif %}
 
 {# ── Presentazione ─────────────────────────────────────────────────────────── #}
@@ -64,10 +74,9 @@
 {% if presentazione.membri.all %}
   <h3>Composizione</h3>
   <table class="griglia">
-    <tr><th>Cognome</th><th>Nome</th><th>Ruolo</th><th>Sentiero</th></tr>
+    <tr><th>Nome e cognome</th><th>Ruolo</th><th>Sentiero</th></tr>
     {% for m in presentazione.membri.all %}
       <tr>
-        <td>{{ m.cognome }}</td>
         <td>{{ m.nome }}</td>
         <td>{{ m.get_ruolo_display|default:"—" }}</td>
         <td>{{ m.get_sentiero_display|default:"—" }}</td>
@@ -105,9 +114,12 @@
   {% if impresa.posti_azione.all %}
     <h3>Posti d'azione</h3>
     <table class="griglia">
-      <tr><th>Descrizione</th></tr>
+      <tr><th>Chi</th><th>Cosa</th></tr>
       {% for pa in impresa.posti_azione.all %}
-        <tr><td>{{ pa.descrizione }}</td></tr>
+        <tr>
+          <td>{{ pa.chi|default:"—" }}</td>
+          <td>{{ pa.cosa|default:pa.descrizione }}</td>
+        </tr>
       {% endfor %}
     </table>
   {% endif %}
@@ -115,9 +127,10 @@
   {% if impresa.esiti_specialita.all %}
     <h3>Specialità e brevetti</h3>
     <table class="griglia">
-      <tr><th>Tipo</th><th>Nome</th><th>Stato</th></tr>
+      <tr><th>Chi</th><th>Tipo</th><th>Nome</th><th>Stato</th></tr>
       {% for esito in impresa.esiti_specialita.all %}
         <tr>
+          <td>{{ esito.chi|default:"—" }}</td>
           <td>{{ esito.get_tipo_display }}</td>
           <td>{{ esito.nome }}</td>
           <td class="badge-{{ esito.stato }}">{{ esito.get_stato_display }}</td>
@@ -151,16 +164,6 @@
   {% endif %}
   {% if missione.descrizione_svolgimento %}
     <div class="sezione">{{ missione.descrizione_svolgimento }}</div>
-  {% endif %}
-
-  {% if missione.posti_azione.all %}
-    <h3>Posti d'azione</h3>
-    <table class="griglia">
-      <tr><th>Descrizione</th></tr>
-      {% for pa in missione.posti_azione.all %}
-        <tr><td>{{ pa.descrizione }}</td></tr>
-      {% endfor %}
-    </table>
   {% endif %}
 
   {% if missione_foto %}
