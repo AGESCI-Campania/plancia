@@ -4,6 +4,7 @@
 {# ── Stili aggiuntivi ────────────────────────────────────────────────────── #}
 {% block extra_head %}
 {% progressive_web_app_meta %}
+<link rel="apple-touch-icon" href="{% static 'images/icons/apple-touch-icon.png' %}">
 <script defer src="{% static 'js/plancia-autosave.js' %}"></script>
 <script defer src="{% static 'js/plancia-foto.js' %}"></script>
 <style>
@@ -351,6 +352,68 @@
     </div>
   </div>
 </footer>
+
+{# ── Banner installazione PWA ─────────────────────────────────────────── #}
+<div id="pwa-install-banner"
+     class="d-none position-fixed bottom-0 start-0 end-0 py-3 px-4
+            d-flex flex-column flex-sm-row align-items-center justify-content-between gap-3"
+     style="z-index:1055; background:#3d8e33; color:#fff;">
+  <div class="d-flex align-items-center gap-3">
+    <img src="{% static 'images/icons/icon-192x192.png' %}" width="40" height="40"
+         style="border-radius:8px;" alt="">
+    <div>
+      <div class="fw-semibold small">Installa Plancia</div>
+      <div class="small opacity-75">Aggiungi alla schermata Home per accesso rapido</div>
+    </div>
+  </div>
+  <div class="d-flex gap-2 flex-shrink-0">
+    <button id="pwa-install-btn" class="btn btn-sm btn-light text-nowrap fw-semibold">
+      {% bs_icon "download" size="13" extra_classes="me-1" %}Installa
+    </button>
+    <button id="pwa-install-dismiss" class="btn btn-sm btn-outline-light text-nowrap">
+      Non ora
+    </button>
+  </div>
+</div>
+<script>
+(function(){
+  var DISMISS_KEY = 'pwaInstallDismissed';
+  var banner = document.getElementById('pwa-install-banner');
+  var installBtn = document.getElementById('pwa-install-btn');
+  var dismissBtn = document.getElementById('pwa-install-dismiss');
+  var deferredPrompt = null;
+
+  if (localStorage.getItem(DISMISS_KEY)) return;
+
+  window.addEventListener('beforeinstallprompt', function(e) {
+    e.preventDefault();
+    deferredPrompt = e;
+    banner.classList.remove('d-none');
+    banner.classList.add('d-flex');
+  });
+
+  installBtn.addEventListener('click', function() {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(function(result) {
+      if (result.outcome === 'accepted') {
+        banner.classList.add('d-none');
+      }
+      deferredPrompt = null;
+    });
+  });
+
+  dismissBtn.addEventListener('click', function() {
+    localStorage.setItem(DISMISS_KEY, '1');
+    banner.classList.add('d-none');
+    banner.classList.remove('d-flex');
+  });
+
+  window.addEventListener('appinstalled', function() {
+    banner.classList.add('d-none');
+  });
+})();
+</script>
 
 {# ── Cookie banner GDPR ───────────────────────────────────────────────── #}
 <div id="cookie-banner"

@@ -284,9 +284,13 @@ PWA_APP_DIR = "ltr"
 PWA_APP_DEBUG_MODE = False
 # Service worker personalizzato (sostituisce il default vuoto di django-pwa)
 PWA_SERVICE_WORKER_PATH = BASE_DIR / "static" / "js" / "plancia-sw.js"
-# Icone: aggiungere /static/images/icons/icon-*.png (asset grafici separati)
-PWA_APP_ICONS = []
-PWA_APP_ICONS_APPLE = []
+PWA_APP_ICONS = [
+    {"src": "/static/images/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "/static/images/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png"},
+]
+PWA_APP_ICONS_APPLE = [
+    {"src": "/static/images/icons/apple-touch-icon.png", "sizes": "180x180"},
+]
 PWA_APP_SPLASH_SCREEN = []
 
 # --- Bootstrap Icons (django-bootstrap-icons) --------------------------------
