@@ -399,14 +399,14 @@ wheels = [
 
 [[package]]
 name = "django-agesci-campania-theme"
-version = "1.1.0"
+version = "1.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/74/5f/feab0541ef3505acc9220ba71a26e1937103c65a2ac136994b4cd1af3287/django_agesci_campania_theme-1.1.0.tar.gz", hash = "sha256:865e14f2a440786a878d9735808ade0a1e7aad2932fdbbcee5b44ceb6df3ffc5", size = 1475612, upload-time = "2026-06-01T08:05:34.175Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5b/e5/c8a71b57acb0d49a259e62ea6c6e4c3eac86424b3fa2d4cce2e7b07d8aa9/django_agesci_campania_theme-1.2.0.tar.gz", hash = "sha256:bbd877fe7097cc7e9e5ab1915abb8368ee77194e639a1bb9c2785c2079016b4a", size = 1475793, upload-time = "2026-06-08T13:27:16.233Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ad/34/96ad97e5c909daf545d2e413cd22710d137f11058782114c0d5ecb661f07/django_agesci_campania_theme-1.1.0-py3-none-any.whl", hash = "sha256:3d2a71c4ba03a2bc80f2b0edb10f038cc9ff93a5775e731aa31c005516660956", size = 1484684, upload-time = "2026-06-01T08:05:35.358Z" },
+    { url = "https://files.pythonhosted.org/packages/69/71/95374fea75d9699e7525148ae2ee3172392d6811025778f42f62f3173a1a/django_agesci_campania_theme-1.2.0-py3-none-any.whl", hash = "sha256:169d73f010f3a7c6cf3dfcf1d88bd5368d90d3c81a08db2e76c3a09fb1e62303", size = 1484835, upload-time = "2026-06-08T13:27:17.808Z" },
 ]
 
 [[package]]
@@ -1062,7 +1062,7 @@ wheels = [
 
 [[package]]
 name = "plancia"
-version = "1.13.0"
+version = "1.14.0"
 source = { virtual = "." }
 dependencies = [
     { name = "celery", extra = ["redis"] },
@@ -1111,7 +1111,7 @@ dev = [
 requires-dist = [
     { name = "celery", extras = ["redis"], specifier = ">=5.4" },
     { name = "django", specifier = ">=6.0,<6.1" },
-    { name = "django-agesci-campania-theme", specifier = "==1.1.0" },
+    { name = "django-agesci-campania-theme", specifier = "==1.2.0" },
     { name = "django-allauth", extras = ["mfa", "socialaccount"], specifier = ">=65.0" },
     { name = "django-anymail", specifier = ">=15.0" },
     { name = "django-axes", specifier = ">=8.0" },
