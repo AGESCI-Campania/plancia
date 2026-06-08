@@ -14,6 +14,8 @@ USE_X_FORWARDED_HOST = True
 # Hardening (vedi docs sez. 12)
 SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=True)
 SESSION_COOKIE_SECURE = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # cookie di sessione eliminato alla chiusura del browser
+SESSION_COOKIE_AGE = 4 * 60 * 60  # 4 ore — timeout assoluto anche con browser aperto
 CSRF_COOKIE_SECURE = True
 SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
