@@ -6,6 +6,7 @@ Se non installate il servizio lancia ImportError con messaggio esplicativo.
 """
 from __future__ import annotations
 
+import contextlib
 import io
 from typing import TYPE_CHECKING
 
@@ -135,17 +136,29 @@ def carica_allegato_drive(allegato) -> None:
 
 
 def carica_pdf_diario(diario) -> None:
-    """Genera il PDF del diario, lo carica su Drive e crea il DriveFile."""
+    """Genera il PDF del diario, lo carica su Drive e crea il DriveFile.
+
+    Elimina automaticamente la versione precedente da Drive prima di caricare
+    la nuova, in modo che nella cartella di output resti solo l'ultimo PDF.
+    """
     from apps.exports.service import genera_pdf_diario
     from apps.storage_drive.models import DriveFile, TipoFile
 
     assicura_cartelle_diario(diario)
 
-    pdf_bytes = genera_pdf_diario(diario)
+    pdf_bytes = genera_pdf_diario(diario, include_relazione=True)
     edizione = diario.edizione
     credenziali = _get_credenziali(edizione)
     # Usa la sottocartella del diario se disponibile, altrimenti la cartella dell'edizione
     folder_id = diario.drive_folder_output_id or edizione.drive_folder_output_id or None
+
+    # Rimuove la versione precedente da Drive (se esiste)
+    vecchio = DriveFile.objects.filter(diario=diario, tipo=TipoFile.PDF).first()
+    if vecchio and vecchio.drive_file_id:
+        with contextlib.suppress(Exception):  # già rimosso manualmente o permesso mancante
+            _build_drive_service(credenziali).files().delete(
+                fileId=vecchio.drive_file_id
+            ).execute()
 
     nome = f"Diario_{diario.squadriglia}_{edizione.anno}.pdf"
     meta = carica_file(credenziali, nome, pdf_bytes, "application/pdf", folder_id)
@@ -165,13 +178,25 @@ def carica_pdf_diario(diario) -> None:
 
 
 def carica_excel_edizione(edizione) -> None:
-    """Genera l'Excel degli esiti, lo carica su Drive e crea il DriveFile."""
+    """Genera l'Excel degli esiti, lo carica su Drive e crea il DriveFile.
+
+    Elimina automaticamente la versione precedente da Drive prima di caricare
+    la nuova, in modo che nella cartella di output resti solo l'ultimo Excel.
+    """
     from apps.exports.service import genera_excel_edizione
     from apps.storage_drive.models import DriveFile, TipoFile
 
     excel_bytes = genera_excel_edizione(edizione)
     credenziali = _get_credenziali(edizione)
     folder_id = edizione.drive_folder_output_id or None
+
+    # Rimuove la versione precedente da Drive (se esiste)
+    vecchio = DriveFile.objects.filter(edizione=edizione, tipo=TipoFile.EXCEL).first()
+    if vecchio and vecchio.drive_file_id:
+        with contextlib.suppress(Exception):  # già rimosso manualmente o permesso mancante
+            _build_drive_service(credenziali).files().delete(
+                fileId=vecchio.drive_file_id
+            ).execute()
 
     nome = f"Esiti_GV_{edizione.anno}.xlsx"
     mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
