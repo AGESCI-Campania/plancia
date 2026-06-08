@@ -22,6 +22,12 @@ def _titolo_piattaforma() -> str:
     return Impostazioni.get().titolo
 
 
+def _from_email() -> str:
+    from apps.siteconfig.models import Impostazioni
+    imp = Impostazioni.get()
+    return imp.from_email_completo or settings.DEFAULT_FROM_EMAIL
+
+
 def _link_attivazione(token) -> str:
     path = reverse("notifications:attiva_invito", kwargs={"token": str(token)})
     base = getattr(settings, "BASE_URL", "http://localhost:8000")
@@ -73,7 +79,7 @@ def invia_invito(invito: Invito, backend_tipo: str = "standard") -> bool:
         msg = _MailMessageClass(
             subject=oggetto,
             body=corpo,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=_from_email(),
             to=[email_dest],
         )
         msg.content_subtype = "html"
@@ -306,7 +312,7 @@ def _invia_riepilogo_csq_a_crp(crp, diario_ref, squadriglie: list, backend_tipo:
         msg = _MailMessageClass(
             subject=f"{titolo} — Attivazione account Capi Squadriglia",
             body=corpo,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=_from_email(),
             to=[crp.email],
         )
         msg.content_subtype = "html"

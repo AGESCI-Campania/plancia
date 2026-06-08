@@ -14,7 +14,7 @@ class ImpostazioniAdmin(admin.ModelAdmin):
     fieldsets = [
         ("Identità piattaforma", {"fields": ["titolo", "sottotitolo"]}),
         ("Email (SMTP)", {
-            "fields": ["email_mode", "from_email", "smtp_host", "smtp_port",
+            "fields": ["email_mode", "from_name", "from_email", "smtp_host", "smtp_port",
                        "smtp_user", "smtp_password", "smtp_use_tls"],
             "classes": ["collapse"],
         }),

@@ -112,7 +112,7 @@ def _notifica_errore_pdf(utente_pk: int | None, diario, errore: str, traceback_s
                         f"Il team tecnico è stato avvisato. "
                         f"Puoi riprovare dalla pagina del diario."
                     ),
-                    from_email=imp.from_email,
+                    from_email=imp.from_email_completo,
                     to=[utente.email],
                     connection=conn,
                 )
@@ -135,7 +135,7 @@ def _notifica_errore_pdf(utente_pk: int | None, diario, errore: str, traceback_s
             msg_admin = EmailMultiAlternatives(
                 subject=f"[Plancia] Errore PDF — {diario.squadriglia}",
                 body=corpo_admin,
-                from_email=imp.from_email,
+                from_email=imp.from_email_completo,
                 to=admin_emails,
                 connection=conn,
             )
@@ -185,7 +185,7 @@ def _invia_mail_pdf(chiave: str, utente_pk: int, diario, link_pdf: str = "") -> 
         msg = EmailMultiAlternatives(
             subject=oggetto or soggetti_default.get(chiave, "Notifica PDF"),
             body=corpo,
-            from_email=imp.from_email,
+            from_email=imp.from_email_completo,
             to=[utente.email],
             connection=get_connection_per_tipo("standard"),
         )
@@ -275,7 +275,7 @@ def task_genera_pdf_massivo(self, edizione_pk: int, utente_pk: int | None = None
     def _mail(subject: str, body: str, to: list[str]) -> None:
         try:
             EmailMultiAlternatives(
-                subject=subject, body=body, from_email=imp.from_email, to=to, connection=conn,
+                subject=subject, body=body, from_email=imp.from_email_completo, to=to, connection=conn,
             ).send()
         except Exception:
             pass

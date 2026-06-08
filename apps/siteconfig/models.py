@@ -54,6 +54,7 @@ class Impostazioni(models.Model):
         verbose_name="provider email",
         help_text="SMTP tradizionale oppure provider transazionale (con tracking bounce/errori).",
     )
+    from_name = models.CharField(max_length=100, blank=True, verbose_name="nome mittente")
     from_email = models.EmailField(blank=True, verbose_name="mittente (from)")
     # Impostazioni SMTP (usate solo quando email_provider = smtp)
     smtp_host = models.CharField(max_length=200, blank=True, verbose_name="SMTP host")
@@ -159,6 +160,13 @@ class Impostazioni(models.Model):
         # Aggiorna la cache con l'istanza appena salvata (non solo cancella)
         # per evitare che un altro worker la riscriva subito con dati obsoleti.
         cache.set(self.CACHE_KEY, self, 300)
+
+    @property
+    def from_email_completo(self) -> str:
+        """Restituisce "Nome <email>" se from_name è valorizzato, altrimenti solo l'email."""
+        if self.from_name and self.from_email:
+            return f"{self.from_name} <{self.from_email}>"
+        return self.from_email
 
     @classmethod
     def get(cls) -> Impostazioni:

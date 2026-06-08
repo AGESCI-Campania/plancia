@@ -64,7 +64,7 @@ class EmailForm(forms.ModelForm):
     class Meta:
         model = Impostazioni
         fields = [
-            "email_mode", "from_email",
+            "email_mode", "from_name", "from_email",
             "email_backend_standard", "email_backend_massivo",
             "smtp_host", "smtp_port", "smtp_user", "smtp_password", "smtp_use_tls",
             "email_provider", "email_provider_api_key", "email_provider_webhook_secret",
@@ -74,6 +74,7 @@ class EmailForm(forms.ModelForm):
             "email_backend_standard": forms.Select(attrs=_sel),
             "email_backend_massivo": forms.Select(attrs=_sel),
             "email_provider": forms.Select(attrs=_sel),
+            "from_name": forms.TextInput(attrs={**_ctrl, "placeholder": "es. Plancia AGESCI Campania"}),
             "from_email": forms.EmailInput(attrs=_ctrl),
             "smtp_host": forms.TextInput(attrs=_ctrl),
             "smtp_port": forms.NumberInput(attrs=_ctrl),

@@ -48,7 +48,7 @@ def task_import_risposte_eg(
         with contextlib.suppress(Exception):
             EmailMultiAlternatives(
                 subject=soggetto, body=corpo,
-                from_email=imp.from_email, to=admin_emails, connection=conn,
+                from_email=imp.from_email_completo, to=admin_emails, connection=conn,
             ).send()
 
     # Email di avvio

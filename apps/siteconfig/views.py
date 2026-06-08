@@ -491,7 +491,7 @@ class TestEmailView(RuoloRequiredMixin, View):
                     "dalle impostazioni di Plancia.\n"
                     "Se lo ricevi, la configurazione funziona correttamente."
                 ),
-                from_email=imp.from_email,
+                from_email=imp.from_email_completo,
                 to=[request.user.email],
                 connection=conn,
             )
