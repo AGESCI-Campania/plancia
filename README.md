@@ -173,7 +173,7 @@ docs/        specifica di progetto
 | **diaries** — eliminazione allegati | 5 | ✅ pass | Permessi per stato e ruolo |
 | **diaries** — dilazione e nuovi campi | 8 | ✅ pass | Context dilazione, PostoAzione chi+cosa, chi specialità |
 | **evaluations** — flussi di valutazione | 3 | ✅ pass | Flusso diretto da INVIATO, override proposta PGV |
-| **Totale** | **141** | **✅ 141/141** | `uv run pytest` — 2026-06-08 (v1.15.0) |
+| **Totale** | **141** | **✅ 141/141** | `uv run pytest` — 2026-06-10 (v1.16.0) |
 
 I test Selenium (12) usano **Django LiveServer** + **Selenium 4** con ChromeDriver scaricato
 automaticamente da Selenium Manager. Coprono:
@@ -359,6 +359,20 @@ pandoc --defaults pandoc-defaults.yaml \
 I PDF sono esclusi dal repository (artefatti generati).
 
 ## Changelog
+
+### v1.16.0 (10/06/2026)
+
+**PWA — splash screen e shortcuts**
+- Splash screen dedicati per tutti i dispositivi iOS e iPad (iPhone SE → iPhone 16 Pro Max, tutte le iPad) — schermata di avvio personalizzata durante il caricamento dell'app
+- Shortcuts nell'icona: dopo l'installazione, tasto lungo (Android) o pressione prolungata (iOS 13+) espone i collegamenti rapidi a **Diari**, **Valutazioni** e **Helpdesk**
+- Icone aggiornate: set completo con nuove varianti 180×180 e 1024×1024
+
+**Fix**
+- Timeout sessione 4h e scadenza automatica alla chiusura del browser
+- `_val()` normalizza float interi da openpyxl (es. numeri di telefono salvati con `.0` finale)
+- Rinomina URL interno `allegati_delete` → `allegati_elimina`
+
+---
 
 ### v1.15.0 (08/06/2026)
 

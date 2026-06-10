@@ -291,7 +291,135 @@ PWA_APP_ICONS = [
 PWA_APP_ICONS_APPLE = [
     {"src": "/static/images/icons/apple-touch-icon.png", "sizes": "180x180"},
 ]
-PWA_APP_SPLASH_SCREEN = []
+PWA_APP_SPLASH_SCREEN = [
+    # ---------- iPhone ----------
+    # iPhone 5 / 5s / SE (1ª gen)
+    {
+        'src': '/static/images/icons/splash-640x1136.png',
+        'media': '(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)'
+    },
+    # iPhone 6 / 7 / 8 / SE (2ª e 3ª gen)
+    {
+        'src': '/static/images/icons/splash-750x1334.png',
+        'media': '(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)'
+    },
+    # iPhone 6+ / 7+ / 8+
+    {
+        'src': '/static/images/icons/splash-1242x2208.png',
+        'media': '(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3)'
+    },
+    # iPhone X / XS / 11 Pro / 12 mini / 13 mini
+    {
+        'src': '/static/images/icons/splash-1125x2436.png',
+        'media': '(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)'
+    },
+    # iPhone XR / 11
+    {
+        'src': '/static/images/icons/splash-828x1792.png',
+        'media': '(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2)'
+    },
+    # iPhone XS Max / 11 Pro Max
+    {
+        'src': '/static/images/icons/splash-1242x2688.png',
+        'media': '(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3)'
+    },
+    # iPhone 12 / 12 Pro / 13 / 13 Pro / 14
+    {
+        'src': '/static/images/icons/splash-1170x2532.png',
+        'media': '(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)'
+    },
+    # iPhone 12 Pro Max / 13 Pro Max / 14 Plus
+    {
+        'src': '/static/images/icons/splash-1284x2778.png',
+        'media': '(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3)'
+    },
+    # iPhone 14 Pro / 15 / 15 Pro / 16
+    {
+        'src': '/static/images/icons/splash-1179x2556.png',
+        'media': '(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3)'
+    },
+    # iPhone 14 Pro Max / 15 Plus / 15 Pro Max / 16 Plus
+    {
+        'src': '/static/images/icons/splash-1290x2796.png',
+        'media': '(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)'
+    },
+    # iPhone 16 Pro
+    {
+        'src': '/static/images/icons/splash-1206x2622.png',
+        'media': '(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3)'
+    },
+    # iPhone 16 Pro Max
+    {
+        'src': '/static/images/icons/splash-1320x2868.png',
+        'media': '(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3)'
+    },
+
+    # ---------- iPad ----------
+    # iPad 9.7" / iPad mini 5 e precedenti
+    {
+        'src': '/static/images/icons/splash-1536x2048.png',
+        'media': '(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2)'
+    },
+    # iPad 10.2" (7ª-9ª gen)
+    {
+        'src': '/static/images/icons/splash-1620x2160.png',
+        'media': '(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2)'
+    },
+    # iPad mini 6 / 7
+    {
+        'src': '/static/images/icons/splash-1488x2266.png',
+        'media': '(device-width: 744px) and (device-height: 1133px) and (-webkit-device-pixel-ratio: 2)'
+    },
+    # iPad Air 10.5" / iPad Pro 10.5"
+    {
+        'src': '/static/images/icons/splash-1668x2224.png',
+        'media': '(device-width: 834px) and (device-height: 1112px) and (-webkit-device-pixel-ratio: 2)'
+    },
+    # iPad 10.9" (10ª gen) / iPad Air 4 e 5 / iPad Air 11" (M2)
+    {
+        'src': '/static/images/icons/splash-1640x2360.png',
+        'media': '(device-width: 820px) and (device-height: 1180px) and (-webkit-device-pixel-ratio: 2)'
+    },
+    # iPad Pro 11"
+    {
+        'src': '/static/images/icons/splash-1668x2388.png',
+        'media': '(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2)'
+    },
+    # iPad Pro 12.9"
+    {
+        'src': '/static/images/icons/splash-2048x2732.png',
+        'media': '(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2)'
+    },
+    # iPad Pro 13" (M4)
+    {
+        'src': '/static/images/icons/splash-2064x2752.png',
+        'media': '(device-width: 1032px) and (device-height: 1376px) and (-webkit-device-pixel-ratio: 2)'
+    },
+]
+
+PWA_APP_SHORTCUTS = [
+    {
+        "name": "Diari",
+        "short_name": "Diari",
+        "description": "Apri la lista dei diari di bordo",
+        "url": "/diari/",
+        "icons": [{"src": "/static/images/icons/icon-192x192.png", "sizes": "192x192"}],
+    },
+    {
+        "name": "Valutazioni",
+        "short_name": "Valutazioni",
+        "description": "Apri la lista delle valutazioni",
+        "url": "/valutazioni/",
+        "icons": [{"src": "/static/images/icons/icon-192x192.png", "sizes": "192x192"}],
+    },
+    {
+        "name": "Helpdesk",
+        "short_name": "Helpdesk",
+        "description": "Apri i ticket di supporto",
+        "url": "/helpdesk/",
+        "icons": [{"src": "/static/images/icons/icon-192x192.png", "sizes": "192x192"}],
+    },
+]
 
 # --- Bootstrap Icons (django-bootstrap-icons) --------------------------------
 # Versione CDN allineata a quella usata nei template; cache su disco in .icon_cache/

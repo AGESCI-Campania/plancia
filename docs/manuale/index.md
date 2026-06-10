@@ -63,6 +63,21 @@ authenticator (Google Authenticator, Aegis, ecc.).
 
 ---
 
+## Installazione come app (PWA)
+
+Plancia può essere installata sul tuo dispositivo come un'app, senza passare dall'App Store.
+
+**Su Android (Chrome):** alla prima visita compare un banner verde in fondo alla pagina —
+clicca **"Installa"** per aggiungerla alla schermata Home.
+
+**Su iPhone / iPad (Safari):** tocca il pulsante **Condividi** (□↑) in basso, poi
+**"Aggiungi a Home"**. Il banner informativo in pagina ricorda questa procedura.
+
+Una volta installata, tieni premuto l'icona: compariranno i collegamenti rapidi a
+**Diari**, **Valutazioni** e **Helpdesk**.
+
+---
+
 ## Note sulla modalità offline (PWA)
 
 Plancia funziona anche senza connessione. Se vai offline mentre compili un modulo:
