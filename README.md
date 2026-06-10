@@ -360,6 +360,14 @@ I PDF sono esclusi dal repository (artefatti generati).
 
 ## Changelog
 
+### v1.16.1 (10/06/2026)
+
+**PWA/favicon — fix icona su iPhone**
+- Aggiunta `favicon.ico` (16/32/48px), `favicon-32x32.png` e `favicon-16x16.png` generate da `icon-192x192.png`
+- Rimosso `<link rel="apple-touch-icon">` duplicato senza `sizes` che sovrascriveva in Safari il tag corretto con `sizes="180x180"` emesso da django-pwa — l'icona installata su iPhone ora si aggiorna
+
+---
+
 ### v1.16.0 (10/06/2026)
 
 **PWA — splash screen e shortcuts**
