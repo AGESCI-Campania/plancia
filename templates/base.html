@@ -4,7 +4,9 @@
 {# ── Stili aggiuntivi ────────────────────────────────────────────────────── #}
 {% block extra_head %}
 {% progressive_web_app_meta %}
-<link rel="apple-touch-icon" href="{% static 'images/icons/apple-touch-icon.png' %}">
+<link rel="shortcut icon" href="{% static 'images/icons/favicon.ico' %}">
+<link rel="icon" type="image/png" sizes="32x32" href="{% static 'images/icons/favicon-32x32.png' %}">
+<link rel="icon" type="image/png" sizes="16x16" href="{% static 'images/icons/favicon-16x16.png' %}">
 <script defer src="{% static 'js/plancia-autosave.js' %}"></script>
 <script defer src="{% static 'js/plancia-foto.js' %}"></script>
 <style>
