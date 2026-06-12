@@ -240,6 +240,7 @@ ACCOUNT_ADAPTER = "apps.accounts.adapters.PlanciaAccountAdapter"
 # --- MFA (allauth.mfa) -------------------------------------------------------
 MFA_ADAPTER = "apps.accounts.adapters.PlanciaMFAAdapter"
 MFA_TOTP_ISSUER = "Plancia AGESCI Campania"
+MFA_SUPPORTED_TYPES = ["totp", "recovery_codes", "webauthn"]
 MFA_PASSKEY_LOGIN_ENABLED = True
 MFA_PASSKEY_SIGNUP_ENABLED = False
 
