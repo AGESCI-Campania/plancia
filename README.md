@@ -360,6 +360,17 @@ I PDF sono esclusi dal repository (artefatti generati).
 
 ## Changelog
 
+### v1.17.0 (12/06/2026)
+
+**Passkey (WebAuthn)**
+- Abilitato il login con passkey: Face ID, Touch ID, Windows Hello e chiavi hardware (YubiKey)
+- Gli utenti possono aggiungere e gestire le passkey dalla pagina **Sicurezza (MFA)** nel menu utente
+- Pulsante "Accedi con passkey" nella pagina di login (visualizzato se l'utente ha passkey registrate)
+- La registrazione autonoma via passkey è disabilitata: l'account deve essere creato tramite il flusso inviti esistente
+- Manuale Admin aggiornato con istruzioni per registrare e usare le passkey
+
+---
+
 ### v1.16.1 (10/06/2026)
 
 **PWA/favicon — fix icona su iPhone**

@@ -53,7 +53,8 @@ L'URL della piattaforma viene comunicato dalla Segreteria regionale.
 | Capo Squadriglia | Link consegnato dal proprio Capo Reparto + conferma codice socio AGESCI e email |
 
 Dopo l'attivazione si accede con email e password, oppure con i pulsanti
-**Accedi con Google / Microsoft / Apple** se configurati dall'Admin.
+**Accedi con Google / Microsoft / Apple** se configurati dall'Admin, oppure con una
+**passkey** (Face ID, Touch ID, Windows Hello) se precedentemente registrata.
 
 ![Pagina di login](screenshots/01_login.png)
 

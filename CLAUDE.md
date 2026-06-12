@@ -151,6 +151,7 @@ Context processor `impostazioni` inietta `Impostazioni` (singleton) in ogni temp
   Webhook: `/anymail/webhook/`.
 - **Dev**: Mailpit su `localhost:8025`. `ACCOUNT_EMAIL_VERIFICATION = "none"` in `dev.py`.
 - **Dev MFA**: middleware disabilitato quando `DEBUG=True`. Bypass TOTP: `000000`.
+- **Passkey (WebAuthn)**: `allauth.mfa.webauthn` in `INSTALLED_APPS`, `MFA_PASSKEY_LOGIN_ENABLED=True`, `MFA_PASSKEY_SIGNUP_ENABLED=False`. Usa `fido2` già incluso nell'extra `mfa` di allauth — nessuna dipendenza aggiuntiva. Nessuna migrazione necessaria (stessa tabella `allauth_mfa_authenticator`).
 - **MFA selettiva**: `Impostazioni.mfa_obbligatoria_ruoli_estesi` (default True). Se False, MFA obbligatoria solo per Admin; Segreteria e Incaricati EG possono accedere senza. `ruolo_richiede_mfa()` in `adapters.py` legge questa impostazione.
 
 ## Regole di dominio

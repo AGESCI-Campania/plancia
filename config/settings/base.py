@@ -80,6 +80,7 @@ THIRD_PARTY_APPS = [
     "allauth",
     "allauth.account",
     "allauth.mfa",
+    "allauth.mfa.webauthn",
     "allauth.socialaccount",
     "allauth.socialaccount.providers.google",
     "allauth.socialaccount.providers.microsoft",
@@ -239,6 +240,8 @@ ACCOUNT_ADAPTER = "apps.accounts.adapters.PlanciaAccountAdapter"
 # --- MFA (allauth.mfa) -------------------------------------------------------
 MFA_ADAPTER = "apps.accounts.adapters.PlanciaMFAAdapter"
 MFA_TOTP_ISSUER = "Plancia AGESCI Campania"
+MFA_PASSKEY_LOGIN_ENABLED = True
+MFA_PASSKEY_SIGNUP_ENABLED = False
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},

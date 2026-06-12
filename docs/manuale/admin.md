@@ -51,6 +51,30 @@ Per impostazione predefinita la MFA è obbligatoria anche per **Segreteria** e
 ![Opzione MFA Segreteria/IABR](screenshots/31_mfa_impostazioni.png)
 
 
+### Passkey (accesso senza password)
+
+Oltre al TOTP, è possibile aggiungere una **passkey** come secondo fattore o come metodo
+di accesso rapido. Le passkey usano il riconoscimento biometrico del dispositivo (Face ID,
+Touch ID, Windows Hello) o una chiave hardware (YubiKey).
+
+**Come aggiungere una passkey:**
+
+1. Accedi e vai nel menu utente (in alto a destra) → **Sicurezza (MFA)**.
+2. In fondo alla pagina trovi la sezione **Passkey** → clicca **Aggiungi passkey**.
+3. Il browser avvia la procedura di registrazione: sblocca il dispositivo con l'impronta,
+   il viso o il PIN — segui le istruzioni a schermo.
+4. Dai un nome alla passkey (es. "MacBook Pro", "iPhone") per riconoscerla facilmente.
+
+**Come funziona il login con passkey:**
+
+Nella pagina di login compare il pulsante **"Accedi con passkey"**. Cliccandolo il browser
+propone le passkey registrate per questo sito — sblocca il dispositivo e accedi senza
+inserire email e password.
+
+> Le passkey sono legate al browser e al dispositivo su cui vengono create. Se cambi
+> dispositivo, aggiungi una nuova passkey dal dispositivo esistente prima di dismettere quello vecchio.
+> Puoi eliminare passkey non più usate dalla stessa pagina **Sicurezza (MFA)**.
+
 ---
 
 ## Configurazione autenticazione social (Google, Microsoft, Apple)
