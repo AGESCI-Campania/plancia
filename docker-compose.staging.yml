@@ -1,0 +1,61 @@
+# Staging: stack separato affiancato alla produzione sulla stessa macchina.
+# Usa porta 8001, volumi distinti e .env.staging.
+# Avvio: docker compose -f docker-compose.staging.yml --env-file .env.staging up -d
+services:
+  web:
+    build: .
+    env_file: [.env.staging]
+    ports:
+      - "127.0.0.1:${APP_PORT:-8001}:8000"
+    volumes:
+      - ./logs-staging:/app/logs
+      - ./staticfiles-staging:/app/staticfiles
+      - plancia_staging_media:/app/media
+    depends_on: [db, redis]
+    restart: unless-stopped
+
+  worker:
+    build: .
+    command: uv run celery -A config worker -l info
+    env_file: [.env.staging]
+    volumes:
+      - ./logs-staging:/app/logs
+      - plancia_staging_media:/app/media
+    depends_on: [db, redis]
+    restart: unless-stopped
+
+  beat:
+    build: .
+    command: uv run celery -A config beat -l info
+    env_file: [.env.staging]
+    volumes:
+      - ./logs-staging:/app/logs
+    depends_on: [db, redis]
+    restart: unless-stopped
+
+  db:
+    image: postgres:17
+    env_file: [.env.staging]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-plancia_staging}
+      POSTGRES_USER: ${POSTGRES_USER:-plancia_staging}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - plancia_staging_db:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+
+  mailpit:
+    image: axllent/mailpit:latest
+    profiles: ["mailpit"]
+    environment:
+      MP_MAX_MESSAGES: 500
+      MP_WEBROOT: /mailadmin
+    restart: unless-stopped
+
+volumes:
+  plancia_staging_db:
+  plancia_staging_media:
