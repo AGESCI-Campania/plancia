@@ -1,6 +1,6 @@
 [project]
 name = "plancia"
-version = "1.17.1"
+version = "2.0.0a1"
 description = "Plancia - Gestione Guidoncini Verdi, AGESCI Campania (Branca E/G)"
 readme = "README.md"
 requires-python = ">=3.14"
