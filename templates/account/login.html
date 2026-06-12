@@ -73,6 +73,17 @@
         </div>
         {% endif %}
 
+        {% if PASSKEY_LOGIN_ENABLED %}
+        <hr class="my-3">
+        <div class="d-grid">
+          <button type="button" id="passkey_login"
+                  class="btn btn-outline-primary d-flex align-items-center justify-content-center gap-2">
+            {% bs_icon "fingerprint" size="18" %}
+            {% trans "Accedi con passkey" %}
+          </button>
+        </div>
+        {% endif %}
+
         <hr class="my-3">
         <div class="text-center small">
           <a href="{% url 'account_reset_password' %}">{% trans "Password dimenticata?" %}</a>
@@ -82,4 +93,11 @@
 
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+{% if PASSKEY_LOGIN_ENABLED %}
+  {% include "mfa/webauthn/snippets/login_script.html" with button_id="passkey_login" %}
+{% endif %}
 {% endblock %}

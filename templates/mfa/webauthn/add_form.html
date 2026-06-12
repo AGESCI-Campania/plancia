@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% load i18n bootstrap_icons %}
+
+{% block title %}Aggiungi passkey — {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-sm-8 col-md-6 col-lg-4">
+
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h1 class="h4 card-title mb-1 text-center">{% trans "Aggiungi passkey" %}</h1>
+        <p class="text-muted small text-center mb-4">
+          Face ID, Touch ID, Windows Hello o chiave hardware.
+        </p>
+
+        <form method="post" action="{% url 'mfa_add_webauthn' %}" id="webauthn_add_form">
+          {% csrf_token %}
+
+          <div class="mb-3">
+            <label for="{{ form.name.id_for_label }}" class="form-label fw-semibold">
+              {% trans "Nome dispositivo" %}
+            </label>
+            <input type="text" name="{{ form.name.html_name }}" id="{{ form.name.id_for_label }}"
+                   value="{{ form.name.value|default:'' }}"
+                   class="form-control {% if form.name.errors %}is-invalid{% endif %}"
+                   placeholder="es. iPhone 16, MacBook Pro"
+                   required>
+            {% for error in form.name.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="mb-4 form-check">
+            <input type="checkbox" name="{{ form.passwordless.html_name }}"
+                   id="{{ form.passwordless.id_for_label }}"
+                   class="form-check-input" checked>
+            <label class="form-check-label" for="{{ form.passwordless.id_for_label }}">
+              {% trans "Usa come passkey" %}
+            </label>
+            <div class="form-text">
+              Permette l'accesso diretto con biometria, senza inserire email e password.
+            </div>
+          </div>
+
+          <input type="hidden" name="{{ form.credential.html_name }}"
+                 id="{{ form.credential.id_for_label }}">
+
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger py-2">
+              {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+            </div>
+          {% endif %}
+
+          <div class="d-grid">
+            <button type="button" id="mfa_webauthn_add" class="btn btn-primary btn-lg">
+              {% bs_icon "fingerprint" extra_classes="me-2" %}{% trans "Registra passkey" %}
+            </button>
+          </div>
+        </form>
+
+        <hr class="my-3">
+        <div class="text-center">
+          <a href="{% url 'mfa_index' %}" class="btn btn-link btn-sm text-muted p-0">
+            {% trans "Annulla" %}
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+{% include "mfa/webauthn/snippets/scripts.html" %}
+{{ js_data|json_script:"js_data" }}
+<script data-allauth-onload="allauth.webauthn.forms.addForm" type="application/json">{
+  "ids": {
+    "add": "mfa_webauthn_add",
+    "passwordless": "{{ form.passwordless.auto_id }}",
+    "credential": "{{ form.credential.auto_id }}",
+    "data": "js_data"
+  }
+}
+</script>
+{% endblock %}

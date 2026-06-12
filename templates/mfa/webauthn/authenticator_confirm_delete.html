@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% load i18n bootstrap_icons %}
+
+{% block title %}Rimuovi passkey — {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-sm-8 col-md-6 col-lg-4">
+
+    <div class="card shadow-sm border-danger">
+      <div class="card-body p-4">
+        <h1 class="h4 card-title mb-3 text-center text-danger">
+          {% bs_icon "trash" extra_classes="me-2" %}{% trans "Rimuovi passkey" %}
+        </h1>
+        <p class="text-center mb-4">
+          Vuoi rimuovere la passkey <strong>{{ authenticator }}</strong>?
+          Dopo la rimozione non potrai più usarla per accedere.
+        </p>
+
+        <form method="post" action="{% url 'mfa_remove_webauthn' pk=authenticator.pk %}">
+          {% csrf_token %}
+          <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-danger">{% trans "Sì, rimuovi" %}</button>
+            <a href="{% url 'mfa_list_webauthn' %}" class="btn btn-outline-secondary">
+              {% trans "Annulla" %}
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
