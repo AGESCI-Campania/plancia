@@ -45,10 +45,17 @@
             </div>
           {% endif %}
 
-          <div class="d-grid mt-4">
+          <div class="d-grid mt-4 gap-2">
             <button type="submit" class="btn btn-primary btn-lg">
               {% bs_icon "box-arrow-in-right" extra_classes="me-2" %}{% trans "Accedi" %}
             </button>
+            {% if PASSKEY_LOGIN_ENABLED %}
+            <button type="button" id="passkey_login" form="mfa_login"
+                    class="btn btn-outline-primary d-flex align-items-center justify-content-center gap-2">
+              {% bs_icon "fingerprint" size="18" %}
+              {% trans "Accedi con passkey" %}
+            </button>
+            {% endif %}
           </div>
         </form>
 
@@ -70,17 +77,6 @@
             </button>
           </form>
           {% endfor %}
-        </div>
-        {% endif %}
-
-        {% if PASSKEY_LOGIN_ENABLED %}
-        <hr class="my-3">
-        <div class="d-grid">
-          <button type="button" id="passkey_login" form="mfa_login"
-                  class="btn btn-outline-primary d-flex align-items-center justify-content-center gap-2">
-            {% bs_icon "fingerprint" size="18" %}
-            {% trans "Accedi con passkey" %}
-          </button>
         </div>
         {% endif %}
 
