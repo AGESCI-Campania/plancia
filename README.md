@@ -360,6 +360,16 @@ I PDF sono esclusi dal repository (artefatti generati).
 
 ## Changelog
 
+### v1.17.1 (12/06/2026)
+
+**Fix passkey — completamento funzionalità**
+- Fix CSRF su iOS Safari dopo login Google: `PlanciaAuthenticateView` non chiama più `begin_authentication()` inutilmente per utenti senza passkey, evitando la scrittura in sessione che causava il mismatch CSRF
+- Fix: aggiunto `MFA_SUPPORTED_TYPES = ["totp", "recovery_codes", "webauthn"]` nelle settings — senza questa impostazione `"webauthn"` non compariva in `SUPPORTED_TYPES` e la sezione passkey restava nascosta
+- Template Bootstrap per tutte le pagine WebAuthn: aggiungi passkey, lista, rinomina, elimina
+- Pulsante "Accedi con passkey" nella pagina di login con attributo `form="mfa_login"` necessario per l'associazione al form nascosto usato da `webauthn.js`
+
+---
+
 ### v1.17.0 (12/06/2026)
 
 **Passkey (WebAuthn)**

@@ -53,27 +53,32 @@ Per impostazione predefinita la MFA è obbligatoria anche per **Segreteria** e
 
 ### Passkey (accesso senza password)
 
-Oltre al TOTP, è possibile aggiungere una **passkey** come secondo fattore o come metodo
-di accesso rapido. Le passkey usano il riconoscimento biometrico del dispositivo (Face ID,
-Touch ID, Windows Hello) o una chiave hardware (YubiKey).
+Oltre al TOTP, è possibile aggiungere una **passkey** per accedere con Face ID, Touch ID,
+Windows Hello o una chiave hardware (YubiKey) — senza inserire email e password.
 
 **Come aggiungere una passkey:**
 
-1. Accedi e vai nel menu utente (in alto a destra) → **Sicurezza (MFA)**.
-2. In fondo alla pagina trovi la sezione **Passkey** → clicca **Aggiungi passkey**.
-3. Il browser avvia la procedura di registrazione: sblocca il dispositivo con l'impronta,
-   il viso o il PIN — segui le istruzioni a schermo.
-4. Dai un nome alla passkey (es. "MacBook Pro", "iPhone") per riconoscerla facilmente.
+1. Accedi normalmente e vai nel menu utente (in alto a destra) → **Sicurezza (MFA)**.
+2. Trovi la sezione **Passkey** → clicca **Aggiungi passkey**.
+3. Inserisci un nome per il dispositivo (es. "iPhone 16", "MacBook Pro").
+4. Lascia spuntata l'opzione **"Usa come passkey"** per poter accedere senza password.
+5. Clicca **Registra passkey** — il browser apre la procedura di registrazione biometrica:
+   sblocca con impronta, viso o PIN e segui le istruzioni a schermo.
 
-**Come funziona il login con passkey:**
+**Come accedere con la passkey:**
 
 Nella pagina di login compare il pulsante **"Accedi con passkey"**. Cliccandolo il browser
-propone le passkey registrate per questo sito — sblocca il dispositivo e accedi senza
-inserire email e password.
+propone le passkey registrate — sblocca il dispositivo e accedi direttamente, senza email
+né password né TOTP.
 
-> Le passkey sono legate al browser e al dispositivo su cui vengono create. Se cambi
-> dispositivo, aggiungi una nuova passkey dal dispositivo esistente prima di dismettere quello vecchio.
-> Puoi eliminare passkey non più usate dalla stessa pagina **Sicurezza (MFA)**.
+**Gestione passkey:**
+
+Da **Sicurezza (MFA)** → clicca il numero di passkey configurate → apri la lista per:
+- **Rinominare** una passkey (icona matita)
+- **Eliminare** una passkey non più usata (icona cestino)
+
+> **Nota**: le passkey sono legate al browser/dispositivo su cui vengono create. Prima di
+> cambiare dispositivo, aggiungi una nuova passkey dal vecchio e poi elimina quella obsoleta.
 
 ---
 

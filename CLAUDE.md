@@ -151,7 +151,8 @@ Context processor `impostazioni` inietta `Impostazioni` (singleton) in ogni temp
   Webhook: `/anymail/webhook/`.
 - **Dev**: Mailpit su `localhost:8025`. `ACCOUNT_EMAIL_VERIFICATION = "none"` in `dev.py`.
 - **Dev MFA**: middleware disabilitato quando `DEBUG=True`. Bypass TOTP: `000000`.
-- **Passkey (WebAuthn)**: `allauth.mfa.webauthn` in `INSTALLED_APPS`, `MFA_PASSKEY_LOGIN_ENABLED=True`, `MFA_PASSKEY_SIGNUP_ENABLED=False`. Usa `fido2` già incluso nell'extra `mfa` di allauth — nessuna dipendenza aggiuntiva. Nessuna migrazione necessaria (stessa tabella `allauth_mfa_authenticator`).
+- **Passkey (WebAuthn)**: `allauth.mfa.webauthn` in `INSTALLED_APPS`, `MFA_SUPPORTED_TYPES=["totp","recovery_codes","webauthn"]` (obbligatorio — senza questa impostazione `webauthn` non compare in `SUPPORTED_TYPES`), `MFA_PASSKEY_LOGIN_ENABLED=True`, `MFA_PASSKEY_SIGNUP_ENABLED=False`. Usa `fido2` già incluso nell'extra `mfa` di allauth — nessuna dipendenza aggiuntiva. Nessuna migrazione necessaria (stessa tabella `allauth_mfa_authenticator`).
+- **PlanciaAuthenticateView**: sovrascrive `mfa_authenticate` URL (`config/urls.py`) per evitare `begin_authentication()` su utenti senza passkey — il write inutile in sessione causava CSRF error su iOS Safari dopo redirect OAuth. Il bottone passkey nella login page richiede `form="mfa_login"` (attributo HTML di associazione al form nascosto, usato da `webauthn.js` via `loginBtn.form`).
 - **MFA selettiva**: `Impostazioni.mfa_obbligatoria_ruoli_estesi` (default True). Se False, MFA obbligatoria solo per Admin; Segreteria e Incaricati EG possono accedere senza. `ruolo_richiede_mfa()` in `adapters.py` legge questa impostazione.
 
 ## Regole di dominio
