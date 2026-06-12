@@ -41,6 +41,38 @@
       </div>
     {% endif %}
 
+    {% if "webauthn" in MFA_SUPPORTED_TYPES %}
+      <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <strong>{% trans "Passkey" %}</strong>
+          {% if authenticators.webauthn %}
+            <span class="badge bg-success">{{ authenticators.webauthn|length }} configurata{% if authenticators.webauthn|length != 1 %}e{% endif %}</span>
+          {% else %}
+            <span class="badge bg-secondary">{% trans "Nessuna" %}</span>
+          {% endif %}
+        </div>
+        <div class="card-body">
+          {% if authenticators.webauthn %}
+            <p class="mb-3">
+              Hai {{ authenticators.webauthn|length }} passkey configurata{% if authenticators.webauthn|length != 1 %}e{% endif %}
+              (Face ID, Touch ID, chiave hardware). Puoi accedere senza inserire email e password.
+            </p>
+            <a href="{% url 'mfa_list_webauthn' %}" class="btn btn-outline-primary btn-sm">
+              {% trans "Gestisci" %}
+            </a>
+          {% else %}
+            <p class="mb-3">
+              Aggiungi una passkey per accedere con Face ID, Touch ID o Windows Hello,
+              senza inserire email e password.
+            </p>
+            <a href="{% url 'mfa_add_webauthn' %}" class="btn btn-primary btn-sm">
+              {% trans "Aggiungi passkey" %}
+            </a>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+
     {% if "recovery_codes" in MFA_SUPPORTED_TYPES %}
       <div class="card mb-3">
         <div class="card-header d-flex justify-content-between align-items-center">

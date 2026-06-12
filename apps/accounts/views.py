@@ -7,9 +7,31 @@ from django.views import View
 from django.views.generic import DetailView, ListView, TemplateView
 
 from apps.accounts.mixins import StaffPlanciaRequiredMixin
+from allauth.mfa.base.views import AuthenticateView as MFAAuthenticateView
+from allauth.mfa.models import Authenticator
+
 from apps.accounts.models import Ruolo, User
 from apps.accounts.roles import ROLE_CREATABLE_BY
 from apps.accounts.roles import nomina as service_nomina
+
+
+class PlanciaAuthenticateView(MFAAuthenticateView):
+    """Sovrascrive AuthenticateView per evitare begin_authentication() inutile.
+
+    Senza override, allauth chiama begin_authentication() e scrive stato WebAuthn
+    in sessione a ogni GET della pagina TOTP, anche per utenti senza passkey.
+    Su iOS Safari dopo redirect OAuth cross-site questo causa errori CSRF.
+    """
+
+    def _build_forms(self):
+        result = super()._build_forms()
+        user = self.stage.login.user
+        if self.webauthn_form is not None:
+            if not Authenticator.objects.filter(
+                user=user, type=Authenticator.Type.WEBAUTHN
+            ).exists():
+                self.webauthn_form = None
+        return result
 
 
 class ProfiloView(LoginRequiredMixin, TemplateView):

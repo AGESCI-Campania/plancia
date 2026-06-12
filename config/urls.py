@@ -3,6 +3,7 @@ from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
 
+from apps.accounts.views import PlanciaAuthenticateView
 from apps.editions.views import HomeView
 from apps.notifications.webhooks import AnymailWebhookDispatchView
 from apps.siteconfig.views import FlowerProxyView, MailpitProxyView, PaginaStaticaPublicView
@@ -10,6 +11,9 @@ from apps.siteconfig.views import FlowerProxyView, MailpitProxyView, PaginaStati
 urlpatterns = [
     path("", HomeView.as_view(), name="home"),
     path("admin/", admin.site.urls),
+    # Override mfa_authenticate prima di allauth.urls per evitare begin_authentication()
+    # inutile in sessione su utenti TOTP-only (fix CSRF su iOS Safari dopo OAuth).
+    path("accounts/2fa/authenticate/", PlanciaAuthenticateView.as_view(), name="mfa_authenticate"),
     path("accounts/", include("allauth.urls")),
     path("utenti/", include("apps.accounts.urls", namespace="accounts")),
     path("", include("pwa.urls")),
