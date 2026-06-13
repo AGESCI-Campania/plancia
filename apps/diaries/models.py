@@ -288,6 +288,7 @@ class Anagrafica(models.Model):
     tecniche = models.TextField(blank=True, verbose_name="tecniche da acquisire (da import)")
 
     aggiornato_at = models.DateTimeField(auto_now=True)
+    version = models.PositiveIntegerField(default=0)
 
     class Meta:
         verbose_name = "anagrafica"
@@ -309,6 +310,7 @@ class Presentazione(models.Model):
     )
     cosa_sappiamo_fare = models.TextField(blank=True, verbose_name="cosa sappiamo fare")
     aggiornato_at = models.DateTimeField(auto_now=True)
+    version = models.PositiveIntegerField(default=0)
 
     class Meta:
         verbose_name = "presentazione squadriglia"
@@ -385,6 +387,7 @@ class Impresa(models.Model):
     cosa = models.TextField(blank=True)
     link_esterno = models.URLField(blank=True, verbose_name="link esterno (video/materiale)")
     aggiornato_at = models.DateTimeField(auto_now=True)
+    version = models.PositiveIntegerField(default=0)
 
     class Meta:
         unique_together = [("diario", "numero")]
@@ -449,6 +452,7 @@ class Missione(models.Model):
     data = models.DateField(null=True, blank=True)
     descrizione_svolgimento = models.TextField(blank=True)
     aggiornato_at = models.DateTimeField(auto_now=True)
+    version = models.PositiveIntegerField(default=0)
 
     class Meta:
         verbose_name = "missione"

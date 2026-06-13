@@ -27,6 +27,7 @@ urlpatterns = [
     path("import/", include("apps.imports.urls", namespace="imports")),
     path("stats/", include("apps.stats.urls", namespace="stats")),
     path("api/soci/", include("apps.org.urls")),
+    path("api/diari/", include("apps.diaries.api_urls")),
     path("drive/", include("apps.storage_drive.urls", namespace="storage_drive")),
     path("anymail/webhook/", AnymailWebhookDispatchView.as_view(), name="anymail_webhook"),
     path("privacy/", PaginaStaticaPublicView.as_view(), {"slug": "privacy"}, name="pagina_privacy"),

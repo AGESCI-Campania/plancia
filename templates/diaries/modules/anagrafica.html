@@ -16,7 +16,10 @@
 </h3>
 <p class="text-muted small mb-4">I dati di contatto sono visibili solo ai Capi Reparto e allo staff.</p>
 
-<form method="post" novalidate data-autosave-key="diario-anagrafica-{{ diario.pk }}">
+<form method="post" novalidate
+      data-autosave-key="diario-anagrafica-{{ diario.pk }}"
+      data-offline-modulo="anagrafica"
+      data-offline-pk="{{ diario.pk }}">
   {% csrf_token %}
   <div class="row g-3">
 

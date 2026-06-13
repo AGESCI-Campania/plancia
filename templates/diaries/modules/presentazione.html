@@ -15,7 +15,11 @@
   <small class="text-muted fs-6">— {{ diario }}</small>
 </h3>
 
-<form method="post" novalidate data-autosave-key="diario-presentazione-{{ diario.pk }}">
+<form method="post" novalidate
+      data-autosave-key="diario-presentazione-{{ diario.pk }}"
+      data-offline-modulo="presentazione"
+      data-offline-pk="{{ diario.pk }}"
+      data-prefix-membri="{{ formset.prefix }}">
   {% csrf_token %}
 
   <div class="mb-4">

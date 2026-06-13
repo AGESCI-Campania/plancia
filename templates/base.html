@@ -7,8 +7,12 @@
 <link rel="shortcut icon" href="{% static 'images/icons/favicon.ico' %}">
 <link rel="icon" type="image/png" sizes="32x32" href="{% static 'images/icons/favicon-32x32.png' %}">
 <link rel="icon" type="image/png" sizes="16x16" href="{% static 'images/icons/favicon-16x16.png' %}">
+<script>window.PLANCIA_AUTENTICATO = {% if user.is_authenticated %}true{% else %}false{% endif %};</script>
 <script defer src="{% static 'js/plancia-autosave.js' %}"></script>
 <script defer src="{% static 'js/plancia-foto.js' %}"></script>
+<script defer src="{% static 'js/plancia-idb.js' %}"></script>
+<script defer src="{% static 'js/plancia-sync.js' %}"></script>
+<script defer src="{% static 'js/plancia-moduli-offline.js' %}"></script>
 <style>
   .nav-avatar {
     display: inline-flex;
@@ -219,6 +223,31 @@
               </li>
             {% endif %}
 
+            {# ── Indicatore offline (mostrato da JS quando navigator.onLine=false) #}
+            <li class="nav-item d-none" id="offline-indicator" aria-live="polite" aria-label="Connessione assente">
+              <span class="badge bg-warning text-dark px-2 py-1 ms-1" style="font-size:.72rem;">
+                Offline
+              </span>
+            </li>
+
+            {# ── Foto in attesa di upload ─────────────────────────────── #}
+            <li class="nav-item d-none" id="photos-pending-badge" aria-live="polite">
+              <span class="badge bg-info text-dark px-2 py-1 ms-1"
+                    style="font-size:.72rem;" title="Foto in attesa di sincronizzazione">
+                <span id="photos-pending-count">0</span> foto
+              </span>
+            </li>
+
+            {# ── Modifiche in attesa di sync ──────────────────────────── #}
+            <li class="nav-item d-none" id="offline-sync-badge" aria-live="polite">
+              <a href="{% url 'diaries:list' %}"
+                 class="badge bg-warning text-dark text-decoration-none px-2 py-1 ms-1"
+                 style="font-size:.72rem;"
+                 title="Modifiche offline in attesa di sincronizzazione">
+                <span id="offline-sync-count">0</span> in attesa
+              </a>
+            </li>
+
             {# ── Badge utente (dropdown) ───────────────────────────────── #}
             <li class="nav-item dropdown ms-lg-1">
               <a class="nav-link dropdown-toggle d-flex align-items-center gap-2 py-1"
@@ -305,6 +334,17 @@
       </div>
     </div>
   </nav>
+{# ── Banner sessione scaduta (mostrato da plancia-sync.js su 401) ──────── #}
+<div id="offline-auth-banner"
+     class="d-none text-center py-2 px-3 small"
+     role="alert" aria-live="assertive"
+     style="background:#fff3cd;border-bottom:1px solid #ffc107;position:sticky;top:0;z-index:1040;">
+  <strong>Sessione scaduta.</strong>
+  Hai <strong><span id="auth-banner-count">0</span></strong> modifica/he in attesa.
+  <a href="{% url 'account_login' %}" class="btn btn-sm btn-warning py-0 px-2 ms-2">
+    Accedi per sincronizzare
+  </a>
+</div>
 {% endblock navbar %}
 
 {# ── Footer con valori da Impostazioni ───────────────────────────────── #}
@@ -438,6 +478,40 @@
 
   document.getElementById('pwa-install-dismiss').addEventListener('click', dismiss);
   window.addEventListener('appinstalled', function() { banner.classList.add('d-none'); });
+})();
+</script>
+
+{# ── Toast notifiche (usato da plancia-moduli-offline.js) ─────────────── #}
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index:1100;">
+  <div id="plancia-toast" class="toast border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="toast-header bg-transparent border-0 pb-0">
+      <strong class="me-auto" id="plancia-toast-title"></strong>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Chiudi"></button>
+    </div>
+    <div class="toast-body pt-1" id="plancia-toast-body"></div>
+  </div>
+</div>
+
+{# ── Indicatore offline e badge foto ─────────────────────────────────── #}
+<script>
+(function() {
+  // Offline/online indicator
+  var indicator = document.getElementById('offline-indicator');
+  if (indicator) {
+    function updateOffline() { indicator.classList.toggle('d-none', navigator.onLine); }
+    updateOffline();
+    window.addEventListener('online',  updateOffline);
+    window.addEventListener('offline', updateOffline);
+  }
+
+  // Badge "N foto in attesa"
+  document.addEventListener('plancia:photos-pending-count', function(e) {
+    var badge   = document.getElementById('photos-pending-badge');
+    var countEl = document.getElementById('photos-pending-count');
+    if (!badge || !countEl) return;
+    countEl.textContent = e.detail;
+    badge.classList.toggle('d-none', e.detail === 0);
+  });
 })();
 </script>
 

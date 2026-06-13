@@ -15,7 +15,10 @@
   <small class="text-muted fs-6">— {{ diario }}</small>
 </h3>
 
-<form method="post" novalidate data-autosave-key="diario-missione-{{ diario.pk }}">
+<form method="post" novalidate
+      data-autosave-key="diario-missione-{{ diario.pk }}"
+      data-offline-modulo="missione"
+      data-offline-pk="{{ diario.pk }}">
   {% csrf_token %}
   <div class="row g-3 mb-4">
     <div class="col-12">
@@ -85,6 +88,7 @@
 <div class="mt-4"
      data-foto-base-url="{% url 'diaries:allegati_list' diario.pk %}"
      data-foto-modulo="missione"
+     data-foto-max-px="{{ impostazioni.allegati_max_px|default:1024 }}"
      data-foto-can-edit="1"></div>
 
 <script>

@@ -32,21 +32,21 @@ al ritorno della connettività.
 
 ## Piano di implementazione
 
-| # | Fase | Stima |
-|---|---|---|
-| 1 | Setup branch `v2-offline` + ambiente staging + script anonimizzazione DB | 2–3 gg |
-| 2 | API JSON moduli 1–5 (fondamento di tutto) | 8–10 gg |
-| 3 | Optimistic locking (`version` sui moduli, conflict detection server-side) | 2–3 gg |
-| 4 | Service worker + cache asset (app installabile, risorse statiche offline) | 3–4 gg |
-| 5 | IndexedDB + salvataggio offline (intercettare submit, coda locale) | 8–10 gg |
-| 6 | Background Sync testi (svuotare la coda al ritorno della connessione) | 4–5 gg |
-| 7 | Auth: sync al login (gestire 401, banner, rilancio sync post-autenticazione) | 3–4 gg |
-| 8 | Coda allegati (resize client-side, coda separata, progress UI) | 7–8 gg |
-| 9 | Test su staging con dati realistici | 4–5 gg |
-| 10 | Aggiornamento manuali (utente CSQ, admin, CLAUDE.md, README.md) | 3–4 gg |
-| 11 | Merge main → branch, test regressione finale | 1–2 gg |
-| 12 | PR → main, tag `v2.0.0`, deploy produzione | 1–2 gg |
-| | **Totale stimato** | **45–58 gg** |
+| # | Fase | Stima | Stato |
+|---|---|---|---|
+| 1 | Setup branch `v2-offline` + ambiente staging + script anonimizzazione DB | 2–3 gg | ✅ |
+| 2 | API JSON moduli 1–5 (fondamento di tutto) | 8–10 gg | ✅ |
+| 3 | Optimistic locking (`version` sui moduli, conflict detection server-side) | 2–3 gg | ✅ integrato in Fase 2 |
+| 4 | Service worker + cache asset (app installabile, risorse statiche offline) | 3–4 gg | ✅ |
+| 5 | IndexedDB + salvataggio offline (intercettare submit, coda locale) | 8–10 gg | ✅ |
+| 6 | Background Sync testi (svuotare la coda al ritorno della connessione) | 4–5 gg | ✅ |
+| 7 | Auth: sync al login (gestire 401, banner, rilancio sync post-autenticazione) | 3–4 gg | ✅ |
+| 8 | Coda allegati (resize client-side, coda separata, progress UI) | 7–8 gg | ✅ |
+| 9 | Test su staging con dati realistici | 4–5 gg | |
+| 10 | Aggiornamento manuali (utente CSQ, admin, CLAUDE.md, README.md) | 3–4 gg | |
+| 11 | Merge main → branch, test regressione finale | 1–2 gg | |
+| 12 | PR → main, tag `v2.0.0`, deploy produzione | 1–2 gg | |
+| | **Totale stimato** | **45–58 gg** | |
 
 Circa **9–12 settimane** a tempo pieno.
 
