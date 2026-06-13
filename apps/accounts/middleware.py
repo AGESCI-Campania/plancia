@@ -37,7 +37,7 @@ class MFAEnforcementMiddleware:
         return self.get_response(request)
 
     def _deve_forzare_setup(self, request) -> bool:
-        if settings.DEBUG:
+        if settings.DEBUG or getattr(settings, "SKIP_MFA_ENFORCEMENT", False):
             return False
         user = request.user
         if not user.is_authenticated:

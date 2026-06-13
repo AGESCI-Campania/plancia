@@ -61,6 +61,7 @@ if Path(_env_file).exists():
 
 SECRET_KEY = env.str("DJANGO_SECRET_KEY", default="dev-insecure-change-me")
 DEBUG = env.bool("DJANGO_DEBUG", default=False)
+SKIP_MFA_ENFORCEMENT = env.bool("SKIP_MFA_ENFORCEMENT", default=False)
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
 
