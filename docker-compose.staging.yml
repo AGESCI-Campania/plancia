@@ -1,12 +1,12 @@
 # Staging: stack separato affiancato alla produzione sulla stessa macchina.
-# Usa porta 8001, volumi distinti e .env.staging.
+# Usa porta 8002, volumi distinti e .env.staging.
 # Avvio: docker compose -f docker-compose.staging.yml --env-file .env.staging up -d
 services:
   web:
     build: .
     env_file: [.env.staging]
     ports:
-      - "127.0.0.1:${APP_PORT:-8001}:8000"
+      - "127.0.0.1:${APP_PORT:-8002}:8000"
     volumes:
       - ./logs-staging:/app/logs
       - ./staticfiles-staging:/app/staticfiles
