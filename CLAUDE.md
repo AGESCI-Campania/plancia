@@ -17,7 +17,7 @@ documento prevale su questo file.
 
 ## Stack
 - Python **≥ 3.14**, Django **≥ 6.0**. PostgreSQL **≥ 17**. Redis + **Celery** per job asincroni.
-- **uv** per dipendenze/venv. **Bootstrap 5** via **`django-agesci-campania-theme` 1.2.4**.
+- **uv** per dipendenze/venv. **Bootstrap 5** via **`django-agesci-campania-theme` 2.0.0**.
   Icone SVG inline con **`django-bootstrap-icons`**. **WeasyPrint** (PDF), **openpyxl** (Excel).
 - Auth: **django-allauth** (email + social Google/Microsoft/Apple, **MFA**), **django-guardian**
   (object-level), **django-axes** (brute-force).
@@ -69,12 +69,25 @@ Context processor `impostazioni` inietta `Impostazioni` (singleton) in ogni temp
 ## Gotchas e trappole
 
 ### Template e UI
-- **Navbar**: `{% block %}` dentro `{% include %}` non partecipa all'ereditarietà Django. Sovrascrivere
-  **completamente** `{% block navbar %}` in `base.html` — no `{{ block.super }}` per le voci.
-- **Messages**: tema 1.1.0 gestisce `{% block messages %}` globalmente — **non aggiungere**
+- **Tema v2 — blocchi header**: i vecchi blocchi `navbar`, `nav_items`, `breadcrumb`, `subnav`
+  **non esistono più**. I nuovi blocchi sono: `header` (intero header), `brand_url`, `brand_text`,
+  `header_nav` (nav desktop icona+testo), `offcanvas_nav` (nav mobile), `header_actions` (barra
+  inferiore destra). Il `base.html` di Plancia sovrascrive già tutti questi blocchi — in altri
+  template non sovrascrivere `header` salvo casi eccezionali.
+- **Tema v2 — footer**: i blocchi del footer sono `footer_brand_text`, `footer_col1_title`,
+  `footer_col1_links`, `footer_col2_title`, `footer_col2_links`, `footer_text`, `footer_copyright`,
+  `footer_links`. Non usare più `class="footer-agesci mt-auto"`.
+- **Sidebar gestione**: `base_gestione.html` estende `base.html` e attiva la sidebar collapsible
+  (variant dark) per le sezioni staff. I template in `siteconfig/`, `imports/`, `stats/`,
+  `accounts/` (lista/dettaglio utenti), `notifications/gestione_inviti` estendono
+  `base_gestione.html`. Per aggiungere nuove voci alla sidebar, modificare `sidebar_items` in
+  `base_gestione.html`.
+- **Componenti opzionali**: `{% load agesci_components %}` — tag disponibili: `ag_hero`,
+  `ag_feature_card`, `ag_feature_grid`, `ag_jumbotron`, `ag_badge`, `ag_button`, `ag_breadcrumb`,
+  `ag_dropdown`, `ag_list_group`, `ag_modal_trigger`, `ag_masonry_grid`.
+- **Messages**: il tema gestisce `{% block messages %}` globalmente — **non aggiungere**
   `{% if messages %}` nei template, causerebbe duplicati.
 - **Icone**: `{% load bootstrap_icons %}` + `{% bs_icon "nome" %}`. Mai `<i class="bi bi-*">`.
-- **Footer**: `class="footer-agesci mt-auto"` — `mt-auto` obbligatorio per il layout sticky.
 - **Abbreviazioni nell'UI**: CSQ/CRP/PGV non devono apparire nell'interfaccia. Usare "Capo
   Squadriglia", "Capo Reparto", "Pattuglia GV". Le abbreviazioni restano solo nel codice.
 
@@ -245,6 +258,16 @@ Accessibile solo a CRP, Incaricati EG e Admin — non al Capo Squadriglia.
 - Resize automatico al caricamento: `_resize_immagine()` in `apps/diaries/views.py`
 - Dimensione configurabile: `Impostazioni.allegati_max_px` (default 1024px)
 
+## Gestione errori HTTP
+
+- **404**: `config.error_views.page_not_found` → `templates/404.html` + email agli ADMINS via `mail_admins()`.
+- **500**: `config.error_views.server_error` → `templates/500.html` (standalone, non estende base.html).
+  Email agli ADMINS gestita da `AdminEmailHandler` in `LOGGING["loggers"]["django.request"]`.
+- **CSRF**: `config.error_views.csrf_failure` (impostato via `CSRF_FAILURE_VIEW`) → `templates/403_csrf.html`.
+- **403 generico**: `templates/403.html` (permessi negati, non CSRF).
+- **Configurazione admin**: variabile d'ambiente `ADMIN_EMAILS` (lista separata da virgola).
+  `SERVER_EMAIL` per il mittente delle notifiche. Se `ADMIN_EMAILS` è vuota, le notifiche sono disabilitate.
+
 ## Cosa NON fare
 - Non cambiare `AUTH_USER_MODEL` né l'app label dopo le prime migrazioni.
 - Non rendere visibili valutazioni/relazioni oltre i ruoli previsti.
@@ -252,5 +275,7 @@ Accessibile solo a CRP, Incaricati EG e Admin — non al Capo Squadriglia.
 - Non versionare CSV reali (dati minori): usare solo `fixtures/`.
 - Non rendere il codice socio editabile a mano; validarlo come numerico 4–8 cifre.
 - Non aggiungere `{% if messages %}` nei template (il tema li gestisce globalmente).
+- Non usare i vecchi blocchi v1 `navbar`, `nav_items`, `breadcrumb`, `subnav` (rimossi nel tema v2).
+- Non usare `class="footer-agesci mt-auto"` (il footer v2 è gestito interamente dal tema).
 - Non usare `<i class="bi bi-*">`: usare `{% bs_icon %}`.
 - Non usare `mt-5` sul footer: usare `mt-auto`.

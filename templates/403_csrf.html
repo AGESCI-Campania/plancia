@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% load bootstrap_icons %}
+
+{% block title %}Errore di sicurezza — Plancia{% endblock %}
+
+{% block content %}
+<div class="text-center py-5">
+  <div class="mb-3 text-warning" style="font-size:5rem;line-height:1">
+    {% bs_icon "shield-exclamation" size="80" %}
+  </div>
+  <h1 class="display-4 fw-bold mb-2">Errore di sicurezza</h1>
+  <p class="lead mb-2">La tua richiesta non è stata elaborata.</p>
+  <p class="text-muted mb-4">
+    Il token di sicurezza della pagina è scaduto o non è valido.<br>
+    Questo accade di solito se la pagina è rimasta aperta troppo a lungo o se hai
+    aperto più schede contemporaneamente.
+  </p>
+  <div class="d-flex gap-2 justify-content-center flex-wrap">
+    <button onclick="history.back()" class="btn btn-outline-secondary">
+      {% bs_icon "arrow-left" extra_classes="me-1" %}Torna indietro
+    </button>
+    <a href="/" class="btn btn-primary">
+      {% bs_icon "house-fill" extra_classes="me-1" %}Vai alla home
+    </a>
+  </div>
+</div>
+{% endblock %}

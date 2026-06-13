@@ -437,6 +437,17 @@ GOOGLE_OAUTH_CLIENT_SECRET = env.str("GOOGLE_OAUTH_CLIENT_SECRET", default="")
 # --- URL base (usato da notifications/service.py per i link di attivazione) --
 BASE_URL = env.str("BASE_URL", default="http://localhost:8000")
 
+# --- Notifiche errori agli amministratori -----------------------------------
+# ADMIN_EMAILS: lista di indirizzi separati da virgola (es. "a@b.it,c@d.it").
+# Se vuota, le notifiche di errore via email sono disabilitate.
+_admin_emails = env.list("ADMIN_EMAILS", default=[])
+ADMINS = [("Plancia Admin", e) for e in _admin_emails]
+SERVER_EMAIL = env.str("SERVER_EMAIL", default="plancia@agescicampania.org")
+EMAIL_SUBJECT_PREFIX = "[Plancia] "
+
+# Vista CSRF failure: mostra un template brandizzato invece della pagina Django.
+CSRF_FAILURE_VIEW = "config.error_views.csrf_failure"
+
 # --- Email ------------------------------------------------------------------
 DEFAULT_FROM_EMAIL = env.str("DEFAULT_FROM_EMAIL", default="plancia@agescicampania.org")
 
@@ -488,8 +499,22 @@ LOGGING = {
             "backupCount": 5,
             "formatter": "std",
         },
+        # Invia email agli ADMINS per ogni errore 500 (livello ERROR su django.request).
+        # fail_silently=True evita eccezioni secondarie se l'email non è configurata.
+        "mail_admins": {
+            "level": "ERROR",
+            "class": "django.utils.log.AdminEmailHandler",
+            "include_html": True,
+        },
     },
     "root": {"handlers": ["console", "file"], "level": "INFO"},
+    "loggers": {
+        "django.request": {
+            "handlers": ["mail_admins"],
+            "level": "ERROR",
+            "propagate": True,
+        },
+    },
 }
 # NB: il flag "debug_diagnostico" di Impostazioni alza a runtime il livello di logging
 # per gli admin; NON ribalta settings.DEBUG (vedi docs sez. 15).

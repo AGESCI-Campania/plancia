@@ -1,7 +1,7 @@
 {% extends "agesci_theme/base.html" %}
 {% load i18n static pwa bootstrap_icons accounts_tags %}
 
-{# ── Stili aggiuntivi ────────────────────────────────────────────────────── #}
+{# ── Extra <head> ────────────────────────────────────────────────────────── #}
 {% block extra_head %}
 {% progressive_web_app_meta %}
 <link rel="shortcut icon" href="{% static 'images/icons/favicon.ico' %}">
@@ -18,17 +18,16 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 30px;
-    height: 30px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
-    background: rgba(255,255,255,.22);
-    border: 2px solid rgba(255,255,255,.55);
+    background: rgba(0,0,0,.15);
+    border: 2px solid rgba(0,0,0,.25);
     font-size: .78rem;
     font-weight: 700;
-    color: #fff;
+    color: inherit;
     flex-shrink: 0;
   }
-  .navbar-agesci .dropdown-menu { border-radius: .5rem; }
   .hijack-banner {
     position: sticky;
     top: 0;
@@ -48,354 +47,329 @@
     vertical-align: middle;
     border-radius: .3rem;
   }
-  .badge-iabr {
-    background-color: #6f42c1 !important;
-    color: #fff !important;
-  }
-  .avatar-admin    { border-color: #dc3545 !important; background: rgba(220,53,69,.30) !important; }
+  .badge-iabr { background-color: #6f42c1 !important; color: #fff !important; }
+  .avatar-admin      { border-color: #dc3545 !important; background: rgba(220,53,69,.30) !important; }
   .avatar-segreteria { border-color: #0d6efd !important; background: rgba(13,110,253,.30) !important; }
-  .avatar-iabr     { border-color: #6f42c1 !important; background: rgba(111,66,193,.30) !important; }
-  .avatar-csq      { border-color: #198754 !important; background: rgba(25,135,84,.30) !important; }
-  .avatar-crp      { border-color: #ffc107 !important; background: rgba(255,193,7,.30) !important; }
-  .avatar-pgv      { border-color: #0dcaf0 !important; background: rgba(13,202,240,.30) !important; }
-  .cursor-pointer  { cursor: pointer; }
+  .avatar-iabr       { border-color: #6f42c1 !important; background: rgba(111,66,193,.30) !important; }
+  .avatar-csq        { border-color: #198754 !important; background: rgba(25,135,84,.30) !important; }
+  .avatar-crp        { border-color: #ffc107 !important; background: rgba(255,193,7,.30) !important; }
+  .avatar-pgv        { border-color: #0dcaf0 !important; background: rgba(13,202,240,.30) !important; }
+  .cursor-pointer    { cursor: pointer; }
 </style>
 {% endblock %}
 
-{# ── Navbar completa (sovrascrive il block che wrappa l'include del tema) ── #}
-{% block navbar %}
+{# ── Brand ───────────────────────────────────────────────────────────────── #}
+{% block brand_url %}{% url 'home' %}{% endblock %}
+{% block brand_text %}{{ impostazioni.titolo|default:"Plancia" }}{% endblock %}
 
-  {# Banner impersonazione ─────────────────────────────────────────────── #}
-  {% if user.is_authenticated and user.is_hijacked %}
-    <div class="hijack-banner">
-      <span>⚠️ Stai operando come
-        <strong>{{ user.email }}</strong>
-        <span class="badge {{ user.ruolo|ruolo_badge_class }} role-chip">{{ user.get_ruolo_display }}</span>
-      </span>
-      <form method="post" action="{% url 'hijack:release' %}" class="d-inline">
-        {% csrf_token %}
-        <input type="hidden" name="next" value="{{ request.path }}">
-        <button type="submit" class="btn btn-sm btn-dark py-0 px-2">
-          Esci dall'impersonazione
-        </button>
-      </form>
-    </div>
-  {% endif %}
-
-  {# Navbar principale ──────────────────────────────────────────────────── #}
-  <nav class="navbar navbar-expand-lg navbar-agesci{% if agesci_theme_navbar_testo_scuro %} text-dark{% endif %}">
-    <div class="container">
-
-      {# Brand #}
-      <a class="navbar-brand d-flex align-items-center gap-2" href="/">
-        <img src="{% static agesci_theme_logo_navbar %}" alt="AGESCI Campania">
-        <span class="d-none d-sm-flex flex-column lh-1">
-          <span class="fw-bold">{{ impostazioni.titolo|default:"Plancia" }}</span>
-          {% if impostazioni.sottotitolo %}
-            <span style="font-size:.65rem; font-weight:400; opacity:.85;">{{ impostazioni.sottotitolo }}</span>
-          {% endif %}
-        </span>
-      </a>
-
-      {# Toggler mobile #}
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
-              data-bs-target="#planciaNav" aria-controls="planciaNav"
-              aria-expanded="false" aria-label="Apri menu">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-
-      {# Voci di navigazione #}
-      <div class="collapse navbar-collapse" id="planciaNav">
-        <ul class="navbar-nav ms-auto align-items-lg-center">
-
-          {% if user.is_authenticated %}
-
-            {# ── Home ──────────────────────────────────────────────────── #}
-            <li class="nav-item">
-              <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}"
-                 href="{% url 'home' %}">Home</a>
-            </li>
-
-            {# ── Diari: CSQ, CRP e staff ───────────────────────────────── #}
-            {% if user.ruolo == 'csq' or user.ruolo == 'crp' or user.is_staff_plancia or user.is_superuser %}
-              <li class="nav-item">
-                <a class="nav-link {% if request.resolver_match.app_name == 'diaries' %}active{% endif %}"
-                   href="{% url 'diaries:list' %}">{% bs_icon "journal-text" size="15" extra_classes="me-1" %}Diari</a>
-              </li>
-            {% endif %}
-
-            {# ── Diari assegnati: PGV ──────────────────────────────────── #}
-            {% if user.ruolo == 'pgv' %}
-              <li class="nav-item">
-                <a class="nav-link {% if request.resolver_match.app_name == 'diaries' %}active{% endif %}"
-                   href="{% url 'diaries:list' %}">{% bs_icon "journal-check" size="15" extra_classes="me-1" %}Diari assegnati</a>
-              </li>
-            {% endif %}
-
-            {# ── Inviti: Capo Reparto ──────────────────────────────────── #}
-            {% if user.ruolo == 'crp' %}
-              <li class="nav-item">
-                <a class="nav-link {% if request.resolver_match.url_name == 'inviti_crp' %}active{% endif %}"
-                   href="{% url 'notifications:inviti_crp' %}">{% bs_icon "envelope" size="15" extra_classes="me-1" %}Inviti</a>
-              </li>
-            {% endif %}
-
-            {# ── Helpdesk ──────────────────────────────────────────────── #}
-            <li class="nav-item">
-              <a class="nav-link {% if request.resolver_match.app_name == 'helpdesk' %}active{% endif %}"
-                 href="{% url 'helpdesk:list' %}">{% bs_icon "headset" size="15" extra_classes="me-1" %}Helpdesk</a>
-            </li>
-
-            {# ── Gestione (dropdown staff) ─────────────────────────────── #}
-            {% if user.is_staff_plancia or user.is_superuser %}
-              <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle {% if request.resolver_match.app_name in 'editions,stats,imports,siteconfig,accounts' %}active{% endif %}"
-                   href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                  {% bs_icon "gear" size="15" extra_classes="me-1" %}Gestione
-                </a>
-                <ul class="dropdown-menu">
-                  <li><h6 class="dropdown-header small">Edizioni</h6></li>
-                  <li>
-                    <a class="dropdown-item {% if request.resolver_match.app_name == 'editions' %}active{% endif %}"
-                       href="{% url 'editions:list' %}">{% bs_icon "calendar3" size="14" extra_classes="me-2 opacity-75" %}Elenco edizioni</a>
-                  </li>
-                  {% if user.ruolo == 'admin' or user.is_superuser %}
-                    <li><a class="dropdown-item" href="{% url 'editions:create' %}">{% bs_icon "plus-lg" size="14" extra_classes="me-2 opacity-75" %}Nuova edizione</a></li>
-                  {% endif %}
-
-                  <li><hr class="dropdown-divider"></li>
-                  <li><h6 class="dropdown-header small">Persone</h6></li>
-                  <li>
-                    <a class="dropdown-item {% if request.resolver_match.app_name == 'accounts' %}active{% endif %}"
-                       href="{% url 'accounts:utente_list' %}">{% bs_icon "people" size="14" extra_classes="me-2 opacity-75" %}Utenti</a>
-                  </li>
-                  <li>
-                    <a class="dropdown-item {% if request.resolver_match.app_name == 'notifications' %}active{% endif %}"
-                       href="{% url 'notifications:gestione_inviti' %}">{% bs_icon "envelope" size="14" extra_classes="me-2 opacity-75" %}Inviti</a>
-                  </li>
-                  {% if user.ruolo == 'admin' or user.ruolo == 'segreteria' or user.is_superuser %}
-                  <li>
-                    <a class="dropdown-item {% if request.resolver_match.url_name == 'crea_staff' %}active{% endif %}"
-                       href="{% url 'accounts:crea_staff' %}">{% bs_icon "person-plus" size="14" extra_classes="me-2 opacity-75" %}Crea utente staff</a>
-                  </li>
-                  {% endif %}
-
-                  <li><hr class="dropdown-divider"></li>
-                  <li><h6 class="dropdown-header small">Dati</h6></li>
-                  <li>
-                    <a class="dropdown-item {% if request.resolver_match.app_name == 'imports' %}active{% endif %}"
-                       href="{% url 'imports:log_list' %}">{% bs_icon "upload" size="14" extra_classes="me-2 opacity-75" %}Import anagrafiche</a>
-                  </li>
-                  {% if user.ruolo == 'incaricato_eg' or user.ruolo == 'admin' or user.is_superuser %}
-                    <li>
-                      <a class="dropdown-item {% if request.resolver_match.app_name == 'stats' %}active{% endif %}"
-                         href="{% url 'stats:dashboard' %}">{% bs_icon "bar-chart" size="14" extra_classes="me-2 opacity-75" %}Statistiche</a>
-                    </li>
-                  {% endif %}
-
-                  {% if user.ruolo == 'admin' or user.is_superuser %}
-                    <li><hr class="dropdown-divider"></li>
-                    <li><h6 class="dropdown-header small">Sistema</h6></li>
-                    <li>
-                      <a class="dropdown-item {% if request.resolver_match.url_name == 'impostazioni' %}active{% endif %}"
-                         href="{% url 'siteconfig:impostazioni' %}">{% bs_icon "sliders" size="14" extra_classes="me-2 opacity-75" %}Impostazioni</a>
-                    </li>
-                    <li>
-                      <a class="dropdown-item {% if request.resolver_match.url_name == 'cache_pdf' %}active{% endif %}"
-                         href="{% url 'siteconfig:cache_pdf' %}">{% bs_icon "file-earmark-pdf" size="14" extra_classes="me-2 opacity-75" %}Cache PDF</a>
-                    </li>
-                    <li>
-                      <a class="dropdown-item {% if request.resolver_match.url_name == 'log_export' %}active{% endif %}"
-                         href="{% url 'siteconfig:log_export' %}">{% bs_icon "journal-text" size="14" extra_classes="me-2 opacity-75" %}Log export</a>
-                    </li>
-                    <li><a class="dropdown-item" href="{% url 'admin:index' %}">{% bs_icon "shield-lock" size="14" extra_classes="me-2 opacity-75" %}Pannello admin</a></li>
-                  {% endif %}
-
-                  <li><hr class="dropdown-divider"></li>
-                  <li><h6 class="dropdown-header small">Strumenti di sviluppo</h6></li>
-                  <li>
-                    <a class="dropdown-item" href="{% url 'flower_proxy' %}" target="_blank">{% bs_icon "diagram-3" size="14" extra_classes="me-2 opacity-75" %}Flower</a>
-                  </li>
-                  <li>
-                    <a class="dropdown-item" href="{% url 'mailpit_proxy' %}" target="_blank">{% bs_icon "envelope-open" size="14" extra_classes="me-2 opacity-75" %}Mailpit</a>
-                  </li>
-                </ul>
-              </li>
-            {% endif %}
-
-            {# ── Indicatore offline (mostrato da JS quando navigator.onLine=false) #}
-            <li class="nav-item d-none" id="offline-indicator" aria-live="polite" aria-label="Connessione assente">
-              <span class="badge bg-warning text-dark px-2 py-1 ms-1" style="font-size:.72rem;">
-                Offline
-              </span>
-            </li>
-
-            {# ── Foto in attesa di upload ─────────────────────────────── #}
-            <li class="nav-item d-none" id="photos-pending-badge" aria-live="polite">
-              <span class="badge bg-info text-dark px-2 py-1 ms-1"
-                    style="font-size:.72rem;" title="Foto in attesa di sincronizzazione">
-                <span id="photos-pending-count">0</span> foto
-              </span>
-            </li>
-
-            {# ── Modifiche in attesa di sync ──────────────────────────── #}
-            <li class="nav-item d-none" id="offline-sync-badge" aria-live="polite">
-              <a href="{% url 'diaries:list' %}"
-                 class="badge bg-warning text-dark text-decoration-none px-2 py-1 ms-1"
-                 style="font-size:.72rem;"
-                 title="Modifiche offline in attesa di sincronizzazione">
-                <span id="offline-sync-count">0</span> in attesa
-              </a>
-            </li>
-
-            {# ── Badge utente (dropdown) ───────────────────────────────── #}
-            <li class="nav-item dropdown ms-lg-1">
-              <a class="nav-link dropdown-toggle d-flex align-items-center gap-2 py-1"
-                 href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                <span class="nav-avatar {{ user.ruolo|ruolo_avatar_class }}" title="{{ user.nome_completo }}">
-                  {{ user.nome_completo|slice:":1"|upper }}
-                </span>
-                <span class="d-none d-lg-inline">{{ user.nome_completo }}</span>
-              </a>
-              <ul class="dropdown-menu dropdown-menu-end" style="min-width:240px;">
-                {# Intestazione con ruolo / selettore ruolo #}
-                <li class="px-3 py-2 border-bottom">
-                  <div class="fw-semibold small text-truncate">{{ user.nome_completo }}</div>
-                  {% with scelte=user.ruoli_attivi_choices %}
-                  {% if scelte|length > 1 %}
-                    {# Selettore ruolo attivo #}
-                    <div class="mt-2">
-                      <div class="text-muted" style="font-size:.68rem; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.3rem;">Ruolo attivo</div>
-                      {% for chiave, etichetta in scelte %}
-                        <form method="post" action="{% url 'accounts:cambia_ruolo' %}" class="mb-1">
-                          {% csrf_token %}
-                          <input type="hidden" name="ruolo" value="{{ chiave }}">
-                          <input type="hidden" name="next" value="{{ request.path }}">
-                          <button type="submit"
-                            class="btn btn-sm w-100 text-start py-1 px-2
-                              {% if chiave == user.ruolo %}btn-secondary{% else %}btn-outline-secondary{% endif %}"
-                            style="font-size:.78rem;">
-                            {% if chiave == user.ruolo %}{% bs_icon "check2" size="12" extra_classes="me-1" %}{% else %}<span style="display:inline-block;width:16px;"></span>{% endif %}{{ etichetta }}
-                          </button>
-                        </form>
-                      {% endfor %}
-                    </div>
-                  {% else %}
-                    <div class="mt-1">
-                      <span class="badge {{ user.ruolo|ruolo_badge_class }} role-chip">{{ user.get_ruolo_display }}</span>
-                      {% if user.mfa_obbligatoria %}
-                        <span class="badge bg-success role-chip ms-1">MFA</span>
-                      {% endif %}
-                    </div>
-                  {% endif %}
-                  {% endwith %}
-                </li>
-                <li>
-                  <a class="dropdown-item" href="{% url 'accounts:profilo' %}">
-                    {% bs_icon "person" size="14" extra_classes="me-2 opacity-75" %}
-                    Profilo
-                  </a>
-                </li>
-                <li>
-                  <a class="dropdown-item" href="{% url 'account_email' %}">
-                    {% bs_icon "envelope" size="14" extra_classes="me-2 opacity-75" %}
-                    Email account
-                  </a>
-                </li>
-                <li>
-                  <a class="dropdown-item" href="{% url 'account_change_password' %}">
-                    {% bs_icon "lock" size="14" extra_classes="me-2 opacity-75" %}
-                    Cambia password
-                  </a>
-                </li>
-                <li>
-                  <a class="dropdown-item" href="{% url 'mfa_index' %}">
-                    {% bs_icon "shield-check" size="14" extra_classes="me-2 opacity-75" %}
-                    Sicurezza (MFA)
-                  </a>
-                </li>
-                <li><hr class="dropdown-divider"></li>
-                <li>
-                  <a class="dropdown-item text-danger" href="{% url 'account_logout' %}">
-                    {% bs_icon "box-arrow-right" size="14" extra_classes="me-2 opacity-75" %}
-                    Esci
-                  </a>
-                </li>
-              </ul>
-            </li>
-
-          {% else %}
-            <li class="nav-item">
-              <a class="nav-link" href="{% url 'account_login' %}">{% bs_icon "box-arrow-in-right" size="15" extra_classes="me-1" %}Accedi</a>
-            </li>
-          {% endif %}
-
-        </ul>
-      </div>
-    </div>
-  </nav>
-{# ── Banner sessione scaduta (mostrato da plancia-sync.js su 401) ──────── #}
+{# ── Header: hijack banner sopra + sessione scaduta sotto ────────────────── #}
+{% block header %}
+{% if user.is_authenticated and user.is_hijacked %}
+<div class="hijack-banner">
+  <span>⚠️ Stai operando come
+    <strong>{{ user.email }}</strong>
+    <span class="badge {{ user.ruolo|ruolo_badge_class }} role-chip">{{ user.get_ruolo_display }}</span>
+  </span>
+  <form method="post" action="{% url 'hijack:release' %}" class="d-inline">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.path }}">
+    <button type="submit" class="btn btn-sm btn-dark py-0 px-2">Esci dall'impersonazione</button>
+  </form>
+</div>
+{% endif %}
+{{ block.super }}
 <div id="offline-auth-banner"
      class="d-none text-center py-2 px-3 small"
      role="alert" aria-live="assertive"
      style="background:#fff3cd;border-bottom:1px solid #ffc107;position:sticky;top:0;z-index:1040;">
   <strong>Sessione scaduta.</strong>
   Hai <strong><span id="auth-banner-count">0</span></strong> modifica/he in attesa.
-  <a href="{% url 'account_login' %}" class="btn btn-sm btn-warning py-0 px-2 ms-2">
-    Accedi per sincronizzare
-  </a>
+  <a href="{% url 'account_login' %}" class="btn btn-sm btn-warning py-0 px-2 ms-2">Accedi per sincronizzare</a>
 </div>
-{% endblock navbar %}
+{% endblock %}
 
-{# ── Footer con valori da Impostazioni ───────────────────────────────── #}
-{% block footer %}
-<footer class="footer-agesci mt-auto">
-  <div class="container">
-    <div class="row align-items-center gy-3">
-      <div class="col-md-3 text-center text-md-start">
-        <img src="{% static agesci_theme_logo_navbar %}" alt="{{ agesci_theme_nome }}" class="footer-emblema">
-      </div>
-      <div class="col-md-6 text-center small">
-        <div class="mb-2">
-          <a href="{% url 'pagina_privacy' %}" class="text-white-50 me-3">Privacy Policy</a>
-          <a href="{% url 'pagina_termini' %}" class="text-white-50">Condizioni del Servizio</a>
-        </div>
-        {% if impostazioni.footer_testo %}
-          {{ footer_rendered|safe }}
-        {% else %}
-          <strong>{{ impostazioni.titolo }}</strong><br>
-          Guidoncini Verdi &mdash; AGESCI Campania
-        {% endif %}
-      </div>
-      <div class="col-md-3 text-center text-md-end small">
-        {% for link in impostazioni.footer_links.all %}
-          <div>
-            {% if link.tipo == "email" %}
-              <a href="{{ link.url }}">
-            {% else %}
-              <a href="{{ link.url }}" target="_blank" rel="noopener">
-            {% endif %}
-              {% if link.tipo == "sito_web" %}{% bs_icon "globe" size="14" extra_classes="me-1" %}
-              {% elif link.tipo == "email" %}{% bs_icon "envelope" size="14" extra_classes="me-1" %}
-              {% elif link.tipo == "facebook" %}{% bs_icon "facebook" size="14" extra_classes="me-1" %}
-              {% elif link.tipo == "instagram" %}{% bs_icon "instagram" size="14" extra_classes="me-1" %}
-              {% elif link.tipo == "tiktok" %}{% bs_icon "tiktok" size="14" extra_classes="me-1" %}
-              {% endif %}
-              {{ link.etichetta|default:link.get_tipo_display }}
-            </a>
+{# ── Navigazione desktop (icona sopra + etichetta sotto) ─────────────────── #}
+{% block header_nav %}
+{% if user.is_authenticated %}
+  <li>
+    <a href="{% url 'home' %}" class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+      <span class="ag-nav-icon">{% bs_icon "house-fill" %}</span>Home
+    </a>
+  </li>
+
+  {% if user.ruolo == 'csq' or user.ruolo == 'crp' or user.is_staff_plancia or user.is_superuser %}
+  <li>
+    <a href="{% url 'diaries:list' %}" class="nav-link {% if request.resolver_match.app_name == 'diaries' %}active{% endif %}">
+      <span class="ag-nav-icon">{% bs_icon "journal-text" %}</span>Diari
+    </a>
+  </li>
+  {% endif %}
+
+  {% if user.ruolo == 'pgv' %}
+  <li>
+    <a href="{% url 'diaries:list' %}" class="nav-link {% if request.resolver_match.app_name == 'diaries' %}active{% endif %}">
+      <span class="ag-nav-icon">{% bs_icon "journal-check" %}</span>Assegnati
+    </a>
+  </li>
+  {% endif %}
+
+  {% if user.ruolo == 'crp' %}
+  <li>
+    <a href="{% url 'notifications:inviti_crp' %}" class="nav-link {% if request.resolver_match.url_name == 'inviti_crp' %}active{% endif %}">
+      <span class="ag-nav-icon">{% bs_icon "envelope" %}</span>Inviti
+    </a>
+  </li>
+  {% endif %}
+
+  <li>
+    <a href="{% url 'helpdesk:list' %}" class="nav-link {% if request.resolver_match.app_name == 'helpdesk' %}active{% endif %}">
+      <span class="ag-nav-icon">{% bs_icon "headset" %}</span>Helpdesk
+    </a>
+  </li>
+
+  {% if user.is_staff_plancia or user.is_superuser %}
+  <li class="dropdown">
+    <a href="#" class="nav-link dropdown-toggle {% if request.resolver_match.app_name in 'editions,stats,imports,siteconfig,accounts' or request.resolver_match.url_name == 'gestione_inviti' %}active{% endif %}"
+       role="button" data-bs-toggle="dropdown" aria-expanded="false">
+      <span class="ag-nav-icon">{% bs_icon "gear" %}</span>Gestione
+    </a>
+    <ul class="dropdown-menu">
+      <li><h6 class="dropdown-header small">Edizioni</h6></li>
+      <li>
+        <a class="dropdown-item {% if request.resolver_match.app_name == 'editions' %}active{% endif %}"
+           href="{% url 'editions:list' %}">{% bs_icon "calendar3" size="14" extra_classes="me-2 opacity-75" %}Elenco edizioni</a>
+      </li>
+      {% if user.ruolo == 'admin' or user.is_superuser %}
+        <li><a class="dropdown-item" href="{% url 'editions:create' %}">{% bs_icon "plus-lg" size="14" extra_classes="me-2 opacity-75" %}Nuova edizione</a></li>
+      {% endif %}
+      <li><hr class="dropdown-divider"></li>
+      <li><h6 class="dropdown-header small">Persone</h6></li>
+      <li>
+        <a class="dropdown-item {% if request.resolver_match.app_name == 'accounts' %}active{% endif %}"
+           href="{% url 'accounts:utente_list' %}">{% bs_icon "people" size="14" extra_classes="me-2 opacity-75" %}Utenti</a>
+      </li>
+      <li>
+        <a class="dropdown-item {% if request.resolver_match.url_name == 'gestione_inviti' %}active{% endif %}"
+           href="{% url 'notifications:gestione_inviti' %}">{% bs_icon "envelope" size="14" extra_classes="me-2 opacity-75" %}Inviti</a>
+      </li>
+      {% if user.ruolo == 'admin' or user.ruolo == 'segreteria' or user.is_superuser %}
+      <li>
+        <a class="dropdown-item {% if request.resolver_match.url_name == 'crea_staff' %}active{% endif %}"
+           href="{% url 'accounts:crea_staff' %}">{% bs_icon "person-plus" size="14" extra_classes="me-2 opacity-75" %}Crea utente staff</a>
+      </li>
+      {% endif %}
+      <li><hr class="dropdown-divider"></li>
+      <li><h6 class="dropdown-header small">Dati</h6></li>
+      <li>
+        <a class="dropdown-item {% if request.resolver_match.app_name == 'imports' %}active{% endif %}"
+           href="{% url 'imports:log_list' %}">{% bs_icon "upload" size="14" extra_classes="me-2 opacity-75" %}Import anagrafiche</a>
+      </li>
+      {% if user.ruolo == 'incaricato_eg' or user.ruolo == 'admin' or user.is_superuser %}
+        <li>
+          <a class="dropdown-item {% if request.resolver_match.app_name == 'stats' %}active{% endif %}"
+             href="{% url 'stats:dashboard' %}">{% bs_icon "bar-chart" size="14" extra_classes="me-2 opacity-75" %}Statistiche</a>
+        </li>
+      {% endif %}
+      {% if user.ruolo == 'admin' or user.is_superuser %}
+        <li><hr class="dropdown-divider"></li>
+        <li><h6 class="dropdown-header small">Sistema</h6></li>
+        <li>
+          <a class="dropdown-item {% if request.resolver_match.url_name == 'impostazioni' %}active{% endif %}"
+             href="{% url 'siteconfig:impostazioni' %}">{% bs_icon "sliders" size="14" extra_classes="me-2 opacity-75" %}Impostazioni</a>
+        </li>
+        <li>
+          <a class="dropdown-item {% if request.resolver_match.url_name == 'cache_pdf' %}active{% endif %}"
+             href="{% url 'siteconfig:cache_pdf' %}">{% bs_icon "file-earmark-pdf" size="14" extra_classes="me-2 opacity-75" %}Cache PDF</a>
+        </li>
+        <li>
+          <a class="dropdown-item {% if request.resolver_match.url_name == 'log_export' %}active{% endif %}"
+             href="{% url 'siteconfig:log_export' %}">{% bs_icon "journal-text" size="14" extra_classes="me-2 opacity-75" %}Log export</a>
+        </li>
+        <li><a class="dropdown-item" href="{% url 'admin:index' %}">{% bs_icon "shield-lock" size="14" extra_classes="me-2 opacity-75" %}Pannello admin</a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><h6 class="dropdown-header small">Strumenti di sviluppo</h6></li>
+        <li>
+          <a class="dropdown-item" href="{% url 'flower_proxy' %}" target="_blank">{% bs_icon "diagram-3" size="14" extra_classes="me-2 opacity-75" %}Flower</a>
+        </li>
+        <li>
+          <a class="dropdown-item" href="{% url 'mailpit_proxy' %}" target="_blank">{% bs_icon "envelope-open" size="14" extra_classes="me-2 opacity-75" %}Mailpit</a>
+        </li>
+      {% endif %}
+    </ul>
+  </li>
+  {% endif %}
+
+{% endif %}
+{% endblock header_nav %}
+
+{# ── Navigazione offcanvas (mobile/tablet) ───────────────────────────────── #}
+{% block offcanvas_nav %}
+{% if user.is_authenticated %}
+  <li>
+    <a href="{% url 'home' %}" class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+      {% bs_icon "house-fill" %} Home
+    </a>
+  </li>
+  {% if user.ruolo == 'csq' or user.ruolo == 'crp' or user.is_staff_plancia or user.is_superuser %}
+    <li>
+      <a href="{% url 'diaries:list' %}" class="nav-link {% if request.resolver_match.app_name == 'diaries' %}active{% endif %}">
+        {% bs_icon "journal-text" %} Diari
+      </a>
+    </li>
+  {% endif %}
+  {% if user.ruolo == 'pgv' %}
+    <li>
+      <a href="{% url 'diaries:list' %}" class="nav-link {% if request.resolver_match.app_name == 'diaries' %}active{% endif %}">
+        {% bs_icon "journal-check" %} Diari assegnati
+      </a>
+    </li>
+  {% endif %}
+  {% if user.ruolo == 'crp' %}
+    <li>
+      <a href="{% url 'notifications:inviti_crp' %}" class="nav-link {% if request.resolver_match.url_name == 'inviti_crp' %}active{% endif %}">
+        {% bs_icon "envelope" %} Inviti
+      </a>
+    </li>
+  {% endif %}
+  <li>
+    <a href="{% url 'helpdesk:list' %}" class="nav-link {% if request.resolver_match.app_name == 'helpdesk' %}active{% endif %}">
+      {% bs_icon "headset" %} Helpdesk
+    </a>
+  </li>
+  {% if user.is_staff_plancia or user.is_superuser %}
+    <li class="mt-2">
+      <span class="nav-link fw-semibold" style="font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; opacity:.55; pointer-events:none;">
+        Gestione
+      </span>
+    </li>
+    <li><a href="{% url 'editions:list' %}" class="nav-link ps-3">{% bs_icon "calendar3" %} Edizioni</a></li>
+    <li><a href="{% url 'accounts:utente_list' %}" class="nav-link ps-3">{% bs_icon "people" %} Utenti</a></li>
+    <li><a href="{% url 'notifications:gestione_inviti' %}" class="nav-link ps-3">{% bs_icon "envelope" %} Inviti</a></li>
+    <li><a href="{% url 'imports:log_list' %}" class="nav-link ps-3">{% bs_icon "upload" %} Import</a></li>
+    {% if user.ruolo == 'incaricato_eg' or user.ruolo == 'admin' or user.is_superuser %}
+      <li><a href="{% url 'stats:dashboard' %}" class="nav-link ps-3">{% bs_icon "bar-chart" %} Statistiche</a></li>
+    {% endif %}
+    {% if user.ruolo == 'admin' or user.is_superuser %}
+      <li><a href="{% url 'siteconfig:impostazioni' %}" class="nav-link ps-3">{% bs_icon "sliders" %} Impostazioni</a></li>
+      <li><a href="{% url 'admin:index' %}" class="nav-link ps-3">{% bs_icon "shield-lock" %} Pannello admin</a></li>
+    {% endif %}
+  {% endif %}
+{% else %}
+  <li><a href="{% url 'account_login' %}" class="nav-link">{% bs_icon "box-arrow-in-right" %} Accedi</a></li>
+{% endif %}
+{% endblock offcanvas_nav %}
+
+{# ── Azioni barra inferiore header (badge offline + dropdown utente) ──────── #}
+{% block header_actions %}
+{% if user.is_authenticated %}
+  <span class="d-none badge bg-warning text-dark px-2 py-1" id="offline-indicator"
+        aria-live="polite" aria-label="Connessione assente" style="font-size:.72rem;">Offline</span>
+  <span class="d-none badge bg-info text-dark px-2 py-1" id="photos-pending-badge"
+        aria-live="polite" style="font-size:.72rem;" title="Foto in attesa di sincronizzazione">
+    <span id="photos-pending-count">0</span> foto
+  </span>
+  <a href="{% url 'diaries:list' %}"
+     class="d-none badge bg-warning text-dark text-decoration-none px-2 py-1" id="offline-sync-badge"
+     aria-live="polite" style="font-size:.72rem;" title="Modifiche offline in attesa">
+    <span id="offline-sync-count">0</span> in attesa
+  </a>
+
+  <div class="dropdown">
+    <a class="d-flex align-items-center gap-2 text-decoration-none dropdown-toggle"
+       href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+      <span class="nav-avatar {{ user.ruolo|ruolo_avatar_class }}" title="{{ user.nome_completo }}">
+        {{ user.nome_completo|slice:":1"|upper }}
+      </span>
+      <span class="d-none d-lg-inline fw-semibold small">{{ user.nome_completo }}</span>
+    </a>
+    <ul class="dropdown-menu dropdown-menu-end" style="min-width:240px;">
+      <li class="px-3 py-2 border-bottom">
+        <div class="fw-semibold small text-truncate">{{ user.nome_completo }}</div>
+        {% with scelte=user.ruoli_attivi_choices %}
+        {% if scelte|length > 1 %}
+          <div class="mt-2">
+            <div class="text-muted" style="font-size:.68rem; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.3rem;">Ruolo attivo</div>
+            {% for chiave, etichetta in scelte %}
+              <form method="post" action="{% url 'accounts:cambia_ruolo' %}" class="mb-1">
+                {% csrf_token %}
+                <input type="hidden" name="ruolo" value="{{ chiave }}">
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button type="submit"
+                  class="btn btn-sm w-100 text-start py-1 px-2 {% if chiave == user.ruolo %}btn-secondary{% else %}btn-outline-secondary{% endif %}"
+                  style="font-size:.78rem;">
+                  {% if chiave == user.ruolo %}{% bs_icon "check2" size="12" extra_classes="me-1" %}{% else %}<span style="display:inline-block;width:16px;"></span>{% endif %}{{ etichetta }}
+                </button>
+              </form>
+            {% endfor %}
           </div>
-        {% endfor %}
-        <div>
-          <a href="https://plancia.readthedocs.io/it/latest/" target="_blank" rel="noopener">
-            {% bs_icon "book" size="14" extra_classes="me-1" %}Manuale
-          </a>
-        </div>
-      </div>
-    </div>
+        {% else %}
+          <div class="mt-1">
+            <span class="badge {{ user.ruolo|ruolo_badge_class }} role-chip">{{ user.get_ruolo_display }}</span>
+            {% if user.mfa_obbligatoria %}<span class="badge bg-success role-chip ms-1">MFA</span>{% endif %}
+          </div>
+        {% endif %}
+        {% endwith %}
+      </li>
+      <li><a class="dropdown-item" href="{% url 'accounts:profilo' %}">{% bs_icon "person" size="14" extra_classes="me-2 opacity-75" %}Profilo</a></li>
+      <li><a class="dropdown-item" href="{% url 'account_email' %}">{% bs_icon "envelope" size="14" extra_classes="me-2 opacity-75" %}Email account</a></li>
+      <li><a class="dropdown-item" href="{% url 'account_change_password' %}">{% bs_icon "lock" size="14" extra_classes="me-2 opacity-75" %}Cambia password</a></li>
+      <li><a class="dropdown-item" href="{% url 'mfa_index' %}">{% bs_icon "shield-check" size="14" extra_classes="me-2 opacity-75" %}Sicurezza (MFA)</a></li>
+      <li><hr class="dropdown-divider"></li>
+      <li><a class="dropdown-item text-danger" href="{% url 'account_logout' %}">{% bs_icon "box-arrow-right" size="14" extra_classes="me-2 opacity-75" %}Esci</a></li>
+    </ul>
   </div>
-</footer>
 
-{# ── Banner installazione PWA ─────────────────────────────────────────── #}
+{% else %}
+  <a href="{% url 'account_login' %}" class="btn btn-primary btn-sm">
+    {% bs_icon "box-arrow-in-right" extra_classes="me-1" %}Accedi
+  </a>
+{% endif %}
+{% endblock header_actions %}
+
+{# ── Footer — contenuto colonne ──────────────────────────────────────────── #}
+{% block footer_brand_text %}
+  <span class="fw-semibold">{{ impostazioni.titolo|default:"Plancia" }}</span><br>
+  <span class="small opacity-75">Guidoncini Verdi — AGESCI Campania</span>
+{% endblock %}
+
+{% block footer_col1_title %}Informazioni{% endblock %}
+{% block footer_col1_links %}
+  <li><a href="{% url 'pagina_privacy' %}">Privacy Policy</a></li>
+  <li><a href="{% url 'pagina_termini' %}">Condizioni del Servizio</a></li>
+  <li>
+    <a href="https://plancia.readthedocs.io/it/latest/" target="_blank" rel="noopener">
+      {% bs_icon "book" size="14" extra_classes="me-1" %}Manuale utente
+    </a>
+  </li>
+{% endblock %}
+
+{% block footer_col2_title %}Contatti{% endblock %}
+{% block footer_col2_links %}
+{% for link in impostazioni.footer_links.all %}
+  <li>
+    {% if link.tipo == "email" %}<a href="{{ link.url }}">{% else %}<a href="{{ link.url }}" target="_blank" rel="noopener">{% endif %}
+      {% if link.tipo == "sito_web" %}{% bs_icon "globe" size="14" extra_classes="me-1" %}
+      {% elif link.tipo == "email" %}{% bs_icon "envelope" size="14" extra_classes="me-1" %}
+      {% elif link.tipo == "facebook" %}{% bs_icon "facebook" size="14" extra_classes="me-1" %}
+      {% elif link.tipo == "instagram" %}{% bs_icon "instagram" size="14" extra_classes="me-1" %}
+      {% elif link.tipo == "tiktok" %}{% bs_icon "tiktok" size="14" extra_classes="me-1" %}
+      {% endif %}{{ link.etichetta|default:link.get_tipo_display }}
+    </a>
+  </li>
+{% endfor %}
+{% endblock %}
+
+{% block footer_text %}
+  {% if impostazioni.footer_testo %}{{ footer_rendered|safe }}{% endif %}
+{% endblock %}
+
+{% block footer_copyright %}© AGESCI Campania{% endblock %}
+
+{# ── Footer: banner PWA, toast, cookie, JS offline ───────────────────────── #}
+{% block footer %}
+{{ block.super }}
+
+{# Banner installazione PWA #}
 <div id="pwa-install-banner"
      class="d-none position-fixed bottom-0 start-0 end-0 py-3 px-4
             d-flex flex-column flex-sm-row align-items-center justify-content-between gap-3"
@@ -412,14 +386,10 @@
     <button id="pwa-install-btn" class="btn btn-sm btn-light text-nowrap fw-semibold">
       {% bs_icon "download" size="13" extra_classes="me-1" %}Installa
     </button>
-    <button id="pwa-install-dismiss" class="btn btn-sm btn-outline-light text-nowrap">
-      Non ora
-    </button>
+    <button id="pwa-install-dismiss" class="btn btn-sm btn-outline-light text-nowrap">Non ora</button>
   </div>
   <div class="d-none gap-2 flex-shrink-0" id="pwa-banner-actions-ios">
-    <button id="pwa-ios-dismiss" class="btn btn-sm btn-outline-light text-nowrap">
-      Ho capito
-    </button>
+    <button id="pwa-ios-dismiss" class="btn btn-sm btn-outline-light text-nowrap">Ho capito</button>
   </div>
 </div>
 <script>
@@ -427,120 +397,90 @@
   var DISMISS_KEY = 'pwaInstallDismissed';
   var banner = document.getElementById('pwa-install-banner');
   var deferredPrompt = null;
-
   if (localStorage.getItem(DISMISS_KEY)) return;
-  if (window.navigator.standalone) return; // già installata su iOS
-
+  if (window.navigator.standalone) return;
   var isIos = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
   var isSafari = /safari/i.test(navigator.userAgent) && !/chrome|crios|fxios/i.test(navigator.userAgent);
-
   function show(ios) {
     if (ios) {
-      document.getElementById('pwa-banner-text').querySelector('.small.opacity-75').textContent =
-        'Tocca   poi "Aggiungi a Home"';
+      document.getElementById('pwa-banner-text').querySelector('.small.opacity-75').textContent = 'Tocca   poi "Aggiungi a Home"';
       document.getElementById('pwa-banner-actions-android').classList.add('d-none');
-      var iosActions = document.getElementById('pwa-banner-actions-ios');
-      iosActions.classList.remove('d-none');
-      iosActions.classList.add('d-flex');
+      var a = document.getElementById('pwa-banner-actions-ios');
+      a.classList.remove('d-none'); a.classList.add('d-flex');
     }
-    banner.classList.remove('d-none');
-    banner.classList.add('d-flex');
+    banner.classList.remove('d-none'); banner.classList.add('d-flex');
   }
-
   function dismiss() {
     localStorage.setItem(DISMISS_KEY, '1');
-    banner.classList.add('d-none');
-    banner.classList.remove('d-flex');
+    banner.classList.add('d-none'); banner.classList.remove('d-flex');
   }
-
-  // iOS Safari: nessun beforeinstallprompt, mostra istruzioni manuali
-  if (isIos && isSafari) {
-    show(true);
-    document.getElementById('pwa-ios-dismiss').addEventListener('click', dismiss);
-    return;
-  }
-
-  // Android / Chrome: beforeinstallprompt
-  window.addEventListener('beforeinstallprompt', function(e) {
-    e.preventDefault();
-    deferredPrompt = e;
-    show(false);
-  });
-
+  if (isIos && isSafari) { show(true); document.getElementById('pwa-ios-dismiss').addEventListener('click', dismiss); return; }
+  window.addEventListener('beforeinstallprompt', function(e) { e.preventDefault(); deferredPrompt = e; show(false); });
   document.getElementById('pwa-install-btn').addEventListener('click', function() {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
-    deferredPrompt.userChoice.then(function(result) {
-      if (result.outcome === 'accepted') banner.classList.add('d-none');
-      deferredPrompt = null;
-    });
+    deferredPrompt.userChoice.then(function(r) { if (r.outcome === 'accepted') banner.classList.add('d-none'); deferredPrompt = null; });
   });
-
   document.getElementById('pwa-install-dismiss').addEventListener('click', dismiss);
   window.addEventListener('appinstalled', function() { banner.classList.add('d-none'); });
 })();
 </script>
 
-{# ── Toast notifiche (usato da plancia-moduli-offline.js) ─────────────── #}
+{# Toast notifiche (usato da plancia-moduli-offline.js) #}
 <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index:1100;">
   <div id="plancia-toast" class="toast border-0" role="alert" aria-live="assertive" aria-atomic="true">
     <div class="toast-header bg-transparent border-0 pb-0">
       <strong class="me-auto" id="plancia-toast-title"></strong>
-      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Chiudi"></button>
+      <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Chiudi"></button>
     </div>
     <div class="toast-body pt-1" id="plancia-toast-body"></div>
   </div>
 </div>
 
-{# ── Indicatore offline e badge foto ─────────────────────────────────── #}
-<script>
-(function() {
-  // Offline/online indicator
-  var indicator = document.getElementById('offline-indicator');
-  if (indicator) {
-    function updateOffline() { indicator.classList.toggle('d-none', navigator.onLine); }
-    updateOffline();
-    window.addEventListener('online',  updateOffline);
-    window.addEventListener('offline', updateOffline);
-  }
-
-  // Badge "N foto in attesa"
-  document.addEventListener('plancia:photos-pending-count', function(e) {
-    var badge   = document.getElementById('photos-pending-badge');
-    var countEl = document.getElementById('photos-pending-count');
-    if (!badge || !countEl) return;
-    countEl.textContent = e.detail;
-    badge.classList.toggle('d-none', e.detail === 0);
-  });
-})();
-</script>
-
-{# ── Cookie banner GDPR ───────────────────────────────────────────────── #}
+{# Cookie banner GDPR #}
 <div id="cookie-banner"
      class="d-none position-fixed bottom-0 start-0 end-0 bg-dark text-white py-3 px-4 d-flex
             flex-column flex-sm-row align-items-center justify-content-between gap-3"
      style="z-index:1060">
   <p class="mb-0 small">
-    Questo sito utilizza solo cookie tecnici essenziali per il funzionamento della
-    piattaforma (sessione, sicurezza). Nessun cookie di profilazione o tracciamento.
+    Questo sito utilizza solo cookie tecnici essenziali per il funzionamento della piattaforma
+    (sessione, sicurezza). Nessun cookie di profilazione o tracciamento.
     <a href="{% url 'pagina_privacy' %}" class="text-white-50 ms-1">Privacy Policy</a>
   </p>
-  <button id="cookie-accept" class="btn btn-sm btn-light text-nowrap flex-shrink-0">
-    Ho capito
-  </button>
+  <button id="cookie-accept" class="btn btn-sm btn-light text-nowrap flex-shrink-0">Ho capito</button>
 </div>
 <script>
 (function() {
   if (!localStorage.getItem('cookieAccepted')) {
     var b = document.getElementById('cookie-banner');
-    b.classList.remove('d-none');
-    b.classList.add('d-flex');
+    b.classList.remove('d-none'); b.classList.add('d-flex');
     document.getElementById('cookie-accept').addEventListener('click', function() {
       localStorage.setItem('cookieAccepted', '1');
-      b.classList.add('d-none');
-      b.classList.remove('d-flex');
+      b.classList.add('d-none'); b.classList.remove('d-flex');
     });
   }
+})();
+</script>
+{% endblock footer %}
+
+{# ── JS inline: indicatore offline + badge foto ───────────────────────────── #}
+{% block extra_js %}{{ block.super }}
+<script>
+(function() {
+  var indicator = document.getElementById('offline-indicator');
+  if (indicator) {
+    function updateOffline() { indicator.classList.toggle('d-none', navigator.onLine); }
+    updateOffline();
+    window.addEventListener('online', updateOffline);
+    window.addEventListener('offline', updateOffline);
+  }
+  document.addEventListener('plancia:photos-pending-count', function(e) {
+    var badge = document.getElementById('photos-pending-badge');
+    var countEl = document.getElementById('photos-pending-count');
+    if (!badge || !countEl) return;
+    countEl.textContent = e.detail;
+    badge.classList.toggle('d-none', e.detail === 0);
+  });
 })();
 </script>
 {% endblock %}

@@ -9,43 +9,49 @@
         integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
         crossorigin="anonymous">
   <style>
-    :root { --ag-primary: #dc3545; }
-    body { min-height: 100vh; display: flex; flex-direction: column; }
-    .navbar-error {
-      background-color: #dc3545;
-      padding: .75rem 1rem;
+    body { min-height: 100vh; display: flex; flex-direction: column; background: #f8f9fa; }
+    .ag-header-top {
+      background: #dc3545;
+      padding: .75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: .75rem;
     }
-    .navbar-error .brand {
-      color: #fff;
-      font-weight: 600;
-      font-size: 1.1rem;
-      text-decoration: none;
-    }
-    main { flex: 1; display: flex; align-items: center; justify-content: center; }
+    .ag-header-top a { color: #fff; font-weight: 700; font-size: 1.1rem; text-decoration: none; }
+    .ag-header-top span { color: rgba(255,255,255,.7); font-size: .85rem; }
+    main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem 1rem; }
+    footer { background: #dc3545; color: rgba(255,255,255,.7); font-size: .8rem; text-align: center; padding: .75rem 1rem; }
   </style>
 </head>
-<body class="bg-light">
+<body>
 
-  <nav class="navbar-error d-flex align-items-center">
-    <a class="brand" href="/">Plancia</a>
-  </nav>
+  <header class="ag-header-top">
+    <a href="/">Plancia</a>
+    <span>Guidoncini Verdi — AGESCI Campania</span>
+  </header>
 
   <main>
-    <div class="text-center py-5 px-3">
-      <div class="mb-3 text-danger" style="font-size:5rem;line-height:1">&#9888;</div>
-      <h1 class="display-4 fw-bold text-danger mb-2">500</h1>
+    <div class="text-center px-3" style="max-width:520px;">
+      <div class="mb-3 text-danger" style="font-size:4.5rem;line-height:1;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/>
+        </svg>
+      </div>
+      <h1 class="display-5 fw-bold text-danger mb-2">500</h1>
       <p class="lead mb-1">Errore interno del server</p>
       <p class="text-muted mb-4">
-        Si è verificato un errore imprevisto. Il problema è stato registrato.<br>
-        Riprova tra qualche minuto o contatta l'amministratore.
+        Si è verificato un errore imprevisto. Il problema è stato registrato<br>
+        e gli amministratori sono stati notificati automaticamente.<br>
+        Riprova tra qualche minuto.
       </p>
-      <a href="/" class="btn btn-danger">Torna alla home</a>
+      <div class="d-flex gap-2 justify-content-center flex-wrap">
+        <button onclick="history.back()" class="btn btn-outline-secondary">← Torna indietro</button>
+        <a href="/" class="btn btn-danger">Vai alla home</a>
+      </div>
     </div>
   </main>
 
-  <footer class="text-center text-muted small py-3">
-    Plancia — Guidoncini Verdi AGESCI Campania
-  </footer>
+  <footer>Plancia — Guidoncini Verdi AGESCI Campania</footer>
 
 </body>
 </html>

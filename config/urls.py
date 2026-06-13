@@ -7,6 +7,10 @@ from apps.accounts.views import PlanciaAuthenticateView
 from apps.editions.views import HomeView
 from apps.notifications.webhooks import AnymailWebhookDispatchView
 from apps.siteconfig.views import FlowerProxyView, MailpitProxyView, PaginaStaticaPublicView
+from config.error_views import page_not_found, server_error
+
+handler404 = page_not_found
+handler500 = server_error
 
 urlpatterns = [
     path("", HomeView.as_view(), name="home"),
