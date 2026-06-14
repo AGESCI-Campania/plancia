@@ -55,13 +55,132 @@
   .avatar-crp        { border-color: #ffc107 !important; background: rgba(255,193,7,.30) !important; }
   .avatar-pgv        { border-color: #0dcaf0 !important; background: rgba(13,202,240,.30) !important; }
   .cursor-pointer    { cursor: pointer; }
-  /* Fix: pagine senza sidebar — annulla height:100vh del tema v2 */
-  @media (min-width: 992px) {
-    body { height: auto !important; min-height: 100vh; overflow: visible !important; }
-    body > .d-flex.flex-grow-1.overflow-hidden { overflow: visible !important; }
-    main { overflow-y: visible !important; }
-  }
+  /* Titoli di sezione sidebar → divisori quando collassata */
+  .ag-sidebar--collapsed .ag-sidebar__section-title { font-size: 0; padding: .25rem .5rem; letter-spacing: 0; }
+  .ag-sidebar--collapsed .ag-sidebar__section-title::after { content: ''; display: block; height: 1px; background: rgba(255,255,255,.2); }
+  /* Nascondi sidebar su mobile (l'offcanvas gestisce la nav) */
+  @media (max-width: 991.98px) { .ag-sidebar { display: none; } }
 </style>
+{% endblock %}
+
+{# ── Sidebar — nav generale (desktop); offcanvas gestisce il mobile ─────── #}
+{% block sidebar %}
+<nav class="ag-sidebar ag-sidebar--dark" id="agSidebar" aria-label="Menu laterale">
+  <button class="ag-sidebar__toggle" id="agSidebarToggle"
+          aria-label="Comprimi menu laterale" aria-expanded="true" aria-controls="agSidebar">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M0 3a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm5-1v12h9a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1zM4 2H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h2z"/>
+    </svg>
+    <span class="ag-sidebar__toggle-label ms-2">Menu</span>
+  </button>
+  <ul class="ag-sidebar__nav">
+    {% block sidebar_items %}
+    {% if user.is_authenticated %}
+      <li>
+        <a href="{% url 'home' %}" class="ag-sidebar__nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+          {% bs_icon "house-fill" size="18" %}<span class="ag-sidebar__label">Home</span>
+        </a>
+      </li>
+      {% if user.ruolo == 'csq' or user.ruolo == 'crp' or user.is_staff_plancia or user.is_superuser %}
+      <li>
+        <a href="{% url 'diaries:list' %}" class="ag-sidebar__nav-link {% if request.resolver_match.app_name == 'diaries' %}active{% endif %}">
+          {% bs_icon "journal-text" size="18" %}<span class="ag-sidebar__label">Diari</span>
+        </a>
+      </li>
+      {% endif %}
+      {% if user.ruolo == 'pgv' %}
+      <li>
+        <a href="{% url 'diaries:list' %}" class="ag-sidebar__nav-link {% if request.resolver_match.app_name == 'diaries' %}active{% endif %}">
+          {% bs_icon "journal-check" size="18" %}<span class="ag-sidebar__label">Diari assegnati</span>
+        </a>
+      </li>
+      {% endif %}
+      {% if user.ruolo == 'crp' %}
+      <li>
+        <a href="{% url 'notifications:inviti_crp' %}" class="ag-sidebar__nav-link {% if request.resolver_match.url_name == 'inviti_crp' %}active{% endif %}">
+          {% bs_icon "envelope" size="18" %}<span class="ag-sidebar__label">Inviti</span>
+        </a>
+      </li>
+      {% endif %}
+      <li>
+        <a href="{% url 'helpdesk:list' %}" class="ag-sidebar__nav-link {% if request.resolver_match.app_name == 'helpdesk' %}active{% endif %}">
+          {% bs_icon "headset" size="18" %}<span class="ag-sidebar__label">Helpdesk</span>
+        </a>
+      </li>
+      {% if user.is_staff_plancia or user.is_superuser %}
+      <li class="ag-sidebar__section-title">Gestione</li>
+      <li>
+        <a href="{% url 'editions:list' %}" class="ag-sidebar__nav-link {% if request.resolver_match.app_name == 'editions' %}active{% endif %}">
+          {% bs_icon "calendar3" size="18" %}<span class="ag-sidebar__label">Edizioni</span>
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'accounts:utente_list' %}" class="ag-sidebar__nav-link {% if request.resolver_match.app_name == 'accounts' %}active{% endif %}">
+          {% bs_icon "people" size="18" %}<span class="ag-sidebar__label">Utenti</span>
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'notifications:gestione_inviti' %}" class="ag-sidebar__nav-link {% if request.resolver_match.url_name == 'gestione_inviti' %}active{% endif %}">
+          {% bs_icon "envelope" size="18" %}<span class="ag-sidebar__label">Inviti</span>
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'imports:log_list' %}" class="ag-sidebar__nav-link {% if request.resolver_match.app_name == 'imports' %}active{% endif %}">
+          {% bs_icon "upload" size="18" %}<span class="ag-sidebar__label">Import</span>
+        </a>
+      </li>
+      {% if user.ruolo == 'incaricato_eg' or user.ruolo == 'admin' or user.is_superuser %}
+      <li>
+        <a href="{% url 'stats:dashboard' %}" class="ag-sidebar__nav-link {% if request.resolver_match.app_name == 'stats' %}active{% endif %}">
+          {% bs_icon "bar-chart" size="18" %}<span class="ag-sidebar__label">Statistiche</span>
+        </a>
+      </li>
+      {% endif %}
+      {% if user.ruolo == 'admin' or user.is_superuser %}
+      <li class="ag-sidebar__section-title">Sistema</li>
+      <li>
+        <a href="{% url 'siteconfig:impostazioni' %}" class="ag-sidebar__nav-link {% if request.resolver_match.url_name == 'impostazioni' %}active{% endif %}">
+          {% bs_icon "sliders" size="18" %}<span class="ag-sidebar__label">Impostazioni</span>
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'siteconfig:cache_pdf' %}" class="ag-sidebar__nav-link {% if request.resolver_match.url_name == 'cache_pdf' %}active{% endif %}">
+          {% bs_icon "file-earmark-pdf" size="18" %}<span class="ag-sidebar__label">Cache PDF</span>
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'siteconfig:log_export' %}" class="ag-sidebar__nav-link {% if request.resolver_match.url_name == 'log_export' %}active{% endif %}">
+          {% bs_icon "journal-text" size="18" %}<span class="ag-sidebar__label">Log export</span>
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'admin:index' %}" class="ag-sidebar__nav-link">
+          {% bs_icon "shield-lock" size="18" %}<span class="ag-sidebar__label">Pannello admin</span>
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'flower_proxy' %}" target="_blank" class="ag-sidebar__nav-link">
+          {% bs_icon "diagram-3" size="18" %}<span class="ag-sidebar__label">Flower</span>
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'mailpit_proxy' %}" target="_blank" class="ag-sidebar__nav-link">
+          {% bs_icon "envelope-open" size="18" %}<span class="ag-sidebar__label">Mailpit</span>
+        </a>
+      </li>
+      {% endif %}
+      {% endif %}{# /is_staff_plancia #}
+    {% else %}
+      <li>
+        <a href="{% url 'account_login' %}" class="ag-sidebar__nav-link">
+          {% bs_icon "box-arrow-in-right" size="18" %}<span class="ag-sidebar__label">Accedi</span>
+        </a>
+      </li>
+    {% endif %}
+    {% endblock sidebar_items %}
+  </ul>
+</nav>
+<script src="{% static 'agesci_theme/js/sidebar.js' %}" defer></script>
 {% endblock %}
 
 {# ── Header: hijack banner + header tema (inline) + sessione scaduta ─────── #}
@@ -88,121 +207,8 @@
         <img src="{% static agesci_theme_logo_navbar %}" alt="{{ agesci_theme_nome }}">
         <span class="d-none d-sm-inline">{% block brand_text %}{{ impostazioni.titolo|default:"Plancia" }}{% endblock %}</span>
       </a>
-      {# Nav desktop: icona (sopra) + etichetta (sotto), visibile solo da lg #}
-      <ul class="ag-header-nav nav col-12 col-lg-auto my-2 justify-content-center my-lg-0 text-small d-none d-lg-flex ms-lg-auto">
-        {% block header_nav %}
-        {% if user.is_authenticated %}
-          <li>
-            <a href="{% url 'home' %}" class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
-              <span class="ag-nav-icon">{% bs_icon "house-fill" %}</span>Home
-            </a>
-          </li>
-
-          {% if user.ruolo == 'csq' or user.ruolo == 'crp' or user.is_staff_plancia or user.is_superuser %}
-          <li>
-            <a href="{% url 'diaries:list' %}" class="nav-link {% if request.resolver_match.app_name == 'diaries' %}active{% endif %}">
-              <span class="ag-nav-icon">{% bs_icon "journal-text" %}</span>Diari
-            </a>
-          </li>
-          {% endif %}
-
-          {% if user.ruolo == 'pgv' %}
-          <li>
-            <a href="{% url 'diaries:list' %}" class="nav-link {% if request.resolver_match.app_name == 'diaries' %}active{% endif %}">
-              <span class="ag-nav-icon">{% bs_icon "journal-check" %}</span>Assegnati
-            </a>
-          </li>
-          {% endif %}
-
-          {% if user.ruolo == 'crp' %}
-          <li>
-            <a href="{% url 'notifications:inviti_crp' %}" class="nav-link {% if request.resolver_match.url_name == 'inviti_crp' %}active{% endif %}">
-              <span class="ag-nav-icon">{% bs_icon "envelope" %}</span>Inviti
-            </a>
-          </li>
-          {% endif %}
-
-          <li>
-            <a href="{% url 'helpdesk:list' %}" class="nav-link {% if request.resolver_match.app_name == 'helpdesk' %}active{% endif %}">
-              <span class="ag-nav-icon">{% bs_icon "headset" %}</span>Helpdesk
-            </a>
-          </li>
-
-          {% if user.is_staff_plancia or user.is_superuser %}
-          <li class="dropdown">
-            <a href="#" class="nav-link dropdown-toggle {% if request.resolver_match.app_name in 'editions,stats,imports,siteconfig,accounts' or request.resolver_match.url_name == 'gestione_inviti' %}active{% endif %}"
-               role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              <span class="ag-nav-icon">{% bs_icon "gear" %}</span>Gestione
-            </a>
-            <ul class="dropdown-menu">
-              <li><h6 class="dropdown-header small">Edizioni</h6></li>
-              <li>
-                <a class="dropdown-item {% if request.resolver_match.app_name == 'editions' %}active{% endif %}"
-                   href="{% url 'editions:list' %}">{% bs_icon "calendar3" size="14" extra_classes="me-2 opacity-75" %}Elenco edizioni</a>
-              </li>
-              {% if user.ruolo == 'admin' or user.is_superuser %}
-                <li><a class="dropdown-item" href="{% url 'editions:create' %}">{% bs_icon "plus-lg" size="14" extra_classes="me-2 opacity-75" %}Nuova edizione</a></li>
-              {% endif %}
-              <li><hr class="dropdown-divider"></li>
-              <li><h6 class="dropdown-header small">Persone</h6></li>
-              <li>
-                <a class="dropdown-item {% if request.resolver_match.app_name == 'accounts' %}active{% endif %}"
-                   href="{% url 'accounts:utente_list' %}">{% bs_icon "people" size="14" extra_classes="me-2 opacity-75" %}Utenti</a>
-              </li>
-              <li>
-                <a class="dropdown-item {% if request.resolver_match.url_name == 'gestione_inviti' %}active{% endif %}"
-                   href="{% url 'notifications:gestione_inviti' %}">{% bs_icon "envelope" size="14" extra_classes="me-2 opacity-75" %}Inviti</a>
-              </li>
-              {% if user.ruolo == 'admin' or user.ruolo == 'segreteria' or user.is_superuser %}
-              <li>
-                <a class="dropdown-item {% if request.resolver_match.url_name == 'crea_staff' %}active{% endif %}"
-                   href="{% url 'accounts:crea_staff' %}">{% bs_icon "person-plus" size="14" extra_classes="me-2 opacity-75" %}Crea utente staff</a>
-              </li>
-              {% endif %}
-              <li><hr class="dropdown-divider"></li>
-              <li><h6 class="dropdown-header small">Dati</h6></li>
-              <li>
-                <a class="dropdown-item {% if request.resolver_match.app_name == 'imports' %}active{% endif %}"
-                   href="{% url 'imports:log_list' %}">{% bs_icon "upload" size="14" extra_classes="me-2 opacity-75" %}Import anagrafiche</a>
-              </li>
-              {% if user.ruolo == 'incaricato_eg' or user.ruolo == 'admin' or user.is_superuser %}
-                <li>
-                  <a class="dropdown-item {% if request.resolver_match.app_name == 'stats' %}active{% endif %}"
-                     href="{% url 'stats:dashboard' %}">{% bs_icon "bar-chart" size="14" extra_classes="me-2 opacity-75" %}Statistiche</a>
-                </li>
-              {% endif %}
-              {% if user.ruolo == 'admin' or user.is_superuser %}
-                <li><hr class="dropdown-divider"></li>
-                <li><h6 class="dropdown-header small">Sistema</h6></li>
-                <li>
-                  <a class="dropdown-item {% if request.resolver_match.url_name == 'impostazioni' %}active{% endif %}"
-                     href="{% url 'siteconfig:impostazioni' %}">{% bs_icon "sliders" size="14" extra_classes="me-2 opacity-75" %}Impostazioni</a>
-                </li>
-                <li>
-                  <a class="dropdown-item {% if request.resolver_match.url_name == 'cache_pdf' %}active{% endif %}"
-                     href="{% url 'siteconfig:cache_pdf' %}">{% bs_icon "file-earmark-pdf" size="14" extra_classes="me-2 opacity-75" %}Cache PDF</a>
-                </li>
-                <li>
-                  <a class="dropdown-item {% if request.resolver_match.url_name == 'log_export' %}active{% endif %}"
-                     href="{% url 'siteconfig:log_export' %}">{% bs_icon "journal-text" size="14" extra_classes="me-2 opacity-75" %}Log export</a>
-                </li>
-                <li><a class="dropdown-item" href="{% url 'admin:index' %}">{% bs_icon "shield-lock" size="14" extra_classes="me-2 opacity-75" %}Pannello admin</a></li>
-                <li><hr class="dropdown-divider"></li>
-                <li><h6 class="dropdown-header small">Strumenti di sviluppo</h6></li>
-                <li>
-                  <a class="dropdown-item" href="{% url 'flower_proxy' %}" target="_blank">{% bs_icon "diagram-3" size="14" extra_classes="me-2 opacity-75" %}Flower</a>
-                </li>
-                <li>
-                  <a class="dropdown-item" href="{% url 'mailpit_proxy' %}" target="_blank">{% bs_icon "envelope-open" size="14" extra_classes="me-2 opacity-75" %}Mailpit</a>
-                </li>
-              {% endif %}
-            </ul>
-          </li>
-          {% endif %}
-
-        {% endif %}
-        {% endblock header_nav %}
-      </ul>
+      {# Nav desktop rimossa — la navigazione è nella sidebar #}
+      {% block header_nav %}{% endblock %}
       {# Hamburger → offcanvas (visibile solo su mobile/tablet) #}
       <button class="ag-header-toggler d-lg-none ms-auto"
               type="button"
