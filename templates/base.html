@@ -55,14 +55,17 @@
   .avatar-crp        { border-color: #ffc107 !important; background: rgba(255,193,7,.30) !important; }
   .avatar-pgv        { border-color: #0dcaf0 !important; background: rgba(13,202,240,.30) !important; }
   .cursor-pointer    { cursor: pointer; }
+  /* Fix: pagine senza sidebar — annulla height:100vh del tema v2 */
+  @media (min-width: 992px) {
+    body { height: auto !important; min-height: 100vh; overflow: visible !important; }
+    body > .d-flex.flex-grow-1.overflow-hidden { overflow: visible !important; }
+    main { overflow-y: visible !important; }
+  }
 </style>
 {% endblock %}
 
-{# ── Brand ───────────────────────────────────────────────────────────────── #}
-{% block brand_url %}{% url 'home' %}{% endblock %}
-{% block brand_text %}{{ impostazioni.titolo|default:"Plancia" }}{% endblock %}
-
-{# ── Header: hijack banner sopra + sessione scaduta sotto ────────────────── #}
+{# ── Header: hijack banner + header tema (inline) + sessione scaduta ─────── #}
+{# Blocchi header_nav/offcanvas_nav/header_actions sono QUI dentro (non orfani) #}
 {% block header %}
 {% if user.is_authenticated and user.is_hijacked %}
 <div class="hijack-banner">
@@ -77,7 +80,295 @@
   </form>
 </div>
 {% endif %}
-{{ block.super }}
+<header>
+  {# ── Barra superiore: logo + nav icone (desktop) + hamburger (mobile) ── #}
+  <div class="ag-header-top px-3 py-2">
+    <div class="container d-flex flex-wrap align-items-center">
+      <a href="{% block brand_url %}{% url 'home' %}{% endblock %}" class="ag-header-brand my-2 my-lg-0">
+        <img src="{% static agesci_theme_logo_navbar %}" alt="{{ agesci_theme_nome }}">
+        <span class="d-none d-sm-inline">{% block brand_text %}{{ impostazioni.titolo|default:"Plancia" }}{% endblock %}</span>
+      </a>
+      {# Nav desktop: icona (sopra) + etichetta (sotto), visibile solo da lg #}
+      <ul class="ag-header-nav nav col-12 col-lg-auto my-2 justify-content-center my-lg-0 text-small d-none d-lg-flex ms-lg-auto">
+        {% block header_nav %}
+        {% if user.is_authenticated %}
+          <li>
+            <a href="{% url 'home' %}" class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+              <span class="ag-nav-icon">{% bs_icon "house-fill" %}</span>Home
+            </a>
+          </li>
+
+          {% if user.ruolo == 'csq' or user.ruolo == 'crp' or user.is_staff_plancia or user.is_superuser %}
+          <li>
+            <a href="{% url 'diaries:list' %}" class="nav-link {% if request.resolver_match.app_name == 'diaries' %}active{% endif %}">
+              <span class="ag-nav-icon">{% bs_icon "journal-text" %}</span>Diari
+            </a>
+          </li>
+          {% endif %}
+
+          {% if user.ruolo == 'pgv' %}
+          <li>
+            <a href="{% url 'diaries:list' %}" class="nav-link {% if request.resolver_match.app_name == 'diaries' %}active{% endif %}">
+              <span class="ag-nav-icon">{% bs_icon "journal-check" %}</span>Assegnati
+            </a>
+          </li>
+          {% endif %}
+
+          {% if user.ruolo == 'crp' %}
+          <li>
+            <a href="{% url 'notifications:inviti_crp' %}" class="nav-link {% if request.resolver_match.url_name == 'inviti_crp' %}active{% endif %}">
+              <span class="ag-nav-icon">{% bs_icon "envelope" %}</span>Inviti
+            </a>
+          </li>
+          {% endif %}
+
+          <li>
+            <a href="{% url 'helpdesk:list' %}" class="nav-link {% if request.resolver_match.app_name == 'helpdesk' %}active{% endif %}">
+              <span class="ag-nav-icon">{% bs_icon "headset" %}</span>Helpdesk
+            </a>
+          </li>
+
+          {% if user.is_staff_plancia or user.is_superuser %}
+          <li class="dropdown">
+            <a href="#" class="nav-link dropdown-toggle {% if request.resolver_match.app_name in 'editions,stats,imports,siteconfig,accounts' or request.resolver_match.url_name == 'gestione_inviti' %}active{% endif %}"
+               role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <span class="ag-nav-icon">{% bs_icon "gear" %}</span>Gestione
+            </a>
+            <ul class="dropdown-menu">
+              <li><h6 class="dropdown-header small">Edizioni</h6></li>
+              <li>
+                <a class="dropdown-item {% if request.resolver_match.app_name == 'editions' %}active{% endif %}"
+                   href="{% url 'editions:list' %}">{% bs_icon "calendar3" size="14" extra_classes="me-2 opacity-75" %}Elenco edizioni</a>
+              </li>
+              {% if user.ruolo == 'admin' or user.is_superuser %}
+                <li><a class="dropdown-item" href="{% url 'editions:create' %}">{% bs_icon "plus-lg" size="14" extra_classes="me-2 opacity-75" %}Nuova edizione</a></li>
+              {% endif %}
+              <li><hr class="dropdown-divider"></li>
+              <li><h6 class="dropdown-header small">Persone</h6></li>
+              <li>
+                <a class="dropdown-item {% if request.resolver_match.app_name == 'accounts' %}active{% endif %}"
+                   href="{% url 'accounts:utente_list' %}">{% bs_icon "people" size="14" extra_classes="me-2 opacity-75" %}Utenti</a>
+              </li>
+              <li>
+                <a class="dropdown-item {% if request.resolver_match.url_name == 'gestione_inviti' %}active{% endif %}"
+                   href="{% url 'notifications:gestione_inviti' %}">{% bs_icon "envelope" size="14" extra_classes="me-2 opacity-75" %}Inviti</a>
+              </li>
+              {% if user.ruolo == 'admin' or user.ruolo == 'segreteria' or user.is_superuser %}
+              <li>
+                <a class="dropdown-item {% if request.resolver_match.url_name == 'crea_staff' %}active{% endif %}"
+                   href="{% url 'accounts:crea_staff' %}">{% bs_icon "person-plus" size="14" extra_classes="me-2 opacity-75" %}Crea utente staff</a>
+              </li>
+              {% endif %}
+              <li><hr class="dropdown-divider"></li>
+              <li><h6 class="dropdown-header small">Dati</h6></li>
+              <li>
+                <a class="dropdown-item {% if request.resolver_match.app_name == 'imports' %}active{% endif %}"
+                   href="{% url 'imports:log_list' %}">{% bs_icon "upload" size="14" extra_classes="me-2 opacity-75" %}Import anagrafiche</a>
+              </li>
+              {% if user.ruolo == 'incaricato_eg' or user.ruolo == 'admin' or user.is_superuser %}
+                <li>
+                  <a class="dropdown-item {% if request.resolver_match.app_name == 'stats' %}active{% endif %}"
+                     href="{% url 'stats:dashboard' %}">{% bs_icon "bar-chart" size="14" extra_classes="me-2 opacity-75" %}Statistiche</a>
+                </li>
+              {% endif %}
+              {% if user.ruolo == 'admin' or user.is_superuser %}
+                <li><hr class="dropdown-divider"></li>
+                <li><h6 class="dropdown-header small">Sistema</h6></li>
+                <li>
+                  <a class="dropdown-item {% if request.resolver_match.url_name == 'impostazioni' %}active{% endif %}"
+                     href="{% url 'siteconfig:impostazioni' %}">{% bs_icon "sliders" size="14" extra_classes="me-2 opacity-75" %}Impostazioni</a>
+                </li>
+                <li>
+                  <a class="dropdown-item {% if request.resolver_match.url_name == 'cache_pdf' %}active{% endif %}"
+                     href="{% url 'siteconfig:cache_pdf' %}">{% bs_icon "file-earmark-pdf" size="14" extra_classes="me-2 opacity-75" %}Cache PDF</a>
+                </li>
+                <li>
+                  <a class="dropdown-item {% if request.resolver_match.url_name == 'log_export' %}active{% endif %}"
+                     href="{% url 'siteconfig:log_export' %}">{% bs_icon "journal-text" size="14" extra_classes="me-2 opacity-75" %}Log export</a>
+                </li>
+                <li><a class="dropdown-item" href="{% url 'admin:index' %}">{% bs_icon "shield-lock" size="14" extra_classes="me-2 opacity-75" %}Pannello admin</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><h6 class="dropdown-header small">Strumenti di sviluppo</h6></li>
+                <li>
+                  <a class="dropdown-item" href="{% url 'flower_proxy' %}" target="_blank">{% bs_icon "diagram-3" size="14" extra_classes="me-2 opacity-75" %}Flower</a>
+                </li>
+                <li>
+                  <a class="dropdown-item" href="{% url 'mailpit_proxy' %}" target="_blank">{% bs_icon "envelope-open" size="14" extra_classes="me-2 opacity-75" %}Mailpit</a>
+                </li>
+              {% endif %}
+            </ul>
+          </li>
+          {% endif %}
+
+        {% endif %}
+        {% endblock header_nav %}
+      </ul>
+      {# Hamburger → offcanvas (visibile solo su mobile/tablet) #}
+      <button class="ag-header-toggler d-lg-none ms-auto"
+              type="button"
+              data-bs-toggle="offcanvas"
+              data-bs-target="#agOffcanvas"
+              aria-controls="agOffcanvas"
+              aria-label="Apri menu">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+          <path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+  {# ── Barra inferiore: azioni ── #}
+  <div class="ag-header-bottom px-3 py-2">
+    <div class="container d-flex flex-wrap align-items-center justify-content-center gap-2">
+      {% block header_search %}{% endblock %}
+      <div class="ms-auto d-flex gap-2">
+        {% block header_actions %}
+        {% if user.is_authenticated %}
+          <span class="d-none badge bg-warning text-dark px-2 py-1" id="offline-indicator"
+                aria-live="polite" aria-label="Connessione assente" style="font-size:.72rem;">Offline</span>
+          <span class="d-none badge bg-info text-dark px-2 py-1" id="photos-pending-badge"
+                aria-live="polite" style="font-size:.72rem;" title="Foto in attesa di sincronizzazione">
+            <span id="photos-pending-count">0</span> foto
+          </span>
+          <a href="{% url 'diaries:list' %}"
+             class="d-none badge bg-warning text-dark text-decoration-none px-2 py-1" id="offline-sync-badge"
+             aria-live="polite" style="font-size:.72rem;" title="Modifiche offline in attesa">
+            <span id="offline-sync-count">0</span> in attesa
+          </a>
+
+          <div class="dropdown">
+            <a class="d-flex align-items-center gap-2 text-decoration-none dropdown-toggle"
+               href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <span class="nav-avatar {{ user.ruolo|ruolo_avatar_class }}" title="{{ user.nome_completo }}">
+                {{ user.nome_completo|slice:":1"|upper }}
+              </span>
+              <span class="d-none d-lg-inline fw-semibold small">{{ user.nome_completo }}</span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end" style="min-width:240px;">
+              <li class="px-3 py-2 border-bottom">
+                <div class="fw-semibold small text-truncate">{{ user.nome_completo }}</div>
+                {% with scelte=user.ruoli_attivi_choices %}
+                {% if scelte|length > 1 %}
+                  <div class="mt-2">
+                    <div class="text-muted" style="font-size:.68rem; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.3rem;">Ruolo attivo</div>
+                    {% for chiave, etichetta in scelte %}
+                      <form method="post" action="{% url 'accounts:cambia_ruolo' %}" class="mb-1">
+                        {% csrf_token %}
+                        <input type="hidden" name="ruolo" value="{{ chiave }}">
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <button type="submit"
+                          class="btn btn-sm w-100 text-start py-1 px-2 {% if chiave == user.ruolo %}btn-secondary{% else %}btn-outline-secondary{% endif %}"
+                          style="font-size:.78rem;">
+                          {% if chiave == user.ruolo %}{% bs_icon "check2" size="12" extra_classes="me-1" %}{% else %}<span style="display:inline-block;width:16px;"></span>{% endif %}{{ etichetta }}
+                        </button>
+                      </form>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <div class="mt-1">
+                    <span class="badge {{ user.ruolo|ruolo_badge_class }} role-chip">{{ user.get_ruolo_display }}</span>
+                    {% if user.mfa_obbligatoria %}<span class="badge bg-success role-chip ms-1">MFA</span>{% endif %}
+                  </div>
+                {% endif %}
+                {% endwith %}
+              </li>
+              <li><a class="dropdown-item" href="{% url 'accounts:profilo' %}">{% bs_icon "person" size="14" extra_classes="me-2 opacity-75" %}Profilo</a></li>
+              <li><a class="dropdown-item" href="{% url 'account_email' %}">{% bs_icon "envelope" size="14" extra_classes="me-2 opacity-75" %}Email account</a></li>
+              <li><a class="dropdown-item" href="{% url 'account_change_password' %}">{% bs_icon "lock" size="14" extra_classes="me-2 opacity-75" %}Cambia password</a></li>
+              <li><a class="dropdown-item" href="{% url 'mfa_index' %}">{% bs_icon "shield-check" size="14" extra_classes="me-2 opacity-75" %}Sicurezza (MFA)</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item text-danger" href="{% url 'account_logout' %}">{% bs_icon "box-arrow-right" size="14" extra_classes="me-2 opacity-75" %}Esci</a></li>
+            </ul>
+          </div>
+
+        {% else %}
+          <a href="{% url 'account_login' %}" class="btn btn-primary btn-sm">
+            {% bs_icon "box-arrow-in-right" extra_classes="me-1" %}Accedi
+          </a>
+        {% endif %}
+        {% endblock header_actions %}
+      </div>
+    </div>
+  </div>
+  {# ── Offcanvas: menu mobile/tablet ── #}
+  <div class="offcanvas offcanvas-start d-lg-none"
+       id="agOffcanvas"
+       tabindex="-1"
+       aria-labelledby="agOffcanvasLabel">
+    <div class="ag-offcanvas-header">
+      <span class="ag-offcanvas-title" id="agOffcanvasLabel">
+        <img src="{% static agesci_theme_logo_navbar %}" alt="{{ agesci_theme_nome }}">
+        {{ agesci_theme_nome }}
+      </span>
+      <button type="button"
+              class="ag-offcanvas-close"
+              data-bs-dismiss="offcanvas"
+              aria-label="Chiudi">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414z"/>
+        </svg>
+      </button>
+    </div>
+    <div class="offcanvas-body p-0">
+      <ul class="navbar-nav px-1 py-2">
+        {% block offcanvas_nav %}
+        {% if user.is_authenticated %}
+          <li>
+            <a href="{% url 'home' %}" class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+              {% bs_icon "house-fill" %} Home
+            </a>
+          </li>
+          {% if user.ruolo == 'csq' or user.ruolo == 'crp' or user.is_staff_plancia or user.is_superuser %}
+            <li>
+              <a href="{% url 'diaries:list' %}" class="nav-link {% if request.resolver_match.app_name == 'diaries' %}active{% endif %}">
+                {% bs_icon "journal-text" %} Diari
+              </a>
+            </li>
+          {% endif %}
+          {% if user.ruolo == 'pgv' %}
+            <li>
+              <a href="{% url 'diaries:list' %}" class="nav-link {% if request.resolver_match.app_name == 'diaries' %}active{% endif %}">
+                {% bs_icon "journal-check" %} Diari assegnati
+              </a>
+            </li>
+          {% endif %}
+          {% if user.ruolo == 'crp' %}
+            <li>
+              <a href="{% url 'notifications:inviti_crp' %}" class="nav-link {% if request.resolver_match.url_name == 'inviti_crp' %}active{% endif %}">
+                {% bs_icon "envelope" %} Inviti
+              </a>
+            </li>
+          {% endif %}
+          <li>
+            <a href="{% url 'helpdesk:list' %}" class="nav-link {% if request.resolver_match.app_name == 'helpdesk' %}active{% endif %}">
+              {% bs_icon "headset" %} Helpdesk
+            </a>
+          </li>
+          {% if user.is_staff_plancia or user.is_superuser %}
+            <li class="mt-2">
+              <span class="nav-link fw-semibold" style="font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; opacity:.55; pointer-events:none;">
+                Gestione
+              </span>
+            </li>
+            <li><a href="{% url 'editions:list' %}" class="nav-link ps-3">{% bs_icon "calendar3" %} Edizioni</a></li>
+            <li><a href="{% url 'accounts:utente_list' %}" class="nav-link ps-3">{% bs_icon "people" %} Utenti</a></li>
+            <li><a href="{% url 'notifications:gestione_inviti' %}" class="nav-link ps-3">{% bs_icon "envelope" %} Inviti</a></li>
+            <li><a href="{% url 'imports:log_list' %}" class="nav-link ps-3">{% bs_icon "upload" %} Import</a></li>
+            {% if user.ruolo == 'incaricato_eg' or user.ruolo == 'admin' or user.is_superuser %}
+              <li><a href="{% url 'stats:dashboard' %}" class="nav-link ps-3">{% bs_icon "bar-chart" %} Statistiche</a></li>
+            {% endif %}
+            {% if user.ruolo == 'admin' or user.is_superuser %}
+              <li><a href="{% url 'siteconfig:impostazioni' %}" class="nav-link ps-3">{% bs_icon "sliders" %} Impostazioni</a></li>
+              <li><a href="{% url 'admin:index' %}" class="nav-link ps-3">{% bs_icon "shield-lock" %} Pannello admin</a></li>
+            {% endif %}
+          {% endif %}
+        {% else %}
+          <li><a href="{% url 'account_login' %}" class="nav-link">{% bs_icon "box-arrow-in-right" %} Accedi</a></li>
+        {% endif %}
+        {% endblock offcanvas_nav %}
+      </ul>
+    </div>
+  </div>
+</header>
 <div id="offline-auth-banner"
      class="d-none text-center py-2 px-3 small"
      role="alert" aria-live="assertive"
@@ -87,244 +378,6 @@
   <a href="{% url 'account_login' %}" class="btn btn-sm btn-warning py-0 px-2 ms-2">Accedi per sincronizzare</a>
 </div>
 {% endblock %}
-
-{# ── Navigazione desktop (icona sopra + etichetta sotto) ─────────────────── #}
-{% block header_nav %}
-{% if user.is_authenticated %}
-  <li>
-    <a href="{% url 'home' %}" class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
-      <span class="ag-nav-icon">{% bs_icon "house-fill" %}</span>Home
-    </a>
-  </li>
-
-  {% if user.ruolo == 'csq' or user.ruolo == 'crp' or user.is_staff_plancia or user.is_superuser %}
-  <li>
-    <a href="{% url 'diaries:list' %}" class="nav-link {% if request.resolver_match.app_name == 'diaries' %}active{% endif %}">
-      <span class="ag-nav-icon">{% bs_icon "journal-text" %}</span>Diari
-    </a>
-  </li>
-  {% endif %}
-
-  {% if user.ruolo == 'pgv' %}
-  <li>
-    <a href="{% url 'diaries:list' %}" class="nav-link {% if request.resolver_match.app_name == 'diaries' %}active{% endif %}">
-      <span class="ag-nav-icon">{% bs_icon "journal-check" %}</span>Assegnati
-    </a>
-  </li>
-  {% endif %}
-
-  {% if user.ruolo == 'crp' %}
-  <li>
-    <a href="{% url 'notifications:inviti_crp' %}" class="nav-link {% if request.resolver_match.url_name == 'inviti_crp' %}active{% endif %}">
-      <span class="ag-nav-icon">{% bs_icon "envelope" %}</span>Inviti
-    </a>
-  </li>
-  {% endif %}
-
-  <li>
-    <a href="{% url 'helpdesk:list' %}" class="nav-link {% if request.resolver_match.app_name == 'helpdesk' %}active{% endif %}">
-      <span class="ag-nav-icon">{% bs_icon "headset" %}</span>Helpdesk
-    </a>
-  </li>
-
-  {% if user.is_staff_plancia or user.is_superuser %}
-  <li class="dropdown">
-    <a href="#" class="nav-link dropdown-toggle {% if request.resolver_match.app_name in 'editions,stats,imports,siteconfig,accounts' or request.resolver_match.url_name == 'gestione_inviti' %}active{% endif %}"
-       role="button" data-bs-toggle="dropdown" aria-expanded="false">
-      <span class="ag-nav-icon">{% bs_icon "gear" %}</span>Gestione
-    </a>
-    <ul class="dropdown-menu">
-      <li><h6 class="dropdown-header small">Edizioni</h6></li>
-      <li>
-        <a class="dropdown-item {% if request.resolver_match.app_name == 'editions' %}active{% endif %}"
-           href="{% url 'editions:list' %}">{% bs_icon "calendar3" size="14" extra_classes="me-2 opacity-75" %}Elenco edizioni</a>
-      </li>
-      {% if user.ruolo == 'admin' or user.is_superuser %}
-        <li><a class="dropdown-item" href="{% url 'editions:create' %}">{% bs_icon "plus-lg" size="14" extra_classes="me-2 opacity-75" %}Nuova edizione</a></li>
-      {% endif %}
-      <li><hr class="dropdown-divider"></li>
-      <li><h6 class="dropdown-header small">Persone</h6></li>
-      <li>
-        <a class="dropdown-item {% if request.resolver_match.app_name == 'accounts' %}active{% endif %}"
-           href="{% url 'accounts:utente_list' %}">{% bs_icon "people" size="14" extra_classes="me-2 opacity-75" %}Utenti</a>
-      </li>
-      <li>
-        <a class="dropdown-item {% if request.resolver_match.url_name == 'gestione_inviti' %}active{% endif %}"
-           href="{% url 'notifications:gestione_inviti' %}">{% bs_icon "envelope" size="14" extra_classes="me-2 opacity-75" %}Inviti</a>
-      </li>
-      {% if user.ruolo == 'admin' or user.ruolo == 'segreteria' or user.is_superuser %}
-      <li>
-        <a class="dropdown-item {% if request.resolver_match.url_name == 'crea_staff' %}active{% endif %}"
-           href="{% url 'accounts:crea_staff' %}">{% bs_icon "person-plus" size="14" extra_classes="me-2 opacity-75" %}Crea utente staff</a>
-      </li>
-      {% endif %}
-      <li><hr class="dropdown-divider"></li>
-      <li><h6 class="dropdown-header small">Dati</h6></li>
-      <li>
-        <a class="dropdown-item {% if request.resolver_match.app_name == 'imports' %}active{% endif %}"
-           href="{% url 'imports:log_list' %}">{% bs_icon "upload" size="14" extra_classes="me-2 opacity-75" %}Import anagrafiche</a>
-      </li>
-      {% if user.ruolo == 'incaricato_eg' or user.ruolo == 'admin' or user.is_superuser %}
-        <li>
-          <a class="dropdown-item {% if request.resolver_match.app_name == 'stats' %}active{% endif %}"
-             href="{% url 'stats:dashboard' %}">{% bs_icon "bar-chart" size="14" extra_classes="me-2 opacity-75" %}Statistiche</a>
-        </li>
-      {% endif %}
-      {% if user.ruolo == 'admin' or user.is_superuser %}
-        <li><hr class="dropdown-divider"></li>
-        <li><h6 class="dropdown-header small">Sistema</h6></li>
-        <li>
-          <a class="dropdown-item {% if request.resolver_match.url_name == 'impostazioni' %}active{% endif %}"
-             href="{% url 'siteconfig:impostazioni' %}">{% bs_icon "sliders" size="14" extra_classes="me-2 opacity-75" %}Impostazioni</a>
-        </li>
-        <li>
-          <a class="dropdown-item {% if request.resolver_match.url_name == 'cache_pdf' %}active{% endif %}"
-             href="{% url 'siteconfig:cache_pdf' %}">{% bs_icon "file-earmark-pdf" size="14" extra_classes="me-2 opacity-75" %}Cache PDF</a>
-        </li>
-        <li>
-          <a class="dropdown-item {% if request.resolver_match.url_name == 'log_export' %}active{% endif %}"
-             href="{% url 'siteconfig:log_export' %}">{% bs_icon "journal-text" size="14" extra_classes="me-2 opacity-75" %}Log export</a>
-        </li>
-        <li><a class="dropdown-item" href="{% url 'admin:index' %}">{% bs_icon "shield-lock" size="14" extra_classes="me-2 opacity-75" %}Pannello admin</a></li>
-        <li><hr class="dropdown-divider"></li>
-        <li><h6 class="dropdown-header small">Strumenti di sviluppo</h6></li>
-        <li>
-          <a class="dropdown-item" href="{% url 'flower_proxy' %}" target="_blank">{% bs_icon "diagram-3" size="14" extra_classes="me-2 opacity-75" %}Flower</a>
-        </li>
-        <li>
-          <a class="dropdown-item" href="{% url 'mailpit_proxy' %}" target="_blank">{% bs_icon "envelope-open" size="14" extra_classes="me-2 opacity-75" %}Mailpit</a>
-        </li>
-      {% endif %}
-    </ul>
-  </li>
-  {% endif %}
-
-{% endif %}
-{% endblock header_nav %}
-
-{# ── Navigazione offcanvas (mobile/tablet) ───────────────────────────────── #}
-{% block offcanvas_nav %}
-{% if user.is_authenticated %}
-  <li>
-    <a href="{% url 'home' %}" class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
-      {% bs_icon "house-fill" %} Home
-    </a>
-  </li>
-  {% if user.ruolo == 'csq' or user.ruolo == 'crp' or user.is_staff_plancia or user.is_superuser %}
-    <li>
-      <a href="{% url 'diaries:list' %}" class="nav-link {% if request.resolver_match.app_name == 'diaries' %}active{% endif %}">
-        {% bs_icon "journal-text" %} Diari
-      </a>
-    </li>
-  {% endif %}
-  {% if user.ruolo == 'pgv' %}
-    <li>
-      <a href="{% url 'diaries:list' %}" class="nav-link {% if request.resolver_match.app_name == 'diaries' %}active{% endif %}">
-        {% bs_icon "journal-check" %} Diari assegnati
-      </a>
-    </li>
-  {% endif %}
-  {% if user.ruolo == 'crp' %}
-    <li>
-      <a href="{% url 'notifications:inviti_crp' %}" class="nav-link {% if request.resolver_match.url_name == 'inviti_crp' %}active{% endif %}">
-        {% bs_icon "envelope" %} Inviti
-      </a>
-    </li>
-  {% endif %}
-  <li>
-    <a href="{% url 'helpdesk:list' %}" class="nav-link {% if request.resolver_match.app_name == 'helpdesk' %}active{% endif %}">
-      {% bs_icon "headset" %} Helpdesk
-    </a>
-  </li>
-  {% if user.is_staff_plancia or user.is_superuser %}
-    <li class="mt-2">
-      <span class="nav-link fw-semibold" style="font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; opacity:.55; pointer-events:none;">
-        Gestione
-      </span>
-    </li>
-    <li><a href="{% url 'editions:list' %}" class="nav-link ps-3">{% bs_icon "calendar3" %} Edizioni</a></li>
-    <li><a href="{% url 'accounts:utente_list' %}" class="nav-link ps-3">{% bs_icon "people" %} Utenti</a></li>
-    <li><a href="{% url 'notifications:gestione_inviti' %}" class="nav-link ps-3">{% bs_icon "envelope" %} Inviti</a></li>
-    <li><a href="{% url 'imports:log_list' %}" class="nav-link ps-3">{% bs_icon "upload" %} Import</a></li>
-    {% if user.ruolo == 'incaricato_eg' or user.ruolo == 'admin' or user.is_superuser %}
-      <li><a href="{% url 'stats:dashboard' %}" class="nav-link ps-3">{% bs_icon "bar-chart" %} Statistiche</a></li>
-    {% endif %}
-    {% if user.ruolo == 'admin' or user.is_superuser %}
-      <li><a href="{% url 'siteconfig:impostazioni' %}" class="nav-link ps-3">{% bs_icon "sliders" %} Impostazioni</a></li>
-      <li><a href="{% url 'admin:index' %}" class="nav-link ps-3">{% bs_icon "shield-lock" %} Pannello admin</a></li>
-    {% endif %}
-  {% endif %}
-{% else %}
-  <li><a href="{% url 'account_login' %}" class="nav-link">{% bs_icon "box-arrow-in-right" %} Accedi</a></li>
-{% endif %}
-{% endblock offcanvas_nav %}
-
-{# ── Azioni barra inferiore header (badge offline + dropdown utente) ──────── #}
-{% block header_actions %}
-{% if user.is_authenticated %}
-  <span class="d-none badge bg-warning text-dark px-2 py-1" id="offline-indicator"
-        aria-live="polite" aria-label="Connessione assente" style="font-size:.72rem;">Offline</span>
-  <span class="d-none badge bg-info text-dark px-2 py-1" id="photos-pending-badge"
-        aria-live="polite" style="font-size:.72rem;" title="Foto in attesa di sincronizzazione">
-    <span id="photos-pending-count">0</span> foto
-  </span>
-  <a href="{% url 'diaries:list' %}"
-     class="d-none badge bg-warning text-dark text-decoration-none px-2 py-1" id="offline-sync-badge"
-     aria-live="polite" style="font-size:.72rem;" title="Modifiche offline in attesa">
-    <span id="offline-sync-count">0</span> in attesa
-  </a>
-
-  <div class="dropdown">
-    <a class="d-flex align-items-center gap-2 text-decoration-none dropdown-toggle"
-       href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-      <span class="nav-avatar {{ user.ruolo|ruolo_avatar_class }}" title="{{ user.nome_completo }}">
-        {{ user.nome_completo|slice:":1"|upper }}
-      </span>
-      <span class="d-none d-lg-inline fw-semibold small">{{ user.nome_completo }}</span>
-    </a>
-    <ul class="dropdown-menu dropdown-menu-end" style="min-width:240px;">
-      <li class="px-3 py-2 border-bottom">
-        <div class="fw-semibold small text-truncate">{{ user.nome_completo }}</div>
-        {% with scelte=user.ruoli_attivi_choices %}
-        {% if scelte|length > 1 %}
-          <div class="mt-2">
-            <div class="text-muted" style="font-size:.68rem; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.3rem;">Ruolo attivo</div>
-            {% for chiave, etichetta in scelte %}
-              <form method="post" action="{% url 'accounts:cambia_ruolo' %}" class="mb-1">
-                {% csrf_token %}
-                <input type="hidden" name="ruolo" value="{{ chiave }}">
-                <input type="hidden" name="next" value="{{ request.path }}">
-                <button type="submit"
-                  class="btn btn-sm w-100 text-start py-1 px-2 {% if chiave == user.ruolo %}btn-secondary{% else %}btn-outline-secondary{% endif %}"
-                  style="font-size:.78rem;">
-                  {% if chiave == user.ruolo %}{% bs_icon "check2" size="12" extra_classes="me-1" %}{% else %}<span style="display:inline-block;width:16px;"></span>{% endif %}{{ etichetta }}
-                </button>
-              </form>
-            {% endfor %}
-          </div>
-        {% else %}
-          <div class="mt-1">
-            <span class="badge {{ user.ruolo|ruolo_badge_class }} role-chip">{{ user.get_ruolo_display }}</span>
-            {% if user.mfa_obbligatoria %}<span class="badge bg-success role-chip ms-1">MFA</span>{% endif %}
-          </div>
-        {% endif %}
-        {% endwith %}
-      </li>
-      <li><a class="dropdown-item" href="{% url 'accounts:profilo' %}">{% bs_icon "person" size="14" extra_classes="me-2 opacity-75" %}Profilo</a></li>
-      <li><a class="dropdown-item" href="{% url 'account_email' %}">{% bs_icon "envelope" size="14" extra_classes="me-2 opacity-75" %}Email account</a></li>
-      <li><a class="dropdown-item" href="{% url 'account_change_password' %}">{% bs_icon "lock" size="14" extra_classes="me-2 opacity-75" %}Cambia password</a></li>
-      <li><a class="dropdown-item" href="{% url 'mfa_index' %}">{% bs_icon "shield-check" size="14" extra_classes="me-2 opacity-75" %}Sicurezza (MFA)</a></li>
-      <li><hr class="dropdown-divider"></li>
-      <li><a class="dropdown-item text-danger" href="{% url 'account_logout' %}">{% bs_icon "box-arrow-right" size="14" extra_classes="me-2 opacity-75" %}Esci</a></li>
-    </ul>
-  </div>
-
-{% else %}
-  <a href="{% url 'account_login' %}" class="btn btn-primary btn-sm">
-    {% bs_icon "box-arrow-in-right" extra_classes="me-1" %}Accedi
-  </a>
-{% endif %}
-{% endblock header_actions %}
 
 {# ── Footer — contenuto colonne ──────────────────────────────────────────── #}
 {% block footer_brand_text %}

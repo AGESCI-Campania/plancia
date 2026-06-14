@@ -1,12 +1,33 @@
 {% extends "base.html" %}
-{% load bootstrap_icons %}
+{% load bootstrap_icons static %}
 
-{# Sidebar collapsible per le sezioni di gestione/amministrazione #}
-{% block sidebar %}
-  {% include "agesci_theme/partials/sidebar.html" with variant="dark" %}
+{# Fix Bug 1: ripristina layout sidebar (height:100vh) che base.html annulla #}
+{% block extra_head %}{{ block.super }}
+<style>
+@media (min-width: 992px) {
+  body { height: 100vh !important; overflow: hidden !important; }
+  body > .d-flex.flex-grow-1 { overflow: hidden !important; }
+  main { overflow-y: auto !important; }
+}
+</style>
 {% endblock %}
 
-{% block sidebar_items %}
+{# Sidebar collapsible — HTML inlinizzato per far funzionare {% block sidebar_items %} #}
+{# (i blocchi dentro {% include %} non partecipano all'ereditarietà Django) #}
+{% block sidebar %}
+<nav class="ag-sidebar ag-sidebar--dark" id="agSidebar" aria-label="Menu laterale">
+  <button class="ag-sidebar__toggle"
+          id="agSidebarToggle"
+          aria-label="Comprimi menu laterale"
+          aria-expanded="true"
+          aria-controls="agSidebar">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M0 3a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm5-1v12h9a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1zM4 2H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h2z"/>
+    </svg>
+    <span class="ag-sidebar__toggle-label ms-2">Menu</span>
+  </button>
+  <ul class="ag-sidebar__nav">
+    {% block sidebar_items %}
   <li class="ag-sidebar__section-title">Edizioni</li>
   <li>
     <a href="{% url 'editions:list' %}"
@@ -101,4 +122,8 @@
     </a>
   </li>
   {% endif %}
-{% endblock sidebar_items %}
+    {% endblock sidebar_items %}
+  </ul>
+</nav>
+<script src="{% static 'agesci_theme/js/sidebar.js' %}" defer></script>
+{% endblock %}
