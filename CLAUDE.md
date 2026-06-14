@@ -68,20 +68,42 @@ Context processor `impostazioni` inietta `Impostazioni` (singleton) in ogni temp
 
 ## Gotchas e trappole
 
-### Template e UI
-- **Tema v2 — blocchi header**: i vecchi blocchi `navbar`, `nav_items`, `breadcrumb`, `subnav`
-  **non esistono più**. I nuovi blocchi sono: `header` (intero header), `brand_url`, `brand_text`,
-  `header_nav` (nav desktop icona+testo), `offcanvas_nav` (nav mobile), `header_actions` (barra
-  inferiore destra). Il `base.html` di Plancia sovrascrive già tutti questi blocchi — in altri
-  template non sovrascrivere `header` salvo casi eccezionali.
-- **Tema v2 — footer**: i blocchi del footer sono `footer_brand_text`, `footer_col1_title`,
-  `footer_col1_links`, `footer_col2_title`, `footer_col2_links`, `footer_text`, `footer_copyright`,
-  `footer_links`. Non usare più `class="footer-agesci mt-auto"`.
-- **Sidebar gestione**: `base_gestione.html` estende `base.html` e attiva la sidebar collapsible
-  (variant dark) per le sezioni staff. I template in `siteconfig/`, `imports/`, `stats/`,
-  `accounts/` (lista/dettaglio utenti), `notifications/gestione_inviti` estendono
-  `base_gestione.html`. Per aggiungere nuove voci alla sidebar, modificare `sidebar_items` in
-  `base_gestione.html`.
+### Template e UI — Architettura layout (v2-offline)
+
+**Schema di ereditarietà:**
+```
+templates/agesci_theme/base.html   ← override progetto del tema (footer dentro <main>)
+  └── templates/base.html          ← base Plancia: sidebar, header, footer, CSS
+        └── templates/base_gestione.html  ← wrapper minimo per pagine staff
+```
+
+**`templates/agesci_theme/base.html`** (override progetto):
+- `<main>` è `d-flex flex-column` — il `{% block footer %}` è dentro `<main>`, **non** dopo.
+  Il footer scorre con il contenuto invece di essere fisso al fondo del viewport.
+- Struttura: `<div class="{% block main_class %}container py-4{% endblock %} flex-grow-1">` +
+  `{% block footer %}` come sibling. Non aggiungere `container` su `<main>` stesso.
+
+**`templates/base.html`**:
+- **Sidebar su tutte le pagine** (`{% block sidebar %}` con `ag-sidebar--dark`): voci di nav
+  (Home, Diari, Helpdesk; Gestione/Sistema per staff). Su mobile nascosta via CSS (`d-none`
+  sotto 992px) — la nav mobile è nell'offcanvas (hamburger in header).
+- **Header semplificato**: solo brand + `header_actions` (dropdown utente). `header_nav` è
+  vuoto — non inserire voci lì, usare `{% block sidebar_items %}`.
+- Blocchi **header**, **sidebar**, **footer** e relativi sub-blocchi sono **tutti inlinizzati**
+  in `base.html` (HTML diretto, non `{% include %}`). **Motivo**: i blocchi Django dentro
+  `{% include %}` non partecipano all'ereditarietà — sarebbero sempre vuoti.
+- Per aggiungere voci alla sidebar: sovrascrivere `{% block sidebar_items %}` nel template
+  figlio (il blocco è nella catena di ereditarietà, non in un include).
+
+**`templates/base_gestione.html`**: solo `{% extends "base.html" %}`. La sidebar mostrata
+è quella di `base.html` (che include già tutte le voci gestione per staff/admin).
+
+- **Tema v2 — blocchi header**: `brand_url`, `brand_text`, `header_actions`, `offcanvas_nav`
+  esistono e funzionano. `header_nav` è vuoto per scelta (nav in sidebar). Non sovrascrivere
+  `{% block header %}` salvo casi eccezionali.
+- **Tema v2 — footer**: blocchi `footer_brand_text`, `footer_col1_title`, `footer_col1_links`,
+  `footer_col2_title`, `footer_col2_links`, `footer_text`, `footer_copyright`, `footer_links`
+  funzionano perché inlinizzati in `base.html`. Non usare `class="footer-agesci mt-auto"`.
 - **Componenti opzionali**: `{% load agesci_components %}` — tag disponibili: `ag_hero`,
   `ag_feature_card`, `ag_feature_grid`, `ag_jumbotron`, `ag_badge`, `ag_button`, `ag_breadcrumb`,
   `ag_dropdown`, `ag_list_group`, `ag_modal_trigger`, `ag_masonry_grid`.
