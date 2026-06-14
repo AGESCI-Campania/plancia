@@ -379,48 +379,64 @@
 </div>
 {% endblock %}
 
-{# ── Footer — contenuto colonne ──────────────────────────────────────────── #}
-{% block footer_brand_text %}
-  <span class="fw-semibold">{{ impostazioni.titolo|default:"Plancia" }}</span><br>
-  <span class="small opacity-75">Guidoncini Verdi — AGESCI Campania</span>
-{% endblock %}
-
-{% block footer_col1_title %}Informazioni{% endblock %}
-{% block footer_col1_links %}
-  <li><a href="{% url 'pagina_privacy' %}">Privacy Policy</a></li>
-  <li><a href="{% url 'pagina_termini' %}">Condizioni del Servizio</a></li>
-  <li>
-    <a href="https://plancia.readthedocs.io/it/latest/" target="_blank" rel="noopener">
-      {% bs_icon "book" size="14" extra_classes="me-1" %}Manuale utente
-    </a>
-  </li>
-{% endblock %}
-
-{% block footer_col2_title %}Contatti{% endblock %}
-{% block footer_col2_links %}
-{% for link in impostazioni.footer_links.all %}
-  <li>
-    {% if link.tipo == "email" %}<a href="{{ link.url }}">{% else %}<a href="{{ link.url }}" target="_blank" rel="noopener">{% endif %}
-      {% if link.tipo == "sito_web" %}{% bs_icon "globe" size="14" extra_classes="me-1" %}
-      {% elif link.tipo == "email" %}{% bs_icon "envelope" size="14" extra_classes="me-1" %}
-      {% elif link.tipo == "facebook" %}{% bs_icon "facebook" size="14" extra_classes="me-1" %}
-      {% elif link.tipo == "instagram" %}{% bs_icon "instagram" size="14" extra_classes="me-1" %}
-      {% elif link.tipo == "tiktok" %}{% bs_icon "tiktok" size="14" extra_classes="me-1" %}
-      {% endif %}{{ link.etichetta|default:link.get_tipo_display }}
-    </a>
-  </li>
-{% endfor %}
-{% endblock %}
-
-{% block footer_text %}
-  {% if impostazioni.footer_testo %}{{ footer_rendered|safe }}{% endif %}
-{% endblock %}
-
-{% block footer_copyright %}© AGESCI Campania{% endblock %}
-
-{# ── Footer: banner PWA, toast, cookie, JS offline ───────────────────────── #}
+{# ── Footer: footer tema (inline) + banner PWA + toast + cookie ──────────── #}
+{# Blocchi footer_brand_text/col*/text/copyright sono QUI dentro (non orfani) #}
 {% block footer %}
-{{ block.super }}
+<footer class="ag-footer py-5">
+  <div class="container">
+    <div class="row g-4">
+      <div class="col-12 col-md-3">
+        <a href="/" class="d-inline-block mb-2">
+          <img src="{% static agesci_theme_logo_navbar %}" alt="{{ agesci_theme_nome }}" class="ag-footer__logo">
+        </a>
+        <p class="small">{% block footer_brand_text %}<span class="fw-semibold">{{ impostazioni.titolo|default:"Plancia" }}</span><br>
+          <span class="small opacity-75">Guidoncini Verdi — AGESCI Campania</span>{% endblock %}</p>
+      </div>
+      <div class="col-6 col-md-2">
+        <h5>{% block footer_col1_title %}Informazioni{% endblock %}</h5>
+        <ul class="ag-footer__nav">
+          {% block footer_col1_links %}
+            <li><a href="{% url 'pagina_privacy' %}">Privacy Policy</a></li>
+            <li><a href="{% url 'pagina_termini' %}">Condizioni del Servizio</a></li>
+            <li>
+              <a href="https://plancia.readthedocs.io/it/latest/" target="_blank" rel="noopener">
+                {% bs_icon "book" size="14" extra_classes="me-1" %}Manuale utente
+              </a>
+            </li>
+          {% endblock %}
+        </ul>
+      </div>
+      <div class="col-6 col-md-2">
+        <h5>{% block footer_col2_title %}Contatti{% endblock %}</h5>
+        <ul class="ag-footer__nav">
+          {% block footer_col2_links %}
+            {% for link in impostazioni.footer_links.all %}
+              <li>
+                {% if link.tipo == "email" %}<a href="{{ link.url }}">{% else %}<a href="{{ link.url }}" target="_blank" rel="noopener">{% endif %}
+                  {% if link.tipo == "sito_web" %}{% bs_icon "globe" size="14" extra_classes="me-1" %}
+                  {% elif link.tipo == "email" %}{% bs_icon "envelope" size="14" extra_classes="me-1" %}
+                  {% elif link.tipo == "facebook" %}{% bs_icon "facebook" size="14" extra_classes="me-1" %}
+                  {% elif link.tipo == "instagram" %}{% bs_icon "instagram" size="14" extra_classes="me-1" %}
+                  {% elif link.tipo == "tiktok" %}{% bs_icon "tiktok" size="14" extra_classes="me-1" %}
+                  {% endif %}{{ link.etichetta|default:link.get_tipo_display }}
+                </a>
+              </li>
+            {% endfor %}
+          {% endblock %}
+        </ul>
+      </div>
+      <div class="col-12 col-md-auto ms-md-auto text-center text-md-end small">
+        {% block footer_text %}{% if impostazioni.footer_testo %}{{ footer_rendered|safe }}{% endif %}{% endblock %}
+      </div>
+    </div>
+    <div class="ag-footer__bottom d-flex flex-column flex-sm-row justify-content-between align-items-center pt-4 mt-4 gap-2">
+      <p>{% block footer_copyright %}© AGESCI Campania{% endblock %}</p>
+      <ul>
+        {% block footer_links %}<li><a href="https://www.agesci.it" target="_blank" rel="noopener">agesci.it</a></li>{% endblock %}
+      </ul>
+    </div>
+  </div>
+</footer>
 
 {# Banner installazione PWA #}
 <div id="pwa-install-banner"

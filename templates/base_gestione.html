@@ -1,13 +1,26 @@
 {% extends "base.html" %}
 {% load bootstrap_icons static %}
 
-{# Fix Bug 1: ripristina layout sidebar (height:100vh) che base.html annulla #}
+{# Fix layout sidebar: ripristina height:100vh che base.html annulla #}
 {% block extra_head %}{{ block.super }}
 <style>
 @media (min-width: 992px) {
   body { height: 100vh !important; overflow: hidden !important; }
-  body > .d-flex.flex-grow-1 { overflow: hidden !important; }
-  main { overflow-y: auto !important; }
+  /* stessa specificità (3 classi) del selettore in base.html → vince per posizione */
+  body > .d-flex.flex-grow-1.overflow-hidden { overflow: hidden !important; }
+  main { overflow-y: auto !important; min-height: 0; }
+}
+/* Titoli di sezione sidebar → diventano divisori quando collassata */
+.ag-sidebar--collapsed .ag-sidebar__section-title {
+  font-size: 0;
+  padding: 0.25rem 0.5rem;
+  letter-spacing: 0;
+}
+.ag-sidebar--collapsed .ag-sidebar__section-title::after {
+  content: '';
+  display: block;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.2);
 }
 </style>
 {% endblock %}
