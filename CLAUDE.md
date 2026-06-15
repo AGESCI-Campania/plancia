@@ -267,6 +267,25 @@ docker compose --env-file .env.staging up -d web worker beat
 Il symlink `.env.prod → .env.staging` è necessario perché `docker-compose.yml` referenzia
 `env_file: [.env.prod]` nei servizi — è già presente su staging.
 
+**Volume DB staging**: il `docker-compose.yml` definisce il volume `plancia_db`, che Docker Compose
+prefissa col nome progetto → `stagingplancia_plancia_db`. Esiste anche `stagingplancia_plancia_staging_db`
+(vecchio nome, da una versione precedente del compose) che contiene il dump anonimizzato della
+produzione. Se staging appare vuoto dopo un `up -d`, il container DB sta usando `plancia_db` (vuoto)
+invece di `plancia_staging_db` (con i dati). Recovery:
+```bash
+# Verifica quale volume è montato
+docker inspect stagingplancia-db-1 --format '{{range .Mounts}}{{.Name}}{{end}}'
+
+# Se è plancia_db (vuoto): ferma lo stack, avvia pg_old sull'altro volume, dump e restore
+docker compose --env-file .env.staging stop web worker beat
+docker run -d --name pg_old -v stagingplancia_plancia_staging_db:/var/lib/postgresql/data -p 127.0.0.1:5434:5432 postgres:17
+sleep 4
+docker exec stagingplancia-db-1 psql -U plancia_staging -d postgres -c 'DROP DATABASE plancia_staging;' -c 'CREATE DATABASE plancia_staging OWNER plancia_staging;'
+docker exec pg_old pg_dump -U plancia_staging plancia_staging | docker exec -i stagingplancia-db-1 psql -U plancia_staging plancia_staging
+docker rm -f pg_old
+docker compose --env-file .env.staging up -d web worker beat
+```
+
 ### Verifica post-deploy
 ```bash
 docker compose --env-file .env.prod logs web --tail=30
