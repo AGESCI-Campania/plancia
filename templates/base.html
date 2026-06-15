@@ -184,8 +184,8 @@
   <div class="ag-sidebar__user">
     <div class="dropdown dropup">
       <a href="#" class="ag-sidebar__user-toggle dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-        <span class="nav-avatar {{ user.ruolo|ruolo_avatar_class }}" aria-hidden="true">{{ user.nome_completo|slice:":1"|upper }}</span>
-        <span class="ag-sidebar__label">{{ user.nome_completo }}</span>
+        <span class="ag-sidebar__user-avatar {{ user.ruolo|ruolo_avatar_class }}" aria-hidden="true">{{ user.nome_completo|slice:":1"|upper }}</span>
+        <span class="ag-sidebar__label text-truncate" style="max-width:120px;">{{ user.nome_completo }}</span>
       </a>
       <ul class="dropdown-menu dropdown-menu-dark shadow" style="min-width:240px;">
         <li class="px-3 py-2 border-bottom">
