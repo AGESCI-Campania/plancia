@@ -204,55 +204,55 @@
     {% endif %}
     {% endblock sidebar_items %}
   </ul>
-  {% block sidebar_user %}
-  {% if user.is_authenticated %}
-  <div class="ag-sidebar__user">
-    <div class="dropdown dropup">
-      <a href="#" class="ag-sidebar__user-toggle dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-        <span class="ag-sidebar__user-avatar" aria-hidden="true">{{ user.nome_completo|slice:":1"|upper }}</span>
-        <span class="ag-sidebar__label" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px;display:inline-block;">{{ user.nome_completo }}</span>
-      </a>
-      <ul class="dropdown-menu dropdown-menu-dark shadow" style="min-width:240px;">
-        <li class="px-3 py-2 border-bottom">
-          <div class="fw-semibold small text-truncate">{{ user.nome_completo }}</div>
-          {% with scelte=user.ruoli_attivi_choices %}
-          {% if scelte|length > 1 %}
-            <div class="mt-2">
-              <div class="text-muted" style="font-size:.68rem; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.3rem;">Ruolo attivo</div>
-              {% for chiave, etichetta in scelte %}
-                <form method="post" action="{% url 'accounts:cambia_ruolo' %}" class="mb-1">
-                  {% csrf_token %}
-                  <input type="hidden" name="ruolo" value="{{ chiave }}">
-                  <input type="hidden" name="next" value="{{ request.path }}">
-                  <button type="submit"
-                    class="btn btn-sm w-100 text-start py-1 px-2 {% if chiave == user.ruolo %}btn-secondary{% else %}btn-outline-secondary{% endif %}"
-                    style="font-size:.78rem;">
-                    {% if chiave == user.ruolo %}{% bs_icon "check2" size="12" extra_classes="me-1" %}{% else %}<span style="display:inline-block;width:16px;"></span>{% endif %}{{ etichetta }}
-                  </button>
-                </form>
-              {% endfor %}
-            </div>
-          {% else %}
-            <div class="mt-1">
-              <span class="badge {{ user.ruolo|ruolo_badge_class }} role-chip">{{ user.get_ruolo_display }}</span>
-              {% if user.mfa_obbligatoria %}<span class="badge bg-success role-chip ms-1">MFA</span>{% endif %}
-            </div>
-          {% endif %}
-          {% endwith %}
-        </li>
-        <li><a class="dropdown-item" href="{% url 'accounts:profilo' %}">{% bs_icon "person" size="14" extra_classes="me-2 opacity-75" %}Profilo</a></li>
-        <li><a class="dropdown-item" href="{% url 'account_email' %}">{% bs_icon "envelope" size="14" extra_classes="me-2 opacity-75" %}Email account</a></li>
-        <li><a class="dropdown-item" href="{% url 'account_change_password' %}">{% bs_icon "lock" size="14" extra_classes="me-2 opacity-75" %}Cambia password</a></li>
-        <li><a class="dropdown-item" href="{% url 'mfa_index' %}">{% bs_icon "shield-check" size="14" extra_classes="me-2 opacity-75" %}Sicurezza (MFA)</a></li>
-        <li><hr class="dropdown-divider"></li>
-        <li><a class="dropdown-item text-danger" href="{% url 'account_logout' %}">{% bs_icon "box-arrow-right" size="14" extra_classes="me-2 opacity-75" %}Esci</a></li>
-      </ul>
-    </div>
-  </div>
-  {% endif %}
-  {% endblock sidebar_user %}
 </nav>
 <script src="{% static 'agesci_theme/js/sidebar.js' %}" defer></script>
+{% block sidebar_user %}
+{% if user.is_authenticated %}
+<div class="ag-sidebar__user">
+  <div class="dropdown dropup">
+    <a href="#" class="ag-sidebar__user-toggle dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+      <span class="ag-sidebar__user-avatar" aria-hidden="true">{{ user.nome_completo|slice:":1"|upper }}</span>
+      <span class="ag-sidebar__label" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px;display:inline-block;">{{ user.nome_completo }}</span>
+    </a>
+    <ul class="dropdown-menu dropdown-menu-dark shadow" style="min-width:240px;">
+      <li class="px-3 py-2 border-bottom">
+        <div class="fw-semibold small text-truncate">{{ user.nome_completo }}</div>
+        {% with scelte=user.ruoli_attivi_choices %}
+        {% if scelte|length > 1 %}
+          <div class="mt-2">
+            <div class="text-muted" style="font-size:.68rem; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.3rem;">Ruolo attivo</div>
+            {% for chiave, etichetta in scelte %}
+              <form method="post" action="{% url 'accounts:cambia_ruolo' %}" class="mb-1">
+                {% csrf_token %}
+                <input type="hidden" name="ruolo" value="{{ chiave }}">
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button type="submit"
+                  class="btn btn-sm w-100 text-start py-1 px-2 {% if chiave == user.ruolo %}btn-secondary{% else %}btn-outline-secondary{% endif %}"
+                  style="font-size:.78rem;">
+                  {% if chiave == user.ruolo %}{% bs_icon "check2" size="12" extra_classes="me-1" %}{% else %}<span style="display:inline-block;width:16px;"></span>{% endif %}{{ etichetta }}
+                </button>
+              </form>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="mt-1">
+            <span class="badge {{ user.ruolo|ruolo_badge_class }} role-chip">{{ user.get_ruolo_display }}</span>
+            {% if user.mfa_obbligatoria %}<span class="badge bg-success role-chip ms-1">MFA</span>{% endif %}
+          </div>
+        {% endif %}
+        {% endwith %}
+      </li>
+      <li><a class="dropdown-item" href="{% url 'accounts:profilo' %}">{% bs_icon "person" size="14" extra_classes="me-2 opacity-75" %}Profilo</a></li>
+      <li><a class="dropdown-item" href="{% url 'account_email' %}">{% bs_icon "envelope" size="14" extra_classes="me-2 opacity-75" %}Email account</a></li>
+      <li><a class="dropdown-item" href="{% url 'account_change_password' %}">{% bs_icon "lock" size="14" extra_classes="me-2 opacity-75" %}Cambia password</a></li>
+      <li><a class="dropdown-item" href="{% url 'mfa_index' %}">{% bs_icon "shield-check" size="14" extra_classes="me-2 opacity-75" %}Sicurezza (MFA)</a></li>
+      <li><hr class="dropdown-divider"></li>
+      <li><a class="dropdown-item text-danger" href="{% url 'account_logout' %}">{% bs_icon "box-arrow-right" size="14" extra_classes="me-2 opacity-75" %}Esci</a></li>
+    </ul>
+  </div>
+</div>
+{% endif %}
+{% endblock sidebar_user %}
 {% endblock %}
 
 {# ── Header: hijack banner + header tema (inline) + sessione scaduta ─────── #}
