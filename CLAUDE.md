@@ -248,6 +248,25 @@ docker compose --env-file .env.prod up -d web worker beat
   sull'host che persiste tra i deploy. Se eseguito dopo `up -d`, il container web carica il
   vecchio manifest e serve i vecchi hash degli asset anche se i file sono stati aggiornati.
 
+### Deploy in staging
+**Cartella**: `/srv/staging.plancia`. Branch `v2-offline`.
+
+Apache su staging serve `/static/` da `staticfiles-staging/` (non `staticfiles/`). Il bind mount
+del compose scrive sempre in `staticfiles/`, quindi il collectstatic va eseguito con un volume
+override che punta alla directory corretta:
+
+```bash
+git pull
+docker compose --env-file .env.staging build --no-cache web worker beat
+docker compose --env-file .env.staging run --rm \
+  -v /srv/staging.plancia/staticfiles-staging:/app/staticfiles \
+  web uv run python manage.py collectstatic --noinput
+docker compose --env-file .env.staging up -d web worker beat
+```
+
+Il symlink `.env.prod → .env.staging` è necessario perché `docker-compose.yml` referenzia
+`env_file: [.env.prod]` nei servizi — è già presente su staging.
+
 ### Verifica post-deploy
 ```bash
 docker compose --env-file .env.prod logs web --tail=30
