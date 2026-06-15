@@ -65,16 +65,19 @@
      (100vh − header), facendo sì che la sidebar superi il viewport e
      overflow:hidden tagli la sezione utente in basso */
   .d-flex.flex-grow-1.overflow-hidden { min-height: 0; }
-  /* Vincolo esplicito di altezza sulla sidebar: senza height:100% la sidebar
-     può crescere oltre il parent flex e overflow:hidden taglia ag-sidebar__user */
-  @media (min-width: 992px) { .ag-sidebar { height: 100%; } }
-  /* Con la sidebar vincolata: il nav shrinka (min-height:0) e scorre,
-     ag-sidebar__user resta visibile in fondo come flex-shrink:0 */
-  .ag-sidebar__nav { min-height: 0; }
-  .ag-sidebar__user {
-    position: absolute !important;
-    bottom: 0; left: 0; right: 0;
-    z-index: 1;
+  /* ag-sidebar__user: position:fixed — ancorato al viewport, immune da
+     overflow:hidden e altezze non vincolate della sidebar */
+  @media (min-width: 992px) {
+    .ag-sidebar__user {
+      position: fixed !important;
+      bottom: 0; left: 0;
+      width: 240px;
+      z-index: 1000;
+      display: flex !important;
+      flex-direction: column;
+    }
+    .ag-sidebar--collapsed .ag-sidebar__user { width: 64px; }
+    .ag-sidebar__nav { min-height: 0; padding-bottom: 80px !important; }
   }
   .ag-sidebar--dark .ag-sidebar__user {
     background-color: var(--ag-primary);
@@ -82,8 +85,6 @@
   }
   .ag-sidebar--dark .ag-sidebar__user-toggle { opacity: 1 !important; }
   .ag-sidebar--dark .ag-sidebar__user-avatar { background-color: rgba(0,0,0,.4) !important; font-weight: 700; }
-  /* padding-bottom al nav per non nascondere le ultime voci dietro la sezione utente */
-  .ag-sidebar__nav { padding-bottom: 72px !important; }
 </style>
 {% endblock %}
 
