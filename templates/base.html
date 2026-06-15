@@ -65,14 +65,14 @@
      (100vh − header), facendo sì che la sidebar superi il viewport e
      overflow:hidden tagli la sezione utente in basso */
   .d-flex.flex-grow-1.overflow-hidden { min-height: 0; }
-  /* ag-sidebar__user: position:fixed — ancorato al viewport, immune da
-     overflow:hidden e altezze non vincolate della sidebar */
+  /* Rimuove z-index dalla sidebar: senza stacking context, overflow:hidden
+     non clippa più i figli position:fixed (ag-sidebar__user) */
+  .ag-sidebar { z-index: auto !important; }
   @media (min-width: 992px) {
     .ag-sidebar__user {
       position: fixed !important;
       bottom: 0; left: 0;
       width: 240px;
-      z-index: 1000;
       display: flex !important;
       flex-direction: column;
     }
@@ -204,6 +204,53 @@
     {% endif %}
     {% endblock sidebar_items %}
   </ul>
+  {% block sidebar_user %}
+  {% if user.is_authenticated %}
+  <div class="ag-sidebar__user">
+    <div class="dropdown dropup">
+      <a href="#" class="ag-sidebar__user-toggle dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+        <span class="ag-sidebar__user-avatar" aria-hidden="true">{{ user.nome_completo|slice:":1"|upper }}</span>
+        <span class="ag-sidebar__label" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px;display:inline-block;">{{ user.nome_completo|truncatechars:22 }}</span>
+      </a>
+      <ul class="dropdown-menu dropdown-menu-dark shadow" style="min-width:240px;">
+        <li class="px-3 py-2 border-bottom">
+          <div class="fw-semibold small text-truncate">{{ user.nome_completo }}</div>
+          {% with scelte=user.ruoli_attivi_choices %}
+          {% if scelte|length > 1 %}
+            <div class="mt-2">
+              <div class="text-muted" style="font-size:.68rem;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem;">Ruolo attivo</div>
+              {% for chiave, etichetta in scelte %}
+                <form method="post" action="{% url 'accounts:cambia_ruolo' %}" class="mb-1">
+                  {% csrf_token %}
+                  <input type="hidden" name="ruolo" value="{{ chiave }}">
+                  <input type="hidden" name="next" value="{{ request.path }}">
+                  <button type="submit"
+                    class="btn btn-sm w-100 text-start py-1 px-2 {% if chiave == user.ruolo %}btn-secondary{% else %}btn-outline-secondary{% endif %}"
+                    style="font-size:.78rem;">
+                    {% if chiave == user.ruolo %}{% bs_icon "check2" size="12" extra_classes="me-1" %}{% else %}<span style="display:inline-block;width:16px;"></span>{% endif %}{{ etichetta }}
+                  </button>
+                </form>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="mt-1">
+              <span class="badge {{ user.ruolo|ruolo_badge_class }} role-chip">{{ user.get_ruolo_display }}</span>
+              {% if user.mfa_obbligatoria %}<span class="badge bg-success role-chip ms-1">MFA</span>{% endif %}
+            </div>
+          {% endif %}
+          {% endwith %}
+        </li>
+        <li><a class="dropdown-item" href="{% url 'accounts:profilo' %}">{% bs_icon "person" size="14" extra_classes="me-2 opacity-75" %}Profilo</a></li>
+        <li><a class="dropdown-item" href="{% url 'account_email' %}">{% bs_icon "envelope" size="14" extra_classes="me-2 opacity-75" %}Email account</a></li>
+        <li><a class="dropdown-item" href="{% url 'account_change_password' %}">{% bs_icon "lock" size="14" extra_classes="me-2 opacity-75" %}Cambia password</a></li>
+        <li><a class="dropdown-item" href="{% url 'mfa_index' %}">{% bs_icon "shield-check" size="14" extra_classes="me-2 opacity-75" %}Sicurezza (MFA)</a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item text-danger" href="{% url 'account_logout' %}">{% bs_icon "box-arrow-right" size="14" extra_classes="me-2 opacity-75" %}Esci</a></li>
+      </ul>
+    </div>
+  </div>
+  {% endif %}
+  {% endblock sidebar_user %}
 </nav>
 <script src="{% static 'agesci_theme/js/sidebar.js' %}" defer></script>
 {% endblock %}
@@ -520,76 +567,6 @@
 })();
 </script>
 {% endblock footer %}
-
-{# ── Sidebar user: fuori dal DOM della sidebar per evitare il clipping da  ── #}
-{# stacking context (position:relative + z-index:2 + overflow:hidden sulla   #}
-{# sidebar clippano il rendering di qualunque figlio fixed nel DOM)           #}
-{% if user.is_authenticated %}
-<div id="ag-sidebar-user-fixed"
-     class="dropdown dropup d-none d-lg-block"
-     style="position:fixed;bottom:0;left:0;width:240px;z-index:1050;
-            background:#3d8e33;border-top:1px solid rgba(255,255,255,.35);">
-  <a href="#" data-bs-toggle="dropdown" aria-expanded="false"
-     style="display:flex;align-items:center;gap:8px;padding:12px 16px;
-            text-decoration:none;color:white;white-space:nowrap;">
-    <span style="display:inline-flex;align-items:center;justify-content:center;
-                 width:32px;height:32px;min-width:32px;border-radius:50%;
-                 background:rgba(0,0,0,.4);font-size:.75rem;font-weight:700;">
-      {{ user.nome_completo|slice:":1"|upper }}
-    </span>
-    <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;font-size:.9rem;">
-      {{ user.nome_completo|truncatechars:22 }}
-    </span>
-  </a>
-  <ul class="dropdown-menu dropdown-menu-dark shadow" style="min-width:240px;">
-    <li class="px-3 py-2 border-bottom">
-      <div class="fw-semibold small text-truncate">{{ user.nome_completo }}</div>
-      {% with scelte=user.ruoli_attivi_choices %}
-      {% if scelte|length > 1 %}
-        <div class="mt-2">
-          <div class="text-muted" style="font-size:.68rem;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem;">Ruolo attivo</div>
-          {% for chiave, etichetta in scelte %}
-            <form method="post" action="{% url 'accounts:cambia_ruolo' %}" class="mb-1">
-              {% csrf_token %}
-              <input type="hidden" name="ruolo" value="{{ chiave }}">
-              <input type="hidden" name="next" value="{{ request.path }}">
-              <button type="submit"
-                class="btn btn-sm w-100 text-start py-1 px-2 {% if chiave == user.ruolo %}btn-secondary{% else %}btn-outline-secondary{% endif %}"
-                style="font-size:.78rem;">
-                {% if chiave == user.ruolo %}{% bs_icon "check2" size="12" extra_classes="me-1" %}{% else %}<span style="display:inline-block;width:16px;"></span>{% endif %}{{ etichetta }}
-              </button>
-            </form>
-          {% endfor %}
-        </div>
-      {% else %}
-        <div class="mt-1">
-          <span class="badge {{ user.ruolo|ruolo_badge_class }} role-chip">{{ user.get_ruolo_display }}</span>
-          {% if user.mfa_obbligatoria %}<span class="badge bg-success role-chip ms-1">MFA</span>{% endif %}
-        </div>
-      {% endif %}
-      {% endwith %}
-    </li>
-    <li><a class="dropdown-item" href="{% url 'accounts:profilo' %}">{% bs_icon "person" size="14" extra_classes="me-2 opacity-75" %}Profilo</a></li>
-    <li><a class="dropdown-item" href="{% url 'account_email' %}">{% bs_icon "envelope" size="14" extra_classes="me-2 opacity-75" %}Email account</a></li>
-    <li><a class="dropdown-item" href="{% url 'account_change_password' %}">{% bs_icon "lock" size="14" extra_classes="me-2 opacity-75" %}Cambia password</a></li>
-    <li><a class="dropdown-item" href="{% url 'mfa_index' %}">{% bs_icon "shield-check" size="14" extra_classes="me-2 opacity-75" %}Sicurezza (MFA)</a></li>
-    <li><hr class="dropdown-divider"></li>
-    <li><a class="dropdown-item text-danger" href="{% url 'account_logout' %}">{% bs_icon "box-arrow-right" size="14" extra_classes="me-2 opacity-75" %}Esci</a></li>
-  </ul>
-</div>
-<script>
-(function(){
-  var sidebar = document.getElementById('agSidebar');
-  var user = document.getElementById('ag-sidebar-user-fixed');
-  if (!sidebar || !user) return;
-  function syncWidth() {
-    user.style.width = sidebar.offsetWidth + 'px';
-  }
-  syncWidth();
-  sidebar.addEventListener('transitionend', syncWidth);
-}());
-</script>
-{% endif %}
 
 {# ── JS inline: indicatore offline + badge foto ───────────────────────────── #}
 {% block extra_js %}{{ block.super }}
