@@ -63,6 +63,10 @@
   /* min-height:0 permette al nav di shrinkare sotto il suo content height,
      attivando overflow-y:auto e mantenendo ag-sidebar__user visibile in fondo */
   .ag-sidebar__nav { min-height: 0; }
+  /* sidebar user — contrasto su dark variant (tema usa opacity:.82 e avatar quasi invisibile) */
+  .ag-sidebar--dark .ag-sidebar__user { border-top: 1px solid rgba(255,255,255,.35) !important; }
+  .ag-sidebar--dark .ag-sidebar__user-toggle { opacity: 1 !important; }
+  .ag-sidebar--dark .ag-sidebar__user-avatar { background-color: rgba(255,255,255,.25) !important; font-weight: 700; }
 </style>
 {% endblock %}
 
@@ -188,7 +192,7 @@
     <div class="dropdown dropup">
       <a href="#" class="ag-sidebar__user-toggle dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
         <span class="ag-sidebar__user-avatar" aria-hidden="true">{{ user.nome_completo|slice:":1"|upper }}</span>
-        <span class="ag-sidebar__label text-truncate" style="max-width:120px;">{{ user.nome_completo }}</span>
+        <span class="ag-sidebar__label" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px;display:inline-block;">{{ user.nome_completo }}</span>
       </a>
       <ul class="dropdown-menu dropdown-menu-dark shadow" style="min-width:240px;">
         <li class="px-3 py-2 border-bottom">
