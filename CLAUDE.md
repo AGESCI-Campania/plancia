@@ -17,7 +17,7 @@ documento prevale su questo file.
 
 ## Stack
 - Python **≥ 3.14**, Django **≥ 6.0**. PostgreSQL **≥ 17**. Redis + **Celery** per job asincroni.
-- **uv** per dipendenze/venv. **Bootstrap 5** via **`django-agesci-campania-theme` 2.0.0**.
+- **uv** per dipendenze/venv. **Bootstrap 5** via **`django-agesci-campania-theme` 2.1.0**.
   Icone SVG inline con **`django-bootstrap-icons`**. **WeasyPrint** (PDF), **openpyxl** (Excel).
 - Auth: **django-allauth** (email + social Google/Microsoft/Apple, **MFA**), **django-guardian**
   (object-level), **django-axes** (brute-force).
@@ -72,16 +72,14 @@ Context processor `impostazioni` inietta `Impostazioni` (singleton) in ogni temp
 
 **Schema di ereditarietà:**
 ```
-templates/agesci_theme/base.html   ← override progetto del tema (footer dentro <main>)
+agesci_theme/base.html             ← tema 2.1.0 (ag-scroll-area, footer fratello di <main>)
   └── templates/base.html          ← base Plancia: sidebar, header, footer, CSS
         └── templates/base_gestione.html  ← wrapper minimo per pagine staff
 ```
 
-**`templates/agesci_theme/base.html`** (override progetto):
-- `<main>` è `d-flex flex-column` — il `{% block footer %}` è dentro `<main>`, **non** dopo.
-  Il footer scorre con il contenuto invece di essere fisso al fondo del viewport.
-- Struttura: `<div class="{% block main_class %}container py-4{% endblock %} flex-grow-1">` +
-  `{% block footer %}` come sibling. Non aggiungere `container` su `<main>` stesso.
+**Struttura layout (tema 2.1.0)**: nessun override di `agesci_theme/base.html` — il tema gestisce
+già tutto correttamente. `.ag-scroll-area` è l'unico container con `overflow-y: auto` (su ≥992px);
+`<main>` e `{% block footer %}` sono fratelli al suo interno. NON rimettere `overflow-y` su `<main>`.
 
 **`templates/base.html`**:
 - **Sidebar su tutte le pagine** (`{% block sidebar %}` con `ag-sidebar--dark`): voci di nav
