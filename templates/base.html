@@ -60,13 +60,17 @@
   .ag-sidebar--collapsed .ag-sidebar__section-title::after { content: ''; display: block; height: 1px; background: rgba(255,255,255,.2); }
   /* Nascondi sidebar su mobile (l'offcanvas gestisce la nav) */
   @media (max-width: 991.98px) { .ag-sidebar { display: none; } }
-  /* min-height:0 permette al nav di shrinkare sotto il suo content height,
-     attivando overflow-y:auto e mantenendo ag-sidebar__user visibile in fondo */
+  /* Il wrapper flex esterno deve avere min-height:0 perché in un flex-column
+     senza questo vincolo il div cresce con i contenuti invece di fermarsi a
+     (100vh − header), facendo sì che la sidebar superi il viewport e
+     overflow:hidden tagli la sezione utente in basso */
+  .d-flex.flex-grow-1.overflow-hidden { min-height: 0; }
+  /* Il nav può shrinkare sotto il suo content height → overflow-y:auto attivo */
   .ag-sidebar__nav { min-height: 0; }
-  /* sidebar user — contrasto su dark variant (tema usa opacity:.82 e avatar quasi invisibile) */
+  /* sidebar user — contrasto su dark variant */
   .ag-sidebar--dark .ag-sidebar__user { border-top: 1px solid rgba(255,255,255,.35) !important; }
   .ag-sidebar--dark .ag-sidebar__user-toggle { opacity: 1 !important; }
-  .ag-sidebar--dark .ag-sidebar__user-avatar { background-color: rgba(255,255,255,.25) !important; font-weight: 700; }
+  .ag-sidebar--dark .ag-sidebar__user-avatar { background-color: rgba(0,0,0,.4) !important; font-weight: 700; }
 </style>
 {% endblock %}
 
