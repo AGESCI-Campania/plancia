@@ -60,6 +60,9 @@
   .ag-sidebar--collapsed .ag-sidebar__section-title::after { content: ''; display: block; height: 1px; background: rgba(255,255,255,.2); }
   /* Nascondi sidebar su mobile (l'offcanvas gestisce la nav) */
   @media (max-width: 991.98px) { .ag-sidebar { display: none; } }
+  /* min-height:0 permette al nav di shrinkare sotto il suo content height,
+     attivando overflow-y:auto e mantenendo ag-sidebar__user visibile in fondo */
+  .ag-sidebar__nav { min-height: 0; }
 </style>
 {% endblock %}
 
