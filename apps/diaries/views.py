@@ -122,6 +122,7 @@ class DiarioListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+        ctx["breadcrumb_items"] = [{"label": "Home", "url": "/"}, {"label": "Diari", "url": None}]
         from apps.editions.models import Edizione
 
         ctx["edizioni"] = Edizione.objects.all()
@@ -153,6 +154,12 @@ class DiarioDetailView(DiarioAccessMixin, DetailView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         diario = self.object
+        from django.urls import reverse
+        ctx["breadcrumb_items"] = [
+            {"label": "Home", "url": "/"},
+            {"label": "Diari", "url": reverse("diaries:list")},
+            {"label": str(diario.squadriglia), "url": None},
+        ]
         user = self.request.user
         is_csq = user.ruolo == Ruolo.CSQ
         ctx["puo_editare"] = self._puo_editare(diario)

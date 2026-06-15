@@ -41,6 +41,7 @@ class ProfiloView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+        ctx["breadcrumb_items"] = [{"label": "Home", "url": "/"}, {"label": "Profilo", "url": None}]
         u = self.request.user
         ctx["nomine"] = u.nomine.select_related("nominato_da", "edizione").order_by("-creato_at")
         ctx["login_events"] = u.login_events.all()[:10]
@@ -95,6 +96,7 @@ class UtenteListView(StaffPlanciaRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+        ctx["breadcrumb_items"] = [{"label": "Home", "url": "/"}, {"label": "Utenti", "url": None}]
         ctx["ruoli"] = Ruolo.choices
         ctx["ruolo_sel"] = self.request.GET.get("ruolo", "")
         ctx["q"] = self.request.GET.get("q", "")

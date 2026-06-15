@@ -38,6 +38,11 @@ class HomeView(LoginRequiredMixin, TemplateView):
             return redirect("editions:detail", pk=edizione.pk)
         return super().get(request, *args, **kwargs)
 
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["breadcrumb_items"] = [{"label": "Home", "url": None}]
+        return ctx
+
 
 class EdizioneListView(LoginRequiredMixin, ListView):
     model = Edizione
@@ -47,6 +52,11 @@ class EdizioneListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         return Edizione.objects.all()
 
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["breadcrumb_items"] = [{"label": "Home", "url": "/"}, {"label": "Edizioni", "url": None}]
+        return ctx
+
 
 class EdizioneDetailView(LoginRequiredMixin, DetailView):
     model = Edizione
@@ -55,6 +65,7 @@ class EdizioneDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+        ctx["breadcrumb_items"] = [{"label": "Home", "url": None}]
         user = self.request.user
         edizione = self.object
         diari = list(self._diari_visibili(edizione, user))

@@ -17,7 +17,7 @@ documento prevale su questo file.
 
 ## Stack
 - Python **≥ 3.14**, Django **≥ 6.0**. PostgreSQL **≥ 17**. Redis + **Celery** per job asincroni.
-- **uv** per dipendenze/venv. **Bootstrap 5** via **`django-agesci-campania-theme` 2.1.0**.
+- **uv** per dipendenze/venv. **Bootstrap 5** via **`django-agesci-campania-theme` 2.2.1**.
   Icone SVG inline con **`django-bootstrap-icons`**. **WeasyPrint** (PDF), **openpyxl** (Excel).
 - Auth: **django-allauth** (email + social Google/Microsoft/Apple, **MFA**), **django-guardian**
   (object-level), **django-axes** (brute-force).
@@ -72,12 +72,12 @@ Context processor `impostazioni` inietta `Impostazioni` (singleton) in ogni temp
 
 **Schema di ereditarietà:**
 ```
-agesci_theme/base.html             ← tema 2.1.0 (ag-scroll-area, footer fratello di <main>)
+agesci_theme/base.html             ← tema 2.2.1 (ag-scroll-area, header inlinizzato in base.html)
   └── templates/base.html          ← base Plancia: sidebar, header, footer, CSS
         └── templates/base_gestione.html  ← wrapper minimo per pagine staff
 ```
 
-**Struttura layout (tema 2.1.0)**: nessun override di `agesci_theme/base.html` — il tema gestisce
+**Struttura layout (tema 2.2.0)**: nessun override di `agesci_theme/base.html` — il tema gestisce
 già tutto correttamente. `.ag-scroll-area` è l'unico container con `overflow-y: auto` (su ≥992px);
 `<main>` e `{% block footer %}` sono fratelli al suo interno. NON rimettere `overflow-y` su `<main>`.
 
@@ -85,13 +85,34 @@ già tutto correttamente. `.ag-scroll-area` è l'unico container con `overflow-y
 - **Sidebar su tutte le pagine** (`{% block sidebar %}` con `ag-sidebar--dark`): voci di nav
   (Home, Diari, Helpdesk; Gestione/Sistema per staff). Su mobile nascosta via CSS (`d-none`
   sotto 992px) — la nav mobile è nell'offcanvas (hamburger in header).
-- **Header semplificato**: solo brand + `header_actions` (dropdown utente). `header_nav` è
-  vuoto — non inserire voci lì, usare `{% block sidebar_items %}`.
+- **Dropdown utente in sidebar** (`{% block sidebar_user %}`): sezione `ag-sidebar__user` in
+  fondo alla sidebar con avatar colorato per ruolo, switcher multi-ruolo, link profilo/email/
+  password/MFA e logout. Usa `dropup`. NON è nell'header.
+- **Badge offline in `ag-header-top`**: `offline-indicator`, `photos-pending-badge`,
+  `offline-sync-badge` sono nel wrapper `ms-auto` della barra superiore (prima dell'hamburger),
+  visibili anche quando la breadcrumb occupa `ag-header-bottom`.
+- **Breadcrumb**: `ag-header-bottom` mostra `{% include "agesci_theme/partials/breadcrumb.html" %}`
+  se `breadcrumb_items` è nel contesto, altrimenti `header_search`/`header_actions` (vuoti).
+  `header_actions` è libero per override dai template figli.
+- **`header_nav`** è vuoto — non inserire voci lì, usare `{% block sidebar_items %}`.
 - Blocchi **header**, **sidebar**, **footer** e relativi sub-blocchi sono **tutti inlinizzati**
   in `base.html` (HTML diretto, non `{% include %}`). **Motivo**: i blocchi Django dentro
   `{% include %}` non partecipano all'ereditarietà — sarebbero sempre vuoti.
 - Per aggiungere voci alla sidebar: sovrascrivere `{% block sidebar_items %}` nel template
   figlio (il blocco è nella catena di ereditarietà, non in un include).
+
+**Breadcrumb nelle view**: aggiungere `ctx["breadcrumb_items"]` in `get_context_data()`.
+Formato: lista di dict `{"label": "...", "url": "..."}` — l'ultimo elemento ha `url: None`
+(voce attiva senza link). Esempio:
+```python
+ctx["breadcrumb_items"] = [
+    {"label": "Home", "url": "/"},
+    {"label": "Diari", "url": reverse("diaries:list")},
+    {"label": str(diario.squadriglia), "url": None},
+]
+```
+View già aggiornate: `EdizioneDetailView`, `EdizioneListView`, `HomeView`, `DiarioListView`,
+`DiarioDetailView`, `ProfiloView`, `UtenteListView`, `TicketListView`.
 
 **`templates/base_gestione.html`**: solo `{% extends "base.html" %}`. La sidebar mostrata
 è quella di `base.html` (che include già tutte le voci gestione per staff/admin).
