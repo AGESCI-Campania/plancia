@@ -67,10 +67,22 @@
   .d-flex.flex-grow-1.overflow-hidden { min-height: 0; }
   /* Il nav può shrinkare sotto il suo content height → overflow-y:auto attivo */
   .ag-sidebar__nav { min-height: 0; }
-  /* sidebar user — contrasto su dark variant */
-  .ag-sidebar--dark .ag-sidebar__user { border-top: 1px solid rgba(255,255,255,.35) !important; }
+  /* ag-sidebar__user ancorato in basso con position:absolute.
+     Il separatore era già visibile nella posizione giusta ma il contenuto
+     veniva tagliato da overflow:hidden — absolute+bottom:0 lo fissa al bordo. */
+  .ag-sidebar__user {
+    position: absolute !important;
+    bottom: 0; left: 0; right: 0;
+    z-index: 1;
+  }
+  .ag-sidebar--dark .ag-sidebar__user {
+    background-color: var(--ag-primary);
+    border-top: 1px solid rgba(255,255,255,.35);
+  }
   .ag-sidebar--dark .ag-sidebar__user-toggle { opacity: 1 !important; }
   .ag-sidebar--dark .ag-sidebar__user-avatar { background-color: rgba(0,0,0,.4) !important; font-weight: 700; }
+  /* padding-bottom al nav per non nascondere le ultime voci dietro la sezione utente */
+  .ag-sidebar__nav { padding-bottom: 72px !important; }
 </style>
 {% endblock %}
 
