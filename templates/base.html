@@ -65,11 +65,12 @@
      (100vh − header), facendo sì che la sidebar superi il viewport e
      overflow:hidden tagli la sezione utente in basso */
   .d-flex.flex-grow-1.overflow-hidden { min-height: 0; }
-  /* Il nav può shrinkare sotto il suo content height → overflow-y:auto attivo */
+  /* Vincolo esplicito di altezza sulla sidebar: senza height:100% la sidebar
+     può crescere oltre il parent flex e overflow:hidden taglia ag-sidebar__user */
+  @media (min-width: 992px) { .ag-sidebar { height: 100%; } }
+  /* Con la sidebar vincolata: il nav shrinka (min-height:0) e scorre,
+     ag-sidebar__user resta visibile in fondo come flex-shrink:0 */
   .ag-sidebar__nav { min-height: 0; }
-  /* ag-sidebar__user ancorato in basso con position:absolute.
-     Il separatore era già visibile nella posizione giusta ma il contenuto
-     veniva tagliato da overflow:hidden — absolute+bottom:0 lo fissa al bordo. */
   .ag-sidebar__user {
     position: absolute !important;
     bottom: 0; left: 0; right: 0;
