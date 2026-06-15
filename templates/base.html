@@ -184,7 +184,7 @@
   </ul>
   {% block sidebar_user %}
   {% if user.is_authenticated %}
-  <div class="ag-sidebar__user">
+  <div class="ag-sidebar__user" style="border:3px solid red;background:yellow;color:black;">
     <div class="dropdown dropup">
       <a href="#" class="ag-sidebar__user-toggle dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
         <span class="ag-sidebar__user-avatar" aria-hidden="true">{{ user.nome_completo|slice:":1"|upper }}</span>
