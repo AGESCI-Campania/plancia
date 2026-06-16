@@ -238,10 +238,20 @@ class AnagraficaUpdateView(DiarioAccessMixin, View):
 
     def get(self, request, pk):
         from django.shortcuts import render
+        from django.urls import reverse
 
         diario, anagrafica = self._setup(pk)
         form = AnagraficaForm(instance=anagrafica, utente=request.user, diario=diario)
-        return render(request, self.template_name, {"form": form, "diario": diario})
+        return render(request, self.template_name, {
+            "form": form,
+            "diario": diario,
+            "breadcrumb_items": [
+                {"label": "Home", "url": "/"},
+                {"label": "Diari", "url": reverse("diaries:list")},
+                {"label": str(diario.squadriglia), "url": reverse("diaries:detail", args=[pk])},
+                {"label": "Anagrafica", "url": None},
+            ],
+        })
 
     def post(self, request, pk):
         from django.shortcuts import render

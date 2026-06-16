@@ -3,14 +3,6 @@
 {% block title %}Anagrafica — {{ diario }} — Plancia{% endblock %}
 
 {% block content %}
-<nav aria-label="breadcrumb" class="mb-3">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="{% url 'diaries:list' %}">Diari</a></li>
-    <li class="breadcrumb-item"><a href="{% url 'diaries:detail' diario.pk %}">{{ diario.squadriglia.nome }}</a></li>
-    <li class="breadcrumb-item active">Anagrafica</li>
-  </ol>
-</nav>
-
 <h3 class="mb-1">Modulo 1 — Anagrafica
   <small class="text-muted fs-6">— {{ diario }}</small>
 </h3>
