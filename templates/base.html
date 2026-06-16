@@ -65,9 +65,6 @@
      (100vh − header), facendo sì che la sidebar superi il viewport e
      overflow:hidden tagli la sezione utente in basso */
   .d-flex.flex-grow-1.overflow-hidden { min-height: 0; }
-  /* Senza min-width:0, un flex item con flex-grow:1 può espandersi oltre il
-     container se il contenuto è più largo del viewport (overflow orizzontale mobile) */
-  .ag-scroll-area { min-width: 0; }
   .ag-sidebar--dark .ag-sidebar__user { border-top: 1px solid rgba(255,255,255,.35); }
   /* !important batte --bs-link-color della branca eg che renderebbe il testo verde su verde */
   .ag-sidebar--dark .ag-sidebar__user-toggle { opacity: 1 !important; color: var(--ag-on-primary) !important; }
