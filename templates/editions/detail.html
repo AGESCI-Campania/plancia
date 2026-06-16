@@ -69,43 +69,38 @@
 
 {% if stats_diari %}
 {# ── Statistiche stati diari (solo staff) ──────────────────────────────── #}
-<div class="card mb-4 shadow-sm">
-  <div class="card-header d-flex align-items-center gap-2">
-    {% bs_icon "bar-chart" size="18" extra_classes="text-primary" %}
-    <span class="fw-semibold">Avanzamento diari</span>
-    <span class="ms-auto text-muted small">{{ stats_diari.totale }} diari totali</span>
+<div class="ag-jumbotron ag-jumbotron--primary mb-4" style="padding:1.5rem 2rem;">
+  <div class="d-flex align-items-center gap-2 mb-3">
+    {% bs_icon "bar-chart" size="18" %}
+    <span class="fw-semibold fs-5">Avanzamento diari</span>
+    <span class="ms-auto opacity-75 small">{{ stats_diari.totale }} diari totali</span>
   </div>
-  <div class="card-body pb-2">
 
-    {# Barra progress composita #}
-    {% if stats_diari.totale %}
-    <div class="progress mb-3" style="height:18px;" role="progressbar">
-      {% for s in stats_diari.per_stato %}{% if s.totale %}
-      <div class="progress-bar {% if s.colore == 'warning' %}bg-warning text-dark{% else %}bg-{{ s.colore }}{% endif %}"
-           style="width:{{ s.percentuale }}%"
-           title="{{ s.label }}: {{ s.totale }}">
-      </div>
-      {% endif %}{% endfor %}
+  {# Barra progress composita #}
+  {% if stats_diari.totale %}
+  <div class="progress mb-3" style="height:18px;background:rgba(0,0,0,.25);" role="progressbar">
+    {% for s in stats_diari.per_stato %}{% if s.totale %}
+    <div class="progress-bar {% if s.colore == 'warning' %}bg-warning text-dark{% else %}bg-{{ s.colore }}{% endif %}"
+         style="width:{{ s.percentuale }}%"
+         title="{{ s.label }}: {{ s.totale }}">
     </div>
-    {% endif %}
-
-    {# Contatori per stato #}
-    <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-7 g-2">
-      {% for s in stats_diari.per_stato %}
-      <div class="col">
-        <div class="text-center py-2 px-1 rounded border
-          {% if s.totale %}border-{{ s.colore }}{% else %}border-light text-muted{% endif %}">
-          <div class="fw-bold fs-5
-            {% if s.totale %}text-{{ s.colore }}{% if s.colore == 'warning' %} text-dark{% endif %}{% endif %}">
-            {{ s.totale }}
-          </div>
-          <div class="small lh-sm" style="font-size:.72rem">{{ s.label }}</div>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-
+    {% endif %}{% endfor %}
   </div>
+  {% endif %}
+
+  {# Contatori per stato — su sfondo primary: bordi e testi bianchi/semitrasparenti #}
+  <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-7 g-2">
+    {% for s in stats_diari.per_stato %}
+    <div class="col">
+      <div class="text-center py-2 px-1 rounded"
+           style="background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,{% if s.totale %}.5{% else %}.15{% endif %});">
+        <div class="fw-bold fs-5 {% if not s.totale %}opacity-50{% endif %}">{{ s.totale }}</div>
+        <div class="small lh-sm opacity-75" style="font-size:.72rem">{{ s.label }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
 </div>
 {% endif %}
 
