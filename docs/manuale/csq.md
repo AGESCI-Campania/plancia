@@ -197,12 +197,14 @@ nel browser e vengono salvati sul server quando torni online.
 
 Puoi aggiungere foto anche senza connessione. Quando selezioni un'immagine offline:
 
-1. La foto viene ridimensionata e salvata **solo nel browser** (badge giallo "In attesa").
-2. Nell'intestazione della pagina compare un numero che indica le foto in attesa di sync.
+1. La foto viene ridimensionata e salvata **solo nel browser** (badge "In attesa").
+2. Nell'intestazione della pagina compare un contatore che indica le foto in attesa.
 3. Non appena la connessione viene ripristinata — anche tornando alla pagina dall'app in
    background — le foto vengono caricate automaticamente.
 4. Il badge "In attesa" si trasforma in "Locale" (o "Drive" se il diario è collegato a
    Google Drive) a upload completato.
+
+![Modulo impresa con widget foto e badge offline](screenshots/45_offline_mobile.png)
 
 > **Consiglio**: se hai molte foto in attesa, assicurati di tenere aperta l'app (anche in
 > background) qualche secondo dopo il ritorno della connessione per completare il sync.
