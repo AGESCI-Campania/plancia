@@ -273,14 +273,22 @@ docker compose --env-file .env.prod up -d web worker beat
 **Cartella**: `/srv/staging.plancia`. Branch `v2-offline`.
 
 Apache su staging serve `/static/` da `staticfiles-staging/` (non `staticfiles/`). Il bind mount
-del compose scrive sempre in `staticfiles/`, quindi il collectstatic va eseguito con un volume
-override che punta alla directory corretta:
+del compose scrive sempre in `staticfiles/`, quindi il collectstatic va eseguito due volte:
+1. con volume override → aggiorna `staticfiles-staging/` (file che Apache serve)
+2. senza override → aggiorna `staticfiles/staticfiles.json` (manifest che Django legge in memory)
+
+Se manca il secondo step, Django emette URL con hash vecchi e il browser carica CSS sbagliati
+(es. versione del tema priva delle classi sidebar) pur avendo i file corretti su disco.
 
 ```bash
 git pull
 docker compose --env-file .env.staging build --no-cache web worker beat
+# 1. Aggiorna staticfiles-staging/ (Apache)
 docker compose --env-file .env.staging run --rm \
   -v /srv/staging.plancia/staticfiles-staging:/app/staticfiles \
+  web uv run python manage.py collectstatic --noinput
+# 2. Aggiorna staticfiles/ (manifest Django — OBBLIGATORIO dopo ogni cambio tema)
+docker compose --env-file .env.staging run --rm \
   web uv run python manage.py collectstatic --noinput
 docker compose --env-file .env.staging up -d web worker beat
 ```
