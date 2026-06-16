@@ -335,20 +335,27 @@
         const fd   = new FormData();
         fd.append('modulo', modulo);
         fd.append('file', file, entry.nome);
-        const url = entry.upload_url || uploadUrl; // retrocompat. voci senza upload_url
+        const url = entry.upload_url || uploadUrl;
         try {
           const resp = await fetch(url, {
             method: 'POST',
             headers: { 'X-CSRFToken': getCsrf() },
             body: fd,
           });
-          if (!resp.ok) continue; // lascia in coda, riprova al prossimo trigger
+          if (!resp.ok) {
+            console.warn('plancia-foto flush: server', resp.status, url);
+            if (resp.status === 401) {
+              // Sessione scaduta: notifica e interrompi
+              document.dispatchEvent(new CustomEvent('plancia:session-expired'));
+              break;
+            }
+            continue; // altri errori: lascia in coda, riprova
+          }
 
           const data = await resp.json();
           await dbDelete(db, entry.localId);
           dispatchPhotoCount(db);
 
-          // Aggiorna la card locale con i dati del server
           if (cards.has(entry.localId)) {
             cards.get(entry.localId).remove();
             cards.delete(entry.localId);
@@ -356,8 +363,9 @@
           addCard(data);
           updateSubtitle();
 
-        } catch (_) {
-          // Rete caduta a metà: interrompi, riprova al prossimo `online`
+        } catch (err) {
+          // Rete caduta a metà: interrompi, riprova al prossimo trigger
+          console.warn('plancia-foto flush error:', err);
           break;
         }
       }
@@ -394,6 +402,19 @@
     }
 
     window.addEventListener('online', flushPending);
+
+    // iOS bfcache: pageshow scatta anche quando la pagina è ripristinata
+    // dallo snapshot (DOMContentLoaded non scatta in quel caso).
+    window.addEventListener('pageshow', function (e) {
+      if (navigator.onLine) flushPending();
+    });
+
+    // PWA in foreground: scatta quando l'utente torna sull'app dopo
+    // averla messa in background (es. usato un'altra app).
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden && navigator.onLine) flushPending();
+    });
+
     if (navigator.onLine) flushPending();
   }
 
