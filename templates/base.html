@@ -65,25 +65,9 @@
      (100vh − header), facendo sì che la sidebar superi il viewport e
      overflow:hidden tagli la sezione utente in basso */
   .d-flex.flex-grow-1.overflow-hidden { min-height: 0; }
-  /* Rimuove z-index dalla sidebar: senza stacking context, overflow:hidden
-     non clippa più i figli position:fixed (ag-sidebar__user) */
-  .ag-sidebar { z-index: auto !important; }
-  @media (min-width: 992px) {
-    .ag-sidebar__user {
-      position: fixed !important;
-      bottom: 0; left: 0;
-      width: 240px;
-      display: flex !important;
-      flex-direction: column;
-    }
-    .ag-sidebar--collapsed .ag-sidebar__user { width: 64px; }
-    .ag-sidebar__nav { min-height: 0; padding-bottom: 80px !important; }
-  }
-  .ag-sidebar--dark .ag-sidebar__user {
-    background-color: var(--ag-primary);
-    border-top: 1px solid rgba(255,255,255,.35);
-  }
-  .ag-sidebar--dark .ag-sidebar__user-toggle { opacity: 1 !important; }
+  .ag-sidebar--dark .ag-sidebar__user { border-top: 1px solid rgba(255,255,255,.35); }
+  /* !important batte --bs-link-color della branca eg che renderebbe il testo verde su verde */
+  .ag-sidebar--dark .ag-sidebar__user-toggle { opacity: 1 !important; color: var(--ag-on-primary) !important; }
   .ag-sidebar--dark .ag-sidebar__user-avatar { background-color: rgba(0,0,0,.4) !important; font-weight: 700; }
 </style>
 {% endblock %}
@@ -208,7 +192,7 @@
   {% if user.is_authenticated %}
   <div class="ag-sidebar__user">
     <div class="dropdown dropup">
-      <a href="#" class="ag-sidebar__user-toggle dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+      <a href="#" class="ag-sidebar__user-toggle dropdown-toggle" data-bs-toggle="dropdown" data-bs-strategy="fixed" aria-expanded="false">
         <span class="ag-sidebar__user-avatar" aria-hidden="true">{{ user.nome_completo|slice:":1"|upper }}</span>
         <span class="ag-sidebar__label" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px;display:inline-block;">{{ user.nome_completo|truncatechars:22 }}</span>
       </a>
