@@ -316,15 +316,24 @@ class CambiaRuoloView(LoginRequiredMixin, View):
 
 
 class TerminaSessioniView(LoginRequiredMixin, View):
-    """Termina tutte le sessioni attive dell'utente tranne quella corrente."""
+    """Termina tutte le sessioni attive dell'utente tranne quella corrente.
+
+    Usa UserSession.end() che cancella sia il record allauth che la django_session
+    sottostante — il semplice .delete() rimuoverebbe solo il tracciamento allauth
+    lasciando l'utente autenticato nel browser remoto.
+    """
 
     def post(self, request):
-        from django.urls import reverse
-        deleted, _ = UserSession.objects.filter(user=request.user).exclude(
-            session_key=request.session.session_key
-        ).delete()
-        if deleted:
-            messages.success(request, f"Terminate {deleted} sessione/i attiva/e.")
+        sessioni = list(
+            UserSession.objects.filter(user=request.user).exclude(
+                session_key=request.session.session_key
+            )
+        )
+        for s in sessioni:
+            s.end()
+        count = len(sessioni)
+        if count:
+            messages.success(request, f"Terminate {count} sessione/i attiva/e.")
         else:
             messages.info(request, "Nessun'altra sessione attiva da terminare.")
         return redirect("accounts:profilo")
