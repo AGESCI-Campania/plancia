@@ -94,11 +94,11 @@ Fasi più rischiose per stima: API JSON (complessità moduli + coverage) e Backg
 |---|---|---|
 | Login da PWA (iOS standalone) | ✅ | Fix CSRF: sync csrfmiddlewaretoken dal cookie al submit |
 | Compilazione moduli online | ✅ | |
-| Pagina offline dopo prima visita online | 🔄 da verificare | Fix SW: URL key + waitUntil + ignoreVary |
-| Compilazione moduli offline + sync | 🔄 da verificare | |
+| Pagina offline dopo prima visita online | ✅ | Selenium+CDP offline mode — 3 pagine servite da SW cache |
+| Compilazione moduli offline + sync | 🔄 da testare su telefono | |
 | 401 (sessione scaduta offline) + sync post-login | ✅ | Testato con "Termina altre sessioni" |
-| Conflict optimistic locking | 🔄 da verificare | |
-| Coda allegati offline | 🔄 da verificare | |
+| Conflict optimistic locking | ✅ | Selenium: 409 su version stale, 200 su version corrente |
+| Coda allegati offline | 🔄 da testare su telefono | |
 | Sidebar utente + logout mobile | ✅ | Sezione utente aggiunta all'offcanvas |
 | Paginazione tabella diari | ✅ | 5/10/25/50/100/200/Tutti |
 | Termina sessioni dal profilo | ✅ | `UserSession.end()` invalida django_session |
