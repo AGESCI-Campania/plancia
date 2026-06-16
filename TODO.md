@@ -42,8 +42,8 @@ al ritorno della connettività.
 | 6 | Background Sync testi (svuotare la coda al ritorno della connessione) | 4–5 gg | ✅ |
 | 7 | Auth: sync al login (gestire 401, banner, rilancio sync post-autenticazione) | 3–4 gg | ✅ |
 | 8 | Coda allegati (resize client-side, coda separata, progress UI) | 7–8 gg | ✅ |
-| 9 | Test su staging con dati realistici | 4–5 gg | 🔄 in corso |
-| 10 | Aggiornamento manuali (utente CSQ, admin, CLAUDE.md, README.md) | 3–4 gg | |
+| 9 | Test su staging con dati realistici | 4–5 gg | ✅ |
+| 10 | Aggiornamento manuali (utente CSQ, admin, CLAUDE.md, README.md) | 3–4 gg | 🔄 in corso |
 | 11 | Merge main → branch, test regressione finale | 1–2 gg | |
 | 12 | PR → main, tag `v2.0.0`, deploy produzione | 1–2 gg | |
 | | **Totale stimato** | **45–58 gg** | |
