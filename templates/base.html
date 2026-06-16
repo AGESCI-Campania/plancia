@@ -385,6 +385,25 @@
           <li><a href="{% url 'account_login' %}" class="nav-link">{% bs_icon "box-arrow-in-right" %} Accedi</a></li>
         {% endif %}
         {% endblock offcanvas_nav %}
+        {% if user.is_authenticated %}
+          <li><hr class="dropdown-divider my-2"></li>
+          <li class="px-2 py-1">
+            <div class="d-flex align-items-center gap-2">
+              <span class="rounded-circle d-inline-flex align-items-center justify-content-center fw-bold text-white"
+                    style="width:32px;height:32px;font-size:.75rem;flex-shrink:0;background:rgba(0,0,0,.25);">
+                {{ user.nome_completo|slice:":1"|upper }}
+              </span>
+              <div class="lh-sm overflow-hidden">
+                <div class="fw-semibold small text-truncate">{{ user.nome_completo }}</div>
+                <span class="badge {{ user.ruolo|ruolo_badge_class }} role-chip" style="font-size:.65rem;">{{ user.get_ruolo_display }}</span>
+              </div>
+            </div>
+          </li>
+          <li><a href="{% url 'accounts:profilo' %}" class="nav-link">{% bs_icon "person" %} Profilo</a></li>
+          <li><a href="{% url 'mfa_index' %}" class="nav-link">{% bs_icon "shield-check" %} Sicurezza (MFA)</a></li>
+          <li><hr class="dropdown-divider my-1"></li>
+          <li><a href="{% url 'account_logout' %}" class="nav-link text-danger">{% bs_icon "box-arrow-right" %} Esci</a></li>
+        {% endif %}
       </ul>
     </div>
   </div>
