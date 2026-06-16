@@ -574,6 +574,28 @@
 {# ── JS inline: indicatore offline + badge foto ───────────────────────────── #}
 {% block extra_js %}{{ block.super }}
 <script>
+// Fix CSRF PWA iOS: il JS passkey/WebAuthn aggiorna il cookie csrftoken dopo il rendering
+// della pagina. Sincronizza csrfmiddlewaretoken col cookie corrente prima di ogni submit.
+(function() {
+  function csrfFromCookie() {
+    var pairs = document.cookie.split(';');
+    for (var i = 0; i < pairs.length; i++) {
+      var p = pairs[i].trim();
+      if (p.startsWith('csrftoken=')) return decodeURIComponent(p.slice(10));
+    }
+    return '';
+  }
+  document.addEventListener('submit', function(e) {
+    var form = e.target;
+    if (!form || form.method.toLowerCase() !== 'post') return;
+    var token = csrfFromCookie();
+    if (!token) return;
+    var inp = form.querySelector('[name="csrfmiddlewaretoken"]');
+    if (inp) inp.value = token;
+  }, true);
+})();
+</script>
+<script>
 (function() {
   var indicator = document.getElementById('offline-indicator');
   if (indicator) {
