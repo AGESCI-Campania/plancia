@@ -296,7 +296,10 @@ function mostraSuggerimenti(comuni) {
   comuni.forEach(c => {
     const li = document.createElement('li');
     li.className = 'list-group-item list-group-item-action py-1 px-2 small';
-    li.textContent = c.nome + (c.provincia ? ` (${c.provincia})` : '');
+    const prov = c.provincia
+      ? (typeof c.provincia === 'object' ? (c.provincia.sigla || c.provincia.nome || '') : c.provincia)
+      : '';
+    li.textContent = c.nome + (prov ? ` (${prov})` : '');
     li.style.cursor = 'pointer';
     li.addEventListener('mousedown', () => {
       comuneDisplay.value = c.nome;
