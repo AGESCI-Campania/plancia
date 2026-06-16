@@ -298,7 +298,9 @@
         updateSubtitle();
 
       } catch (err) {
-        if (!navigator.onLine) {
+        // Considera offline anche se navigator.onLine è true ma fetch lancia TypeError
+        // (es. WiFi senza internet — il browser pensa di essere online ma la rete non risponde).
+        if (!navigator.onLine || err instanceof TypeError) {
           // 4. Offline: accoda il blob già ridimensionato
           await dbPut(db, {
             localId,
@@ -323,19 +325,20 @@
     }
 
     // ── Flush coda offline ─────────────────────────────────────────────────
-    // Ogni item è processato indipendentemente: se la connessione cade a metà,
-    // il ciclo riprende dal successivo (quelli già caricati sono rimossi dall'IDB).
+    // Svuota TUTTE le foto in IDB (tutti i moduli), non solo quelle del modulo
+    // corrente: le foto potrebbero essere state accodate su una pagina diversa.
+    // L'aggiornamento UI avviene solo per le card del modulo di questo widget.
 
     async function flushPending() {
       if (!navigator.onLine) return;
-      const all  = await dbGetAll(db);
-      const mine = all.filter(e => e.modulo === modulo);
-      for (const entry of mine) {
-        const file = new File([entry.blob], entry.nome, { type: entry.mime });
+      const all = await dbGetAll(db);
+      for (const entry of all) {
+        const url = entry.upload_url;
+        if (!url) continue;
+        const file = new File([entry.blob], entry.nome, { type: entry.mime || 'image/jpeg' });
         const fd   = new FormData();
-        fd.append('modulo', modulo);
+        fd.append('modulo', entry.modulo);
         fd.append('file', file, entry.nome);
-        const url = entry.upload_url || uploadUrl;
         try {
           const resp = await fetch(url, {
             method: 'POST',
@@ -356,12 +359,15 @@
           await dbDelete(db, entry.localId);
           dispatchPhotoCount(db);
 
-          if (cards.has(entry.localId)) {
-            cards.get(entry.localId).remove();
-            cards.delete(entry.localId);
+          // Aggiorna UI solo se la foto appartiene al modulo di questo widget
+          if (entry.modulo === modulo) {
+            if (cards.has(entry.localId)) {
+              cards.get(entry.localId).remove();
+              cards.delete(entry.localId);
+            }
+            addCard(data);
+            updateSubtitle();
           }
-          addCard(data);
-          updateSubtitle();
 
         } catch (err) {
           // Rete caduta a metà: interrompi, riprova al prossimo trigger
