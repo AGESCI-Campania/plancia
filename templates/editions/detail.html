@@ -156,6 +156,15 @@
       {% for val, label in tipi_diari_choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
     </select>
   </div>
+  <div class="col-sm-auto">
+    <label class="form-label small fw-semibold mb-1">Per pagina</label>
+    <select id="diari-per-pagina" class="form-select form-select-sm" style="width:auto">
+      <option value="5">5</option><option value="10">10</option>
+      <option value="25" selected>25</option><option value="50">50</option>
+      <option value="100">100</option><option value="200">200</option>
+      <option value="0">Tutti</option>
+    </select>
+  </div>
   <div class="col-sm-2">
     <button id="diari-reset" class="btn btn-outline-secondary btn-sm w-100">
       {% bs_icon "x-circle" size="13" extra_classes="me-1" %}Reset
@@ -251,6 +260,10 @@
       </tbody>
     </table>
   </div>
+  <div id="diari-paginator" class="d-flex align-items-center justify-content-between mt-2 flex-wrap gap-2">
+    <small id="diari-count" class="text-muted"></small>
+    <nav aria-label="Paginazione diari"><ul class="pagination pagination-sm mb-0" id="diari-pages"></ul></nav>
+  </div>
 
 {# Dilazione gestita nel dettaglio diario #}
 {% else %}
@@ -273,70 +286,122 @@
   var selTipo = document.getElementById('diari-tipo');
   var btnRst  = document.getElementById('diari-reset');
   var noRes   = document.getElementById('diari-nessun-risultato');
+  var selPP   = document.getElementById('diari-per-pagina');
+  var pagesEl = document.getElementById('diari-pages');
+  var countEl = document.getElementById('diari-count');
 
-  function applyFilters() {
-    var q    = search.value.trim().toLowerCase();
-    var zona = selZona.value.toLowerCase();
-    var grp  = selGrp.value.toLowerCase();
-    var spec = selSpec.value.toLowerCase();
-    var stat = selStat ? selStat.value.toLowerCase() : '';
-    var tipo = selTipo ? selTipo.value.toLowerCase() : '';
-    var vis  = 0;
-    Array.from(tbody.querySelectorAll('tr')).forEach(function (tr) {
-      var ok =
-        (!zona || (tr.dataset.zona   || '').toLowerCase() === zona) &&
-        (!grp  || (tr.dataset.gruppo || '').toLowerCase() === grp)  &&
-        (!spec || (tr.dataset.specialita || '').toLowerCase() === spec) &&
-        (!stat || (tr.dataset.stato  || '').toLowerCase() === stat) &&
-        (!tipo || (tr.dataset.tipo   || '').toLowerCase() === tipo) &&
-        (!q    || (tr.dataset.crp    || '').toLowerCase().includes(q) ||
-                  (tr.dataset.csq    || '').toLowerCase().includes(q));
-      tr.style.display = ok ? '' : 'none';
-      if (ok) vis++;
-    });
-    noRes.classList.toggle('d-none', vis > 0);
+  var rows = Array.from(tbody.querySelectorAll('tr'));
+  var pageSize = 25, currentPage = 0, sortCol = -1, sortAsc = true;
+
+  function rowPasses(tr) {
+    var q    = (search.value || '').trim().toLowerCase();
+    var zona = selZona ? selZona.value.toLowerCase() : '';
+    var grp  = selGrp  ? selGrp.value.toLowerCase()  : '';
+    var spec = selSpec ? selSpec.value.toLowerCase()  : '';
+    var stat = selStat ? selStat.value.toLowerCase()  : '';
+    var tipo = selTipo ? selTipo.value.toLowerCase()  : '';
+    return (
+      (!zona || (tr.dataset.zona       || '').toLowerCase() === zona) &&
+      (!grp  || (tr.dataset.gruppo     || '').toLowerCase() === grp)  &&
+      (!spec || (tr.dataset.specialita || '').toLowerCase() === spec) &&
+      (!stat || (tr.dataset.stato      || '').toLowerCase() === stat) &&
+      (!tipo || (tr.dataset.tipo       || '').toLowerCase() === tipo) &&
+      (!q    || (tr.dataset.crp        || '').toLowerCase().includes(q) ||
+                (tr.dataset.csq        || '').toLowerCase().includes(q))
+    );
   }
 
-  [search, selZona, selGrp, selSpec, selStat, selTipo].filter(Boolean).forEach(function (el) {
+  function buildRange(pages, cur) {
+    if (pages <= 7) { var r = []; for (var i = 0; i < pages; i++) r.push(i); return r; }
+    var r = [0], lo = Math.max(1, cur - 2), hi = Math.min(pages - 2, cur + 2);
+    if (lo > 1) r.push('…');
+    for (var i = lo; i <= hi; i++) r.push(i);
+    if (hi < pages - 2) r.push('…');
+    r.push(pages - 1);
+    return r;
+  }
+
+  function renderPage() {
+    var filtered = rows.filter(function(r) { return !r._hf; });
+    var total = filtered.length;
+    var ps = pageSize === 0 ? total : pageSize;
+    if (!ps) ps = total;
+    var pages = Math.max(1, Math.ceil(total / ps));
+    currentPage = Math.min(currentPage, pages - 1);
+    var start = currentPage * ps, end = Math.min(start + ps, total);
+
+    rows.forEach(function(r) { r.style.display = 'none'; });
+    filtered.slice(start, end).forEach(function(r) { r.style.display = ''; });
+
+    noRes.classList.toggle('d-none', total > 0);
+    if (countEl) countEl.textContent = total === 0 ? '' :
+      pageSize === 0 ? total + ' diari' : (start + 1) + '–' + end + ' di ' + total;
+
+    if (!pagesEl) return;
+    pagesEl.innerHTML = '';
+    if (pageSize === 0 || pages <= 1) return;
+
+    function mkBtn(html, page, dis, act) {
+      var li = document.createElement('li');
+      li.className = 'page-item' + (dis ? ' disabled' : '') + (act ? ' active' : '');
+      var a = document.createElement('a'); a.className = 'page-link'; a.href = '#'; a.innerHTML = html;
+      if (!dis && !act) a.addEventListener('click', function(e) {
+        e.preventDefault(); currentPage = page; renderPage();
+        table.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+      li.appendChild(a); return li;
+    }
+
+    pagesEl.appendChild(mkBtn('&laquo;', currentPage - 1, currentPage === 0));
+    buildRange(pages, currentPage).forEach(function(p) {
+      if (p === '…') { var li = document.createElement('li'); li.className = 'page-item disabled';
+        li.innerHTML = '<span class="page-link">…</span>'; pagesEl.appendChild(li); }
+      else pagesEl.appendChild(mkBtn(p + 1, p, false, p === currentPage));
+    });
+    pagesEl.appendChild(mkBtn('&raquo;', currentPage + 1, currentPage >= pages - 1));
+  }
+
+  function applyFilters() {
+    rows.forEach(function(tr) { tr._hf = !rowPasses(tr); });
+    currentPage = 0;
+    renderPage();
+  }
+
+  [search, selZona, selGrp, selSpec, selStat, selTipo].filter(Boolean).forEach(function(el) {
     el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', applyFilters);
   });
-  btnRst.addEventListener('click', function () {
-    search.value = ''; selZona.value = ''; selGrp.value = '';
-    selSpec.value = '';
-    if (selStat) selStat.value = '';
-    if (selTipo) selTipo.value = '';
+  selPP.addEventListener('change', function() { pageSize = parseInt(selPP.value); currentPage = 0; renderPage(); });
+  btnRst.addEventListener('click', function() {
+    search.value = '';
+    [selZona, selGrp, selSpec, selStat, selTipo].filter(Boolean).forEach(function(s) { s.value = ''; });
     applyFilters();
   });
 
-  // Ordinamento colonne
-  var sortCol = -1, sortAsc = true;
-  table.querySelectorAll('th.sortable').forEach(function (th) {
-    th.addEventListener('click', function () {
+  table.querySelectorAll('th.sortable').forEach(function(th) {
+    th.addEventListener('click', function() {
       var col = parseInt(th.dataset.col);
-      sortAsc = sortCol === col ? !sortAsc : true;
-      sortCol = col;
-      table.querySelectorAll('th.sortable').forEach(function (h) {
+      sortAsc = sortCol === col ? !sortAsc : true; sortCol = col;
+      table.querySelectorAll('th.sortable').forEach(function(h) {
         h.querySelector('svg').style.opacity = h === th ? '1' : '0.3';
       });
-      Array.from(tbody.querySelectorAll('tr'))
-        .sort(function (a, b) {
-          var aT = (a.cells[col] ? a.cells[col].textContent : '').trim().toLowerCase();
-          var bT = (b.cells[col] ? b.cells[col].textContent : '').trim().toLowerCase();
-          return sortAsc ? aT.localeCompare(bT, 'it') : bT.localeCompare(aT, 'it');
-        })
-        .forEach(function (r) { tbody.appendChild(r); });
+      rows.sort(function(a, b) {
+        var aT = (a.cells[col] ? a.cells[col].textContent : '').trim().toLowerCase();
+        var bT = (b.cells[col] ? b.cells[col].textContent : '').trim().toLowerCase();
+        return sortAsc ? aT.localeCompare(bT, 'it') : bT.localeCompare(aT, 'it');
+      });
+      rows.forEach(function(r) { tbody.appendChild(r); });
+      currentPage = 0; renderPage();
     });
   });
 
-  // Riga cliccabile
-  tbody.querySelectorAll('tr[data-href]').forEach(function (tr) {
-    tr.addEventListener('click', function () { window.location = tr.dataset.href; });
+  rows.forEach(function(tr) {
+    if (tr.dataset.href) tr.addEventListener('click', function() { window.location = tr.dataset.href; });
   });
-
-  // Tooltip Bootstrap
-  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
     new bootstrap.Tooltip(el);
   });
+
+  applyFilters();
 })();
 </script>
 {% endblock %}

@@ -60,6 +60,15 @@
       {% for val, label in tipi_choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
     </select>
   </div>
+  <div class="col-sm-auto">
+    <label class="form-label small fw-semibold mb-1">Per pagina</label>
+    <select id="d-per-pagina" class="form-select form-select-sm" style="width:auto">
+      <option value="5">5</option><option value="10">10</option>
+      <option value="25" selected>25</option><option value="50">50</option>
+      <option value="100">100</option><option value="200">200</option>
+      <option value="0">Tutti</option>
+    </select>
+  </div>
   <div class="col-sm-2 col-md-1">
     <button id="d-reset" class="btn btn-outline-secondary btn-sm w-100">
       {% bs_icon "x-circle" size="13" extra_classes="me-1" %}Reset
@@ -157,6 +166,10 @@
     </tbody>
   </table>
 </div>
+<div id="d-paginator" class="d-flex align-items-center justify-content-between mt-2 flex-wrap gap-2">
+  <small id="d-count" class="text-muted"></small>
+  <nav aria-label="Paginazione diari"><ul class="pagination pagination-sm mb-0" id="d-pages"></ul></nav>
+</div>
 {% else %}
   <div class="alert alert-info">Nessun diario disponibile.</div>
 {% endif %}
@@ -177,11 +190,13 @@
   var selTipo = document.getElementById('d-tipo');
   var btnRst  = document.getElementById('d-reset');
   var noRes   = document.getElementById('d-no-result');
+  var selPP   = document.getElementById('d-per-pagina');
+  var pagesEl = document.getElementById('d-pages');
+  var countEl = document.getElementById('d-count');
 
-  // Cache dei riferimenti alle righe (invariante anche dopo l'ordinamento)
   var rows = Array.from(tbody.querySelectorAll('tr'));
+  var pageSize = 25, currentPage = 0, sortCol = -1, sortAsc = true;
 
-  // Descrizione dei filtri a select con l'attributo data corrispondente
   var filters = [
     { sel: selZona, attr: 'zona'       },
     { sel: selGrp,  attr: 'gruppo'     },
@@ -192,7 +207,7 @@
 
   // Restituisce true se tr supera tutti i filtri (escludendo opzionalmente skipF)
   function rowPasses(tr, skipF) {
-    var q = search.value.trim().toLowerCase();
+    var q = (search.value || '').trim().toLowerCase();
     if (q && !(tr.dataset.crp || '').toLowerCase().includes(q) &&
              !(tr.dataset.csq || '').toLowerCase().includes(q)) return false;
     for (var i = 0; i < filters.length; i++) {
@@ -203,87 +218,115 @@
     return true;
   }
 
-  // Mostra/nasconde le opzioni di ogni select in base alle righe visibili
-  // Ogni select vede le opzioni presenti nelle righe che passano TUTTI gli
-  // altri filtri (escluso se stesso) → i filtri si restringono a cascata.
+  // Aggiorna opzioni disponibili nei select a cascata
   function updateOptions() {
-    filters.forEach(function (f) {
+    filters.forEach(function(f) {
       var current = f.sel.value;
       var available = new Set();
-      rows.forEach(function (tr) {
-        if (rowPasses(tr, f)) {
-          var v = tr.dataset[f.attr];
-          if (v) available.add(v);
-        }
+      rows.forEach(function(tr) {
+        if (rowPasses(tr, f)) { var v = tr.dataset[f.attr]; if (v) available.add(v); }
       });
-      Array.from(f.sel.options).forEach(function (opt) {
-        if (!opt.value) return; // "— Tutti/Tutte —" sempre visibile
+      Array.from(f.sel.options).forEach(function(opt) {
+        if (!opt.value) return;
         opt.hidden = !available.has(opt.value);
       });
-      // Se il valore corrente non è più disponibile, resetta
-      if (current && !available.has(current)) {
-        f.sel.value = '';
-      }
+      if (current && !available.has(current)) f.sel.value = '';
     });
+  }
+
+  function buildRange(pages, cur) {
+    if (pages <= 7) { var r = []; for (var i = 0; i < pages; i++) r.push(i); return r; }
+    var r = [0], lo = Math.max(1, cur - 2), hi = Math.min(pages - 2, cur + 2);
+    if (lo > 1) r.push('…');
+    for (var i = lo; i <= hi; i++) r.push(i);
+    if (hi < pages - 2) r.push('…');
+    r.push(pages - 1);
+    return r;
+  }
+
+  function renderPage() {
+    var filtered = rows.filter(function(r) { return !r._hf; });
+    var total = filtered.length;
+    var ps = pageSize === 0 ? total : pageSize;
+    if (!ps) ps = total;
+    var pages = Math.max(1, Math.ceil(total / ps));
+    currentPage = Math.min(currentPage, pages - 1);
+    var start = currentPage * ps, end = Math.min(start + ps, total);
+
+    rows.forEach(function(r) { r.style.display = 'none'; });
+    filtered.slice(start, end).forEach(function(r) { r.style.display = ''; });
+
+    noRes.classList.toggle('d-none', total > 0);
+    if (countEl) countEl.textContent = total === 0 ? '' :
+      pageSize === 0 ? total + ' diari' : (start + 1) + '–' + end + ' di ' + total;
+
+    if (!pagesEl) return;
+    pagesEl.innerHTML = '';
+    if (pageSize === 0 || pages <= 1) return;
+
+    function mkBtn(html, page, dis, act) {
+      var li = document.createElement('li');
+      li.className = 'page-item' + (dis ? ' disabled' : '') + (act ? ' active' : '');
+      var a = document.createElement('a'); a.className = 'page-link'; a.href = '#'; a.innerHTML = html;
+      if (!dis && !act) a.addEventListener('click', function(e) {
+        e.preventDefault(); currentPage = page; renderPage();
+        table.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+      li.appendChild(a); return li;
+    }
+
+    pagesEl.appendChild(mkBtn('&laquo;', currentPage - 1, currentPage === 0));
+    buildRange(pages, currentPage).forEach(function(p) {
+      if (p === '…') { var li = document.createElement('li'); li.className = 'page-item disabled';
+        li.innerHTML = '<span class="page-link">…</span>'; pagesEl.appendChild(li); }
+      else pagesEl.appendChild(mkBtn(p + 1, p, false, p === currentPage));
+    });
+    pagesEl.appendChild(mkBtn('&raquo;', currentPage + 1, currentPage >= pages - 1));
   }
 
   function applyFilters() {
-    var vis = 0;
-    rows.forEach(function (tr) {
-      var ok = rowPasses(tr, null);
-      tr.style.display = ok ? '' : 'none';
-      if (ok) vis++;
-    });
-    noRes.classList.toggle('d-none', vis > 0);
+    rows.forEach(function(tr) { tr._hf = !rowPasses(tr, null); });
+    currentPage = 0;
+    renderPage();
   }
 
-  function applyAll() {
-    updateOptions(); // aggiorna opzioni disponibili nei select
-    applyFilters();  // mostra/nasconde righe
-  }
+  function applyAll() { updateOptions(); applyFilters(); }
 
-  [search, selZona, selGrp, selSpec, selStat, selTipo].forEach(function (el) {
+  [search, selZona, selGrp, selSpec, selStat, selTipo].forEach(function(el) {
     el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', applyAll);
   });
-
-  btnRst.addEventListener('click', function () {
+  selPP.addEventListener('change', function() { pageSize = parseInt(selPP.value); currentPage = 0; renderPage(); });
+  btnRst.addEventListener('click', function() {
     search.value = '';
-    filters.forEach(function (f) {
-      f.sel.value = '';
-      Array.from(f.sel.options).forEach(function (opt) { opt.hidden = false; });
-    });
+    filters.forEach(function(f) { f.sel.value = ''; Array.from(f.sel.options).forEach(function(o) { o.hidden = false; }); });
     applyFilters();
   });
 
-  // Ordinamento colonne
-  var sortCol = -1, sortAsc = true;
-  table.querySelectorAll('th.sortable').forEach(function (th) {
-    th.addEventListener('click', function () {
+  table.querySelectorAll('th.sortable').forEach(function(th) {
+    th.addEventListener('click', function() {
       var col = parseInt(th.dataset.col);
-      sortAsc = sortCol === col ? !sortAsc : true;
-      sortCol = col;
-      table.querySelectorAll('th.sortable').forEach(function (h) {
+      sortAsc = sortCol === col ? !sortAsc : true; sortCol = col;
+      table.querySelectorAll('th.sortable').forEach(function(h) {
         h.querySelector('svg').style.opacity = h === th ? '1' : '0.3';
       });
-      Array.from(tbody.querySelectorAll('tr'))
-        .sort(function (a, b) {
-          var aT = (a.cells[col] ? a.cells[col].textContent : '').trim().toLowerCase();
-          var bT = (b.cells[col] ? b.cells[col].textContent : '').trim().toLowerCase();
-          return sortAsc ? aT.localeCompare(bT, 'it') : bT.localeCompare(aT, 'it');
-        })
-        .forEach(function (r) { tbody.appendChild(r); });
+      rows.sort(function(a, b) {
+        var aT = (a.cells[col] ? a.cells[col].textContent : '').trim().toLowerCase();
+        var bT = (b.cells[col] ? b.cells[col].textContent : '').trim().toLowerCase();
+        return sortAsc ? aT.localeCompare(bT, 'it') : bT.localeCompare(aT, 'it');
+      });
+      rows.forEach(function(r) { tbody.appendChild(r); });
+      currentPage = 0; renderPage();
     });
   });
 
-  // Riga cliccabile
-  tbody.querySelectorAll('tr[data-href]').forEach(function (tr) {
-    tr.addEventListener('click', function () { window.location = tr.dataset.href; });
+  rows.forEach(function(tr) {
+    if (tr.dataset.href) tr.addEventListener('click', function() { window.location = tr.dataset.href; });
   });
-
-  // Tooltip Bootstrap
-  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
     new bootstrap.Tooltip(el);
   });
+
+  applyFilters();
 })();
 </script>
 {% endblock %}
