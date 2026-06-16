@@ -15,7 +15,7 @@
  */
 
 const CACHE_PREFIX  = 'plancia';
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3'; // bump: fix navigazione offline (ignoreVary + waitUntil cache.put)
 const STATIC_CACHE  = `${CACHE_PREFIX}-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `${CACHE_PREFIX}-dynamic-${CACHE_VERSION}`;
 const API_CACHE     = `${CACHE_PREFIX}-api-${CACHE_VERSION}`;
@@ -131,18 +131,27 @@ self.addEventListener('fetch', event => {
   }
 
   // Navigazione HTML: network-first, fallback cache, fallback /offline/.
+  // - Usiamo l'URL (stringa) come chiave di cache invece del Request object:
+  //   evita che Vary:Cookie renda il match impossibile quando i cookie cambiano.
+  // - event.waitUntil sul cache.put impedisce a iOS di uccidere il SW
+  //   prima che il salvataggio in cache sia completato.
   if (event.request.mode === 'navigate') {
+    const cacheKey = event.request.url;
     event.respondWith(
       fetch(event.request)
         .then(response => {
           if (response && response.ok) {
-            caches.open(DYNAMIC_CACHE)
-              .then(cache => cache.put(event.request, response.clone()));
+            const toCache = response.clone();
+            event.waitUntil(
+              caches.open(DYNAMIC_CACHE)
+                .then(cache => cache.put(cacheKey, toCache))
+                .catch(() => {})
+            );
           }
           return response;
         })
         .catch(() =>
-          caches.match(event.request)
+          caches.match(cacheKey, { ignoreVary: true })
             .then(cached => cached || caches.match(OFFLINE_URL))
         )
     );
