@@ -31,14 +31,21 @@
           {% endif %}
         </dl>
       </div>
-      <div class="card-footer d-flex gap-2">
+      <div class="card-footer d-flex flex-wrap gap-2">
         {% if puo_modificare_email %}
           <button class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse"
                   data-bs-target="#form-email">Modifica email</button>
         {% endif %}
         <a href="{% url 'account_change_password' %}" class="btn btn-sm btn-outline-secondary">
-          Cambia password
+          {% bs_icon "key" size="14" extra_classes="me-1" %}Cambia password
         </a>
+        <form method="post" action="{% url 'accounts:termina_sessioni' %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm btn-outline-danger"
+                  onclick="return confirm('Terminare tutte le sessioni attive tranne questa?')">
+            {% bs_icon "box-arrow-right" size="14" extra_classes="me-1" %}Termina altre sessioni
+          </button>
+        </form>
       </div>
     </div>
 
@@ -159,4 +166,37 @@
   </div>
 
 </div>
+
+{% if request.GET.dopo_cambio_password %}
+<div class="modal fade" id="modalSessioniDopoPwd" tabindex="-1" aria-labelledby="modalSessioniLabel" aria-modal="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        {% bs_icon "shield-check" size="18" extra_classes="text-success me-2" %}
+        <h5 class="modal-title" id="modalSessioniLabel">Password aggiornata</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Chiudi"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-0">Vuoi terminare le altre sessioni attive? È consigliato per sicurezza.</p>
+      </div>
+      <div class="modal-footer">
+        <form method="post" action="{% url 'accounts:termina_sessioni' %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger btn-sm">
+            {% bs_icon "box-arrow-right" size="14" extra_classes="me-1" %}Termina sessioni
+          </button>
+        </form>
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+          Non ora
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    new bootstrap.Modal(document.getElementById('modalSessioniDopoPwd')).show();
+  });
+</script>
+{% endif %}
 {% endblock %}

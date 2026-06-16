@@ -9,6 +9,8 @@ from django.views.generic import DetailView, ListView, TemplateView
 from apps.accounts.mixins import StaffPlanciaRequiredMixin
 from allauth.mfa.base.views import AuthenticateView as MFAAuthenticateView
 from allauth.mfa.models import Authenticator
+from allauth.account.views import PasswordChangeView as AllauthPasswordChangeView
+from allauth.usersessions.models import UserSession
 
 from apps.accounts.models import Ruolo, User
 from apps.accounts.roles import ROLE_CREATABLE_BY
@@ -311,3 +313,27 @@ class CambiaRuoloView(LoginRequiredMixin, View):
             f"Stai operando come {Ruolo(ruolo_target).label}.",
         )
         return redirect(next_url)
+
+
+class TerminaSessioniView(LoginRequiredMixin, View):
+    """Termina tutte le sessioni attive dell'utente tranne quella corrente."""
+
+    def post(self, request):
+        from django.urls import reverse
+        deleted, _ = UserSession.objects.filter(user=request.user).exclude(
+            session_key=request.session.session_key
+        ).delete()
+        if deleted:
+            messages.success(request, f"Terminate {deleted} sessione/i attiva/e.")
+        else:
+            messages.info(request, "Nessun'altra sessione attiva da terminare.")
+        return redirect("accounts:profilo")
+
+
+class PlanciaPasswordChangeView(AllauthPasswordChangeView):
+    """Cambio password con redirect al profilo + prompt termina sessioni."""
+
+    def form_valid(self, form):
+        from django.urls import reverse
+        super().form_valid(form)
+        return redirect(reverse("accounts:profilo") + "?dopo_cambio_password=1")

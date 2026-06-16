@@ -12,4 +12,5 @@ urlpatterns = [
     path("crea-da-socio/", views.CreaUtenteDaSocioView.as_view(), name="crea_da_socio"),
     path("cambia-ruolo/", views.CambiaRuoloView.as_view(), name="cambia_ruolo"),
     path("crea-staff/", views.CreaUtenteStaffView.as_view(), name="crea_staff"),
+    path("termina-sessioni/", views.TerminaSessioniView.as_view(), name="termina_sessioni"),
 ]
