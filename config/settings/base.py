@@ -278,7 +278,7 @@ CELERY_RESULT_BACKEND = env.str("CELERY_RESULT_BACKEND", default="redis://localh
 CELERY_TASK_ALWAYS_EAGER = env.bool("CELERY_TASK_ALWAYS_EAGER", default=False)
 
 # --- PWA (django-pwa) -------------------------------------------------------
-PWA_APP_NAME = "Plancia"
+PWA_APP_NAME = env.str("PWA_APP_NAME", default="Plancia")
 PWA_APP_DESCRIPTION = "Gestione Guidoncini Verdi - AGESCI Campania"
 PWA_APP_THEME_COLOR = "#5AA02C"  # verde GV (vedi palette docs)
 PWA_APP_BACKGROUND_COLOR = "#ffffff"
