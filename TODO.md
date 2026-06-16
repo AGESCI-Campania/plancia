@@ -42,7 +42,7 @@ al ritorno della connettività.
 | 6 | Background Sync testi (svuotare la coda al ritorno della connessione) | 4–5 gg | ✅ |
 | 7 | Auth: sync al login (gestire 401, banner, rilancio sync post-autenticazione) | 3–4 gg | ✅ |
 | 8 | Coda allegati (resize client-side, coda separata, progress UI) | 7–8 gg | ✅ |
-| 9 | Test su staging con dati realistici | 4–5 gg | |
+| 9 | Test su staging con dati realistici | 4–5 gg | 🔄 in corso |
 | 10 | Aggiornamento manuali (utente CSQ, admin, CLAUDE.md, README.md) | 3–4 gg | |
 | 11 | Merge main → branch, test regressione finale | 1–2 gg | |
 | 12 | PR → main, tag `v2.0.0`, deploy produzione | 1–2 gg | |
@@ -85,3 +85,22 @@ Fasi più rischiose per stima: API JSON (complessità moduli + coverage) e Backg
 - `README.md` — stack aggiornato, istruzioni setup staging
 - Manuale utente CSQ — installazione PWA, uso offline, banner "sync in attesa"
 - Manuale admin — gestione staging, script anonimizzazione DB
+
+---
+
+## Fase 9 — Log scenari testati
+
+| Scenario | Esito | Note |
+|---|---|---|
+| Login da PWA (iOS standalone) | ✅ | Fix CSRF: sync csrfmiddlewaretoken dal cookie al submit |
+| Compilazione moduli online | ✅ | |
+| Pagina offline dopo prima visita online | 🔄 da verificare | Fix SW: URL key + waitUntil + ignoreVary |
+| Compilazione moduli offline + sync | 🔄 da verificare | |
+| 401 (sessione scaduta offline) + sync post-login | ✅ | Testato con "Termina altre sessioni" |
+| Conflict optimistic locking | 🔄 da verificare | |
+| Coda allegati offline | 🔄 da verificare | |
+| Sidebar utente + logout mobile | ✅ | Sezione utente aggiunta all'offcanvas |
+| Paginazione tabella diari | ✅ | 5/10/25/50/100/200/Tutti |
+| Termina sessioni dal profilo | ✅ | `UserSession.end()` invalida django_session |
+| Cambio password → redirect profilo → modal sessioni | ✅ | |
+| Layout mobile responsive | ✅ | Fix min-width:0 su ag-scroll-area (tema 2.2.2) |
