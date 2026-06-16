@@ -15,7 +15,7 @@
  */
 
 const CACHE_PREFIX  = 'plancia';
-const CACHE_VERSION = 'v3'; // bump: fix navigazione offline (ignoreVary + waitUntil cache.put)
+const CACHE_VERSION = 'v4'; // bump: /accounts/ e /allauth/ esclusi dalla cache (CSRF fresco)
 const STATIC_CACHE  = `${CACHE_PREFIX}-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `${CACHE_PREFIX}-dynamic-${CACHE_VERSION}`;
 const API_CACHE     = `${CACHE_PREFIX}-api-${CACHE_VERSION}`;
@@ -65,6 +65,9 @@ function isNetworkOnly(url) {
     url.pathname.startsWith('/api/') ||       // /api/soci/ e altri endpoint live
     url.pathname.startsWith('/admin/') ||
     url.pathname.startsWith('/media/') ||
+    url.pathname.startsWith('/accounts/') ||  // login/logout/password: CSRF token sempre fresco
+    url.pathname.startsWith('/allauth/') ||   // social auth callbacks
+    url.pathname === '/offline/' ||
     url.pathname === '/serviceworker.js' ||
     url.pathname === '/manifest.json'
   );
