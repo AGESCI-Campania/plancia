@@ -43,7 +43,7 @@ al ritorno della connettività.
 | 7 | Auth: sync al login (gestire 401, banner, rilancio sync post-autenticazione) | 3–4 gg | ✅ |
 | 8 | Coda allegati (resize client-side, coda separata, progress UI) | 7–8 gg | ✅ |
 | 9 | Test su staging con dati realistici | 4–5 gg | ✅ |
-| 10 | Aggiornamento manuali (utente CSQ, admin, CLAUDE.md, README.md) | 3–4 gg | 🔄 in corso |
+| 10 | Aggiornamento manuali (utente CSQ, admin, CLAUDE.md, README.md) | 3–4 gg | ✅ |
 | 11 | Merge main → branch, test regressione finale | 1–2 gg | |
 | 12 | PR → main, tag `v2.0.0`, deploy produzione | 1–2 gg | |
 | | **Totale stimato** | **45–58 gg** | |
@@ -81,10 +81,10 @@ Fasi più rischiose per stima: API JSON (complessità moduli + coverage) e Backg
 
 ## Manuali da aggiornare
 
-- `CLAUDE.md` — procedura staging, branch workflow
-- `README.md` — stack aggiornato, istruzioni setup staging
-- Manuale utente CSQ — installazione PWA, uso offline, banner "sync in attesa"
-- Manuale admin — gestione staging, script anonimizzazione DB
+- `CLAUDE.md` — procedura staging, branch workflow ✅ (aggiornato durante sviluppo)
+- `README.md` — stack aggiornato, istruzioni setup staging ✅
+- Manuale utente CSQ — installazione PWA, uso offline, banner "sync in attesa" ✅
+- Manuale admin — gestione staging, script anonimizzazione DB ✅
 
 ---
 
