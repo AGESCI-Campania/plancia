@@ -26,6 +26,14 @@ def server_error(request):
 
 def csrf_failure(request, reason=""):
     """CSRF token mancante o non valido. Mostra template brandizzato con istruzioni."""
+    logger.warning(
+        "CSRF failure | reason=%r | path=%s | Origin=%r | Referer=%r | User-Agent=%r",
+        reason,
+        request.path,
+        request.META.get("HTTP_ORIGIN"),
+        request.META.get("HTTP_REFERER"),
+        request.META.get("HTTP_USER_AGENT", "")[:120],
+    )
     return render(request, "403_csrf.html", {"reason": reason}, status=403)
 
 
