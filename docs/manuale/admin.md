@@ -461,3 +461,102 @@ il dettaglio del flusso inviti Capi Reparto e Capi Squadriglia.
 L'Admin può impersonare qualsiasi utente compresa la Segreteria.
 Ogni impersonazione viene registrata nel log di audit.
 La Segreteria non può impersonare l'Admin.
+
+---
+
+## Ambiente di staging
+
+Lo staging (`https://staging.plancia.agescicampania.org`) è un'istanza separata della
+piattaforma usata per testare le nuove funzionalità prima del deploy in produzione.
+Gira sullo stesso server di produzione in una directory diversa (`/srv/staging.plancia`),
+sul branch `v2-offline`.
+
+> **Regola**: produzione si tocca solo su `main`. Ogni novità va prima su staging.
+
+### Prima configurazione
+
+```bash
+git clone <repo> /srv/staging.plancia
+cd /srv/staging.plancia
+git checkout v2-offline
+./deploy/configure-staging.sh --proxy apache-host --port 8002
+```
+
+Lo script genera `.env.staging`, il vhost Apache e la unit systemd
+`deploy/plancia-staging.service`.
+
+### Deploy su staging
+
+```bash
+cd /srv/staging.plancia
+git pull origin v2-offline
+
+# Se sono cambiate dipendenze o file Python/template:
+docker compose --env-file .env.staging build --no-cache web worker beat
+
+# Doppio collectstatic obbligatorio (Apache serve da staticfiles-staging/)
+docker compose --env-file .env.staging run --rm \
+  -v /srv/staging.plancia/staticfiles-staging:/app/staticfiles \
+  web uv run python manage.py collectstatic --noinput
+docker compose --env-file .env.staging run --rm \
+  web uv run python manage.py collectstatic --noinput
+
+docker compose --env-file .env.staging up -d web worker beat
+```
+
+> Il doppio `collectstatic` è necessario perché Apache legge i file da `staticfiles-staging/`
+> mentre Django legge il manifest da `staticfiles/staticfiles.json`. Se si salta il secondo
+> step Django emette URL con hash vecchi.
+
+### Popolare il DB staging con dati reali anonimizzati
+
+Lo staging usa un dump della produzione con tutti i dati personali sostituiti.
+**Non usare mai un dump grezzo** (contiene dati di minori).
+
+**Passo 1 — Genera il dump in produzione:**
+```bash
+# Sulla macchina di produzione
+cd /srv/plancia
+docker compose --env-file .env.prod exec db \
+  pg_dump -U plancia plancia > prod_dump_$(date +%Y%m%d).sql
+```
+
+**Passo 2 — Trasferisci il dump sullo stesso server (staging è sulla stessa macchina):**
+```bash
+cp /srv/plancia/prod_dump_*.sql /srv/staging.plancia/
+```
+
+**Passo 3 — Ripristina e anonimizza:**
+```bash
+cd /srv/staging.plancia
+./deploy/anonymize_staging.sh prod_dump_20260616.sql
+```
+
+Lo script esegue in sequenza:
+1. Drop e ricreazione dello schema nel DB staging
+2. Restore del dump
+3. Anonimizzazione di tutti i dati sensibili:
+
+| Tabella | Dati sostituiti |
+|---|---|
+| `accounts_user` | email → `utente_<id>@staging.invalid`, password → hash non funzionante |
+| `account_emailaddress` | email → `utente_<id>@staging.invalid` |
+| `socialaccount_socialaccount` | uid e extra_data OAuth svuotati |
+| `org_socio` | nome, cognome, email, cellulare, data nascita |
+| `diaries_anagrafica` | dati CRP e CSQ (nome, cognome, email, cell) |
+| `diaries_membrosq` | nomi dei membri della squadriglia |
+
+**Passo 4 — Crea il superuser staging:**
+```bash
+docker compose --env-file .env.staging run --rm web \
+  uv run python manage.py createsuperuser
+```
+
+> Dopo l'anonimizzazione nessun account originale è accessibile. Il superuser creato al
+> passo 4 è l'unico modo per accedere allo staging.
+
+### Verifica post-deploy
+
+```bash
+docker compose --env-file .env.staging logs web --tail=20
+```

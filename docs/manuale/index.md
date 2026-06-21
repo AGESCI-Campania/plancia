@@ -83,8 +83,15 @@ Una volta installata, tieni premuto l'icona: compariranno i collegamenti rapidi 
 
 Plancia funziona anche senza connessione. Se vai offline mentre compili un modulo:
 
-- I dati inseriti vengono **salvati automaticamente** nel browser.
-- Le foto selezionate vengono **accodate localmente**.
-- Quando la connessione viene ripristinata, tutto viene sincronizzato in automatico.
+- I dati inseriti vengono **salvati automaticamente** nel browser (ogni pochi secondi).
+- Le foto selezionate vengono **accodate localmente** e mostrate con il badge "In attesa".
+- Al ritorno della connessione, testi e foto vengono sincronizzati in automatico.
+- Un banner colorato segnala lo stato della connessione; un badge nell'intestazione mostra
+  il numero di foto ancora in attesa di sincronizzazione.
 
-Un banner colorato in basso alla pagina segnala lo stato della connessione.
+**Sessione scaduta offline**: se la sessione scade mentre si è offline, la coda non viene
+persa — compare un banner "Hai modifiche in attesa, accedi per sincronizzare". Al login
+successivo il sync riparte automaticamente.
+
+> **Nota**: le pagine di login (`/accounts/`) richiedono sempre la rete — non vengono mai
+> servite dalla cache offline, per garantire un token di sicurezza (CSRF) sempre aggiornato.

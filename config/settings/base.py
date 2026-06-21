@@ -61,6 +61,7 @@ if Path(_env_file).exists():
 
 SECRET_KEY = env.str("DJANGO_SECRET_KEY", default="dev-insecure-change-me")
 DEBUG = env.bool("DJANGO_DEBUG", default=False)
+SKIP_MFA_ENFORCEMENT = env.bool("SKIP_MFA_ENFORCEMENT", default=False)
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
 
@@ -85,6 +86,7 @@ THIRD_PARTY_APPS = [
     "allauth.socialaccount.providers.google",
     "allauth.socialaccount.providers.microsoft",
     "allauth.socialaccount.providers.apple",
+    "allauth.usersessions",
     "guardian",
     "axes",
     "pwa",
@@ -116,6 +118,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "allauth.usersessions.middleware.UserSessionsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -277,7 +280,7 @@ CELERY_RESULT_BACKEND = env.str("CELERY_RESULT_BACKEND", default="redis://localh
 CELERY_TASK_ALWAYS_EAGER = env.bool("CELERY_TASK_ALWAYS_EAGER", default=False)
 
 # --- PWA (django-pwa) -------------------------------------------------------
-PWA_APP_NAME = "Plancia"
+PWA_APP_NAME = env.str("PWA_APP_NAME", default="Plancia")
 PWA_APP_DESCRIPTION = "Gestione Guidoncini Verdi - AGESCI Campania"
 PWA_APP_THEME_COLOR = "#5AA02C"  # verde GV (vedi palette docs)
 PWA_APP_BACKGROUND_COLOR = "#ffffff"
@@ -437,6 +440,17 @@ GOOGLE_OAUTH_CLIENT_SECRET = env.str("GOOGLE_OAUTH_CLIENT_SECRET", default="")
 # --- URL base (usato da notifications/service.py per i link di attivazione) --
 BASE_URL = env.str("BASE_URL", default="http://localhost:8000")
 
+# --- Notifiche errori agli amministratori -----------------------------------
+# ADMIN_EMAILS: lista di indirizzi separati da virgola (es. "a@b.it,c@d.it").
+# Se vuota, le notifiche di errore via email sono disabilitate.
+_admin_emails = env.list("ADMIN_EMAILS", default=[])
+ADMINS = [("Plancia Admin", e) for e in _admin_emails]
+SERVER_EMAIL = env.str("SERVER_EMAIL", default="plancia@agescicampania.org")
+EMAIL_SUBJECT_PREFIX = "[Plancia] "
+
+# Vista CSRF failure: mostra un template brandizzato invece della pagina Django.
+CSRF_FAILURE_VIEW = "config.error_views.csrf_failure"
+
 # --- Email ------------------------------------------------------------------
 DEFAULT_FROM_EMAIL = env.str("DEFAULT_FROM_EMAIL", default="plancia@agescicampania.org")
 
@@ -488,8 +502,22 @@ LOGGING = {
             "backupCount": 5,
             "formatter": "std",
         },
+        # Invia email agli ADMINS per ogni errore 500 (livello ERROR su django.request).
+        # fail_silently=True evita eccezioni secondarie se l'email non è configurata.
+        "mail_admins": {
+            "level": "ERROR",
+            "class": "django.utils.log.AdminEmailHandler",
+            "include_html": True,
+        },
     },
     "root": {"handlers": ["console", "file"], "level": "INFO"},
+    "loggers": {
+        "django.request": {
+            "handlers": ["mail_admins"],
+            "level": "ERROR",
+            "propagate": True,
+        },
+    },
 }
 # NB: il flag "debug_diagnostico" di Impostazioni alza a runtime il livello di logging
 # per gli admin; NON ribalta settings.DEBUG (vedi docs sez. 15).

@@ -16,8 +16,9 @@ pubblicano l'esito; output in PDF ed Excel, file su Google Drive, frontend respo
 
 ## Stack
 Python ≥ 3.14 · Django ≥ 6.0 · PostgreSQL ≥ 17 · Redis + Celery · django-allauth (MFA, social) ·
-django-guardian · django-axes · django-pwa · Bootstrap 5 · django-agesci-campania-theme 1.2.4 ·
+django-guardian · django-axes · django-pwa · Bootstrap 5 · django-agesci-campania-theme 2.2.2 ·
 django-bootstrap-icons · WeasyPrint · openpyxl · Google Drive (OAuth).
+**PWA offline-first**: Service Worker · IndexedDB · Background Sync · resize immagini client-side.
 Gestione dipendenze con **uv**; ambiente opzionale con **mise**.
 
 ## Prerequisiti
@@ -359,6 +360,29 @@ pandoc --defaults pandoc-defaults.yaml \
 I PDF sono esclusi dal repository (artefatti generati).
 
 ## Changelog
+
+### v2.0.0 (in sviluppo — branch `v2-offline`)
+
+**PWA offline-first**
+
+Il Capo Squadriglia può compilare il Diario di Bordo e allegare foto anche senza connessione
+(in campo, in montagna) e sincronizzare al ritorno della connettività.
+
+- **API JSON moduli 1–5** con optimistic locking (`version` su ogni modulo): il client invia
+  la versione su cui ha basato la modifica; il server rifiuta con 409 se la versione è obsoleta.
+- **Service Worker** (v4): cache asset e pagine per uso offline; network-only per `/accounts/`
+  e `/allauth/` (token CSRF sempre fresco); gestione bfcache iOS (`pageshow`, `visibilitychange`).
+- **IndexedDB + autosave**: i moduli vengono salvati nel browser a ogni modifica; la coda di sync
+  li invia al server al ritorno online.
+- **Coda allegati offline**: le foto selezionate vengono ridimensionate client-side (Canvas → JPEG),
+  accodate in IndexedDB, sincronizzate in automatico. Il flush processa tutti i moduli in coda,
+  non solo quello della pagina attiva.
+- **Auth offline**: se la sessione scade mentre si è offline, la coda viene trattenuta con banner
+  "Hai modifiche in attesa — accedi per sincronizzare"; il sync riparte automaticamente al login.
+- **Badge UI**: indicatore foto in sospeso nell'header; badge connessione offline; badge sync.
+- **Fix iOS PWA**: CSRF al login (PKCE), bfcache restore, preview allegati con fallback locale.
+
+---
 
 ### v1.17.1 (12/06/2026)
 

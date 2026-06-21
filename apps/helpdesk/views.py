@@ -33,6 +33,7 @@ class TicketListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+        ctx["breadcrumb_items"] = [{"label": "Home", "url": "/"}, {"label": "Helpdesk", "url": None}]
         ctx["stati"] = StatoTicket.choices
         ctx["stato_corrente"] = self.request.GET.get("stato", "")
         ctx["is_staff_helpdesk"] = self.request.user.ruolo in _STAFF_RUOLI

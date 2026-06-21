@@ -31,9 +31,12 @@ def ensure_superuser_ruolo(sender, instance, **kwargs):
         sender.objects.filter(pk=instance.pk).update(ruolo=Ruolo.ADMIN)
 
 
+_CSQ_SESSION_SECONDS = 30 * 24 * 60 * 60  # 30 giorni
+
+
 @receiver(user_logged_in)
 def on_login(sender, request, user, **kwargs):
-    from apps.accounts.models import EsitoLogin, LoginEvent
+    from apps.accounts.models import EsitoLogin, LoginEvent, Ruolo
 
     LoginEvent.objects.create(
         utente=user,
@@ -42,6 +45,11 @@ def on_login(sender, request, user, **kwargs):
         provider=getattr(getattr(request, "socialaccount_last_login", None), "provider", ""),
         esito=EsitoLogin.OK,
     )
+
+    # Sessione più lunga per il CSQ: tipicamente in campo con connessione intermittente.
+    # Il CSQ non ha MFA obbligatoria, quindi il profilo di rischio è diverso da Admin/Incaricati.
+    if user.ruolo == Ruolo.CSQ:
+        request.session.set_expiry(_CSQ_SESSION_SECONDS)
 
 
 @receiver(user_logged_out)

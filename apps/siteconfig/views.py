@@ -876,8 +876,9 @@ class MailpitProxyView(View):
         except Exception as e:
             return HttpResponse(
                 f"<h1>Mailpit non raggiungibile</h1><pre>{e}</pre>"
-                "<p>Avvia Mailpit con il profilo <code>mailpit</code>: "
-                "<code>COMPOSE_PROFILES=proxy-nginx,mailpit docker compose up -d</code></p>",
+                "<p>Avvia Mailpit con il profilo <code>mailpit</code>:<br>"
+                "Produzione: <code>COMPOSE_PROFILES=mailpit docker compose --env-file .env.prod up -d mailpit</code><br>"
+                "Staging: <code>COMPOSE_PROFILES=mailpit docker compose -f docker-compose.staging.yml --env-file .env.staging up -d mailpit</code></p>",
                 status=503,
                 content_type="text/html",
             )

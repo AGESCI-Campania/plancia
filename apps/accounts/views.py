@@ -9,6 +9,8 @@ from django.views.generic import DetailView, ListView, TemplateView
 from apps.accounts.mixins import StaffPlanciaRequiredMixin
 from allauth.mfa.base.views import AuthenticateView as MFAAuthenticateView
 from allauth.mfa.models import Authenticator
+from allauth.account.views import PasswordChangeView as AllauthPasswordChangeView
+from allauth.usersessions.models import UserSession
 
 from apps.accounts.models import Ruolo, User
 from apps.accounts.roles import ROLE_CREATABLE_BY
@@ -41,6 +43,7 @@ class ProfiloView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+        ctx["breadcrumb_items"] = [{"label": "Home", "url": "/"}, {"label": "Profilo", "url": None}]
         u = self.request.user
         ctx["nomine"] = u.nomine.select_related("nominato_da", "edizione").order_by("-creato_at")
         ctx["login_events"] = u.login_events.all()[:10]
@@ -95,6 +98,7 @@ class UtenteListView(StaffPlanciaRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+        ctx["breadcrumb_items"] = [{"label": "Home", "url": "/"}, {"label": "Utenti", "url": None}]
         ctx["ruoli"] = Ruolo.choices
         ctx["ruolo_sel"] = self.request.GET.get("ruolo", "")
         ctx["q"] = self.request.GET.get("q", "")
@@ -309,3 +313,36 @@ class CambiaRuoloView(LoginRequiredMixin, View):
             f"Stai operando come {Ruolo(ruolo_target).label}.",
         )
         return redirect(next_url)
+
+
+class TerminaSessioniView(LoginRequiredMixin, View):
+    """Termina tutte le sessioni attive dell'utente tranne quella corrente.
+
+    Usa UserSession.end() che cancella sia il record allauth che la django_session
+    sottostante — il semplice .delete() rimuoverebbe solo il tracciamento allauth
+    lasciando l'utente autenticato nel browser remoto.
+    """
+
+    def post(self, request):
+        sessioni = list(
+            UserSession.objects.filter(user=request.user).exclude(
+                session_key=request.session.session_key
+            )
+        )
+        for s in sessioni:
+            s.end()
+        count = len(sessioni)
+        if count:
+            messages.success(request, f"Terminate {count} sessione/i attiva/e.")
+        else:
+            messages.info(request, "Nessun'altra sessione attiva da terminare.")
+        return redirect("accounts:profilo")
+
+
+class PlanciaPasswordChangeView(AllauthPasswordChangeView):
+    """Cambio password con redirect al profilo + prompt termina sessioni."""
+
+    def form_valid(self, form):
+        from django.urls import reverse
+        super().form_valid(form)
+        return redirect(reverse("accounts:profilo") + "?dopo_cambio_password=1")

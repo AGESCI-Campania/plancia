@@ -192,3 +192,25 @@ Da questo momento i tuoi moduli non sono più modificabili (salvo riapertura aut
 Ogni modulo salva automaticamente i dati nel browser ogni pochi secondi.
 Se perdi la connessione, un banner rosso in basso ti avvisa; i dati rimangono
 nel browser e vengono salvati sul server quando torni online.
+
+### Foto in modalità offline
+
+Puoi aggiungere foto anche senza connessione. Quando selezioni un'immagine offline:
+
+1. La foto viene ridimensionata e salvata **solo nel browser** (badge "In attesa").
+2. Nell'intestazione della pagina compare un contatore che indica le foto in attesa.
+3. Non appena la connessione viene ripristinata — anche tornando alla pagina dall'app in
+   background — le foto vengono caricate automaticamente.
+4. Il badge "In attesa" si trasforma in "Locale" (o "Drive" se il diario è collegato a
+   Google Drive) a upload completato.
+
+![Modulo impresa con widget foto e badge offline](screenshots/45_offline_mobile.png)
+
+> **Consiglio**: se hai molte foto in attesa, assicurati di tenere aperta l'app (anche in
+> background) qualche secondo dopo il ritorno della connessione per completare il sync.
+
+### Sessione scaduta offline
+
+Se la sessione scade mentre sei offline, le modifiche non vengono perse. Compare un banner
+"Hai modifiche in attesa, accedi per sincronizzare". Effettua il login normalmente: il sync
+riparte in automatico non appena sei autenticato.

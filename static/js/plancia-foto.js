@@ -1,24 +1,25 @@
-/* Plancia — widget upload foto con supporto offline.
+/* Plancia — widget upload foto con supporto offline e resize client-side.
  *
  * Attivato da qualsiasi elemento con:
  *   data-foto-base-url="..."   URL base allegati del diario (es. /diari/42/allegati/)
  *   data-foto-modulo="..."     "impresa_1" | "impresa_2" | "missione"
  *   data-foto-can-edit="1"     presente solo se l'utente può modificare
+ *   data-foto-max-px="1024"    dimensione massima resize (default 1024)
  *
- * Flusso online:  selezione → AJAX upload → JSON response → card in gallery.
- * Flusso offline: selezione → IndexedDB   → card "In attesa"
- *                 tornando online          → flush automatico da IndexedDB.
+ * Flusso online:  selezione → resize canvas → AJAX upload → card in gallery.
+ * Flusso offline: selezione → resize canvas → IndexedDB → card "In attesa".
+ *                 tornando online            → flush automatico da IndexedDB.
  *
- * DB separato da plancia-autosave per evitare accoppiamento di versioni.
+ * Dispatcha `plancia:photos-pending-count` (detail = N) ad ogni cambio coda.
  */
 (function () {
   'use strict';
 
-  const DB_NAME    = 'plancia-photos';
+  const DB_NAME   = 'plancia-photos';
   const DB_VERSION = 1;
-  const STORE      = 'pending';
-  const MAX_BYTES  = 20 * 1024 * 1024; // 20 MB
-  const ACCEPT     = 'image/jpeg,image/png,image/webp,image/heic,image/heif';
+  const STORE     = 'pending';
+  const MAX_BYTES = 20 * 1024 * 1024; // 20 MB
+  const ACCEPT    = 'image/jpeg,image/png,image/webp,image/heic,image/heif';
 
   // ── IndexedDB helpers ────────────────────────────────────────────────────
 
@@ -63,6 +64,52 @@
     });
   }
 
+  // Dispatcha il conteggio globale dei pending foto.
+  function dispatchPhotoCount(db) {
+    dbGetAll(db).then(all => {
+      document.dispatchEvent(
+        new CustomEvent('plancia:photos-pending-count', { detail: all.length })
+      );
+    }).catch(() => {});
+  }
+
+  // ── Resize client-side ──────────────────────────────────────────────────
+
+  /**
+   * Ridimensiona un'immagine al lato maggiore maxPx usando Canvas.
+   * Restituisce sempre un Blob JPEG (quality 0.85).
+   * In caso di errore (es. HEIC senza codec) restituisce il file originale.
+   */
+  function resizeImage(file, maxPx) {
+    return new Promise(resolve => {
+      const img    = new Image();
+      const blobUrl = URL.createObjectURL(file);
+
+      img.onload = () => {
+        URL.revokeObjectURL(blobUrl);
+        let w = img.naturalWidth;
+        let h = img.naturalHeight;
+        if (Math.max(w, h) > maxPx) {
+          const ratio = maxPx / Math.max(w, h);
+          w = Math.round(w * ratio);
+          h = Math.round(h * ratio);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width  = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        canvas.toBlob(blob => resolve(blob || file), 'image/jpeg', 0.85);
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(blobUrl);
+        resolve(file); // fallback: file originale intatto
+      };
+
+      img.src = blobUrl;
+    });
+  }
+
   // ── CSRF ─────────────────────────────────────────────────────────────────
 
   function getCsrf() {
@@ -88,8 +135,6 @@
   // ── Card rendering ───────────────────────────────────────────────────────
 
   function makeThumbnailUrl(entry) {
-    // entry.url è valorizzato per allegati già caricati
-    // entry.blob è valorizzato per pending locali
     if (entry.url) return entry.url;
     if (entry.blob && entry.blob.type && entry.blob.type.startsWith('image/')) {
       return URL.createObjectURL(entry.blob);
@@ -99,11 +144,11 @@
 
   function buildCard(entry, canEdit, onDelete) {
     const [badgeCls, badgeLbl] = BADGE[entry.stato_sync || 'pending'] || BADGE.pending;
-    const thumb = makeThumbnailUrl(entry);
+    const thumb      = makeThumbnailUrl(entry);
     const isRevocable = canEdit && (entry.stato_sync !== 'caricato' || entry.localId);
 
     const col = document.createElement('div');
-    col.className = 'col-6 col-sm-4 col-md-3 col-xl-2';
+    col.className    = 'col-6 col-sm-4 col-md-3 col-xl-2';
     col.dataset.cardId = entry.id || entry.localId;
 
     col.innerHTML = `
@@ -145,12 +190,13 @@
   // ── Widget per singolo container ─────────────────────────────────────────
 
   async function initWidget(container, db) {
-    const baseUrl  = container.dataset.fotoBaseUrl;   // es. /diari/42/allegati/
-    const modulo   = container.dataset.fotoModulo;
-    const canEdit  = container.hasAttribute('data-foto-can-edit');
+    const baseUrl   = container.dataset.fotoBaseUrl;
+    const modulo    = container.dataset.fotoModulo;
+    const canEdit   = container.hasAttribute('data-foto-can-edit');
+    const maxPx     = parseInt(container.dataset.fotoMaxPx, 10) || 1024;
     const uploadUrl = `${baseUrl}upload/`;
+    const diarioPk  = parseInt(baseUrl.split('/').filter(Boolean).slice(-2)[0], 10);
 
-    // --- Rendering ---
     container.innerHTML = `
       <h5 class="border-bottom pb-1 mb-3">
         Foto
@@ -161,7 +207,7 @@
       <label class="btn btn-outline-secondary btn-sm foto-add-label">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
              class="me-1" viewBox="0 0 16 16">
-          <path d="M15 12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h1.172a3 3 0 0 0 2.12-.879l.83-.828A1 1 0 0 1 6.827 3h2.344a1 1 0 0 1 .707.293l.828.828A3 3 0 0 0 12.828 5H14a1 1 0 0 1 1 1zM2 4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-1.172a2 2 0 0 1-1.414-.586l-.828-.828A2 2 0 0 0 9.172 2H6.828a2 2 0 0 0-1.414.586l-.828.828A2 2 0 0 1 3.172 4z"/>
+          <path d="M15 12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h1.172a3 3 0 0 0 2.12-.879l.83-.828A1 1 0 0 1 6.827 3h2.344a1 1 0 0 1 .707.293l.828.828A3 3 0 0 0 12.828 5H14a1 1 0 0 1 1 1zM2 4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0-2-2h-1.172a2 2 0 0 1-1.414-.586l-.828-.828A2 2 0 0 0 9.172 2H6.828a2 2 0 0 0-1.414.586l-.828.828A2 2 0 0 1 3.172 4z"/>
           <path d="M8 11a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5m0 1a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M3 6.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0"/>
         </svg>
         Aggiungi foto
@@ -175,24 +221,22 @@
     const gallery   = container.querySelector('.foto-gallery');
     const fileInput = container.querySelector('.foto-file-input');
     const subtitle  = container.querySelector('h5 small');
-
-    // Stato condiviso: localId → card col element
-    const cards = new Map();
+    const cards     = new Map(); // localId|serverId → col element
 
     function updateSubtitle() {
       subtitle.textContent = cards.size ? `(${cards.size})` : '';
     }
 
-    // --- Cancellazione ---
+    // ── Cancellazione ──────────────────────────────────────────────────────
+
     async function deleteEntry(entry) {
       const cardId = entry.id || entry.localId;
       if (!confirm(`Eliminare "${entry.nome}"?`)) return;
 
       if (entry.localId) {
-        // Solo locale (IndexedDB)
         await dbDelete(db, entry.localId);
+        dispatchPhotoCount(db);
       } else {
-        // Già sul server
         const resp = await fetch(`${baseUrl}${entry.id}/elimina/`, {
           method: 'POST',
           headers: { 'X-CSRFToken': getCsrf() },
@@ -204,7 +248,8 @@
       updateSubtitle();
     }
 
-    // --- Aggiunge card ---
+    // ── Aggiunge card ──────────────────────────────────────────────────────
+
     function addCard(entry) {
       const cardId = entry.id || entry.localId;
       if (cards.has(cardId)) return;
@@ -214,20 +259,28 @@
       updateSubtitle();
     }
 
-    // --- Upload singolo file (AJAX) ---
-    async function uploadFile(file) {
-      const localId = `pending-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    // ── Upload singolo file ────────────────────────────────────────────────
 
-      // Mostra subito come "In attesa" durante l'upload
-      const preview = { localId, nome: file.name, dimensione: file.size, stato_sync: 'pending',
-                         blob: file, url: null };
-      addCard(preview);
+    async function uploadFile(file) {
+      // 1. Resize client-side (Canvas → JPEG)
+      let blob;
+      try { blob = await resizeImage(file, maxPx); }
+      catch (_) { blob = file; }
+
+      const baseName = file.name.replace(/\.[^.]*$/, '') || file.name;
+      const nome     = baseName + '.jpg';
+      const localId  = `pending-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+      // 2. Mostra card "In attesa" immediatamente
+      addCard({ localId, nome, dimensione: blob.size, stato_sync: 'pending',
+                blob, url: null });
 
       const fd = new FormData();
       fd.append('modulo', modulo);
-      fd.append('file', file);
+      fd.append('file', blob, nome);
 
       try {
+        // 3. Tenta l'upload
         const resp = await fetch(uploadUrl, {
           method: 'POST',
           headers: { 'X-CSRFToken': getCsrf() },
@@ -238,72 +291,111 @@
           throw new Error(err.error || `HTTP ${resp.status}`);
         }
         const data = await resp.json();
-        // Sostituisce la card temporanea con quella del server
+        // Sostituisce la card temporanea
         cards.get(localId)?.remove();
         cards.delete(localId);
         addCard(data);
+        updateSubtitle();
+
       } catch (err) {
-        if (!navigator.onLine) {
-          // Offline: salva in IndexedDB, lascia la card "In attesa"
+        // Considera offline anche se navigator.onLine è true ma fetch lancia TypeError
+        // (es. WiFi senza internet — il browser pensa di essere online ma la rete non risponde).
+        if (!navigator.onLine || err instanceof TypeError) {
+          // 4. Offline: accoda il blob già ridimensionato
           await dbPut(db, {
-            localId, diaroPk: parseInt(baseUrl.split('/').filter(Boolean).slice(-2)[0], 10),
-            modulo, nome: file.name, mime: file.type,
-            dimensione: file.size, blob: file, ts: Date.now(),
+            localId,
+            diario_pk:  diarioPk,
+            modulo,
+            upload_url: uploadUrl,
+            nome,
+            mime:       'image/jpeg',
+            dimensione: blob.size,
+            blob,
+            ts:         Date.now(),
           });
+          dispatchPhotoCount(db);
         } else {
           console.error('plancia-foto upload error:', err);
           cards.get(localId)?.remove();
           cards.delete(localId);
+          updateSubtitle();
           alert(`Errore upload "${file.name}": ${err.message}`);
         }
       }
     }
 
-    // --- Flush coda offline ---
+    // ── Flush coda offline ─────────────────────────────────────────────────
+    // Svuota TUTTE le foto in IDB (tutti i moduli), non solo quelle del modulo
+    // corrente: le foto potrebbero essere state accodate su una pagina diversa.
+    // L'aggiornamento UI avviene solo per le card del modulo di questo widget.
+
     async function flushPending() {
       if (!navigator.onLine) return;
       const all = await dbGetAll(db);
-      const mine = all.filter(e => e.modulo === modulo);
-      for (const entry of mine) {
-        const file = new File([entry.blob], entry.nome, { type: entry.mime });
-        const fd = new FormData();
-        fd.append('modulo', modulo);
-        fd.append('file', file);
+      for (const entry of all) {
+        const url = entry.upload_url;
+        if (!url) continue;
+        const file = new File([entry.blob], entry.nome, { type: entry.mime || 'image/jpeg' });
+        const fd   = new FormData();
+        fd.append('modulo', entry.modulo);
+        fd.append('file', file, entry.nome);
         try {
-          const resp = await fetch(uploadUrl, {
+          const resp = await fetch(url, {
             method: 'POST',
             headers: { 'X-CSRFToken': getCsrf() },
             body: fd,
           });
-          if (!resp.ok) continue;
+          if (!resp.ok) {
+            console.warn('plancia-foto flush: server', resp.status, url);
+            if (resp.status === 401) {
+              // Sessione scaduta: notifica e interrompi
+              document.dispatchEvent(new CustomEvent('plancia:session-expired'));
+              break;
+            }
+            continue; // altri errori: lascia in coda, riprova
+          }
+
           const data = await resp.json();
           await dbDelete(db, entry.localId);
-          // Aggiorna la card esistente se presente, altrimenti aggiunge
-          if (cards.has(entry.localId)) {
-            cards.get(entry.localId).remove();
-            cards.delete(entry.localId);
+          dispatchPhotoCount(db);
+
+          // Aggiorna UI solo se la foto appartiene al modulo di questo widget
+          if (entry.modulo === modulo) {
+            if (cards.has(entry.localId)) {
+              cards.get(entry.localId).remove();
+              cards.delete(entry.localId);
+            }
+            addCard(data);
+            updateSubtitle();
           }
-          addCard(data);
-        } catch (_) {
-          // Riproverà alla prossima connessione
+
+        } catch (err) {
+          // Rete caduta a metà: interrompi, riprova al prossimo trigger
+          console.warn('plancia-foto flush error:', err);
+          break;
         }
       }
     }
 
-    // --- Carica allegati esistenti dal server ---
+    // ── Carica allegati esistenti dal server ──────────────────────────────
+
     try {
       const resp = await fetch(`${baseUrl}?modulo=${encodeURIComponent(modulo)}`);
       if (resp.ok) {
         const data = await resp.json();
         data.results.forEach(addCard);
       }
-    } catch (_) { /* offline, ignora */ }
+    } catch (_) { /* offline: nessun problema, carica solo i pending */ }
 
-    // --- Carica pending da IndexedDB ---
+    // ── Carica pending da IndexedDB ───────────────────────────────────────
+
     const pending = await dbGetAll(db);
-    pending.filter(e => e.modulo === modulo).forEach(e => addCard({ ...e, stato_sync: 'pending' }));
+    pending
+      .filter(e => e.modulo === modulo)
+      .forEach(e => addCard({ ...e, stato_sync: 'pending' }));
 
-    // --- Ascoltatori ---
+    // ── Ascoltatori ────────────────────────────────────────────────────────
+
     if (fileInput) {
       fileInput.addEventListener('change', async () => {
         const files = [...fileInput.files];
@@ -317,15 +409,25 @@
 
     window.addEventListener('online', flushPending);
 
-    // Auto-flush se siamo già online all'avvio (pending dal giro precedente)
+    // iOS bfcache: pageshow scatta anche quando la pagina è ripristinata
+    // dallo snapshot (DOMContentLoaded non scatta in quel caso).
+    window.addEventListener('pageshow', function (e) {
+      if (navigator.onLine) flushPending();
+    });
+
+    // PWA in foreground: scatta quando l'utente torna sull'app dopo
+    // averla messa in background (es. usato un'altra app).
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden && navigator.onLine) flushPending();
+    });
+
     if (navigator.onLine) flushPending();
   }
 
-  // ── Bootstrap: trova tutti i widget nella pagina ─────────────────────────
+  // ── Bootstrap ────────────────────────────────────────────────────────────
 
   document.addEventListener('DOMContentLoaded', async () => {
     const widgets = document.querySelectorAll('[data-foto-base-url]');
-    if (!widgets.length) return;
 
     let db;
     try {
@@ -335,6 +437,11 @@
       return;
     }
 
-    widgets.forEach(w => initWidget(w, db));
+    // Conteggio iniziale (anche su pagine senza widget foto)
+    dispatchPhotoCount(db);
+
+    if (widgets.length) {
+      widgets.forEach(w => initWidget(w, db));
+    }
   });
 })();

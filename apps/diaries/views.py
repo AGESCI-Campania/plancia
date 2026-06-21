@@ -122,6 +122,7 @@ class DiarioListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+        ctx["breadcrumb_items"] = [{"label": "Home", "url": "/"}, {"label": "Diari", "url": None}]
         from apps.editions.models import Edizione
 
         ctx["edizioni"] = Edizione.objects.all()
@@ -153,6 +154,12 @@ class DiarioDetailView(DiarioAccessMixin, DetailView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         diario = self.object
+        from django.urls import reverse
+        ctx["breadcrumb_items"] = [
+            {"label": "Home", "url": "/"},
+            {"label": "Diari", "url": reverse("diaries:list")},
+            {"label": str(diario.squadriglia), "url": None},
+        ]
         user = self.request.user
         is_csq = user.ruolo == Ruolo.CSQ
         ctx["puo_editare"] = self._puo_editare(diario)
@@ -231,10 +238,20 @@ class AnagraficaUpdateView(DiarioAccessMixin, View):
 
     def get(self, request, pk):
         from django.shortcuts import render
+        from django.urls import reverse
 
         diario, anagrafica = self._setup(pk)
         form = AnagraficaForm(instance=anagrafica, utente=request.user, diario=diario)
-        return render(request, self.template_name, {"form": form, "diario": diario})
+        return render(request, self.template_name, {
+            "form": form,
+            "diario": diario,
+            "breadcrumb_items": [
+                {"label": "Home", "url": "/"},
+                {"label": "Diari", "url": reverse("diaries:list")},
+                {"label": str(diario.squadriglia), "url": reverse("diaries:detail", args=[pk])},
+                {"label": "Anagrafica", "url": None},
+            ],
+        })
 
     def post(self, request, pk):
         from django.shortcuts import render
@@ -714,7 +731,7 @@ class DiarioPdfView(DiarioAccessMixin, View):
 
 
 class AllegatoPreviewView(DiarioAccessMixin, View):
-    """GET /diari/<pk>/allegati/<allegato_pk>/preview/ → immagine dal Drive (proxy)."""
+    """GET /diari/<pk>/allegati/<allegato_pk>/preview/ → immagine (Drive o file locale)."""
 
     def get(self, request, pk, allegato_pk):
         import io
@@ -722,8 +739,16 @@ class AllegatoPreviewView(DiarioAccessMixin, View):
         diario = self._get_diario(pk)
         allegato = get_object_or_404(Allegato, pk=allegato_pk, diario=diario)
 
-        if not allegato.drive_file_id or not allegato.mime.startswith("image/"):
+        if not allegato.mime.startswith("image/"):
             raise Http404
+
+        # Fallback al file locale se Drive non è configurato o il file non è ancora su Drive
+        if not allegato.drive_file_id:
+            if not allegato.file:
+                raise Http404
+            response = HttpResponse(allegato.file.read(), content_type=allegato.mime)
+            response["Cache-Control"] = "private, max-age=86400"
+            return response
 
         try:
             from googleapiclient.http import MediaIoBaseDownload

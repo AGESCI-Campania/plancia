@@ -17,7 +17,7 @@ documento prevale su questo file.
 
 ## Stack
 - Python **≥ 3.14**, Django **≥ 6.0**. PostgreSQL **≥ 17**. Redis + **Celery** per job asincroni.
-- **uv** per dipendenze/venv. **Bootstrap 5** via **`django-agesci-campania-theme` 1.2.4**.
+- **uv** per dipendenze/venv. **Bootstrap 5** via **`django-agesci-campania-theme` 2.2.1**.
   Icone SVG inline con **`django-bootstrap-icons`**. **WeasyPrint** (PDF), **openpyxl** (Excel).
 - Auth: **django-allauth** (email + social Google/Microsoft/Apple, **MFA**), **django-guardian**
   (object-level), **django-axes** (brute-force).
@@ -68,13 +68,67 @@ Context processor `impostazioni` inietta `Impostazioni` (singleton) in ogni temp
 
 ## Gotchas e trappole
 
-### Template e UI
-- **Navbar**: `{% block %}` dentro `{% include %}` non partecipa all'ereditarietà Django. Sovrascrivere
-  **completamente** `{% block navbar %}` in `base.html` — no `{{ block.super }}` per le voci.
-- **Messages**: tema 1.1.0 gestisce `{% block messages %}` globalmente — **non aggiungere**
+### Template e UI — Architettura layout (v2-offline)
+
+**Schema di ereditarietà:**
+```
+agesci_theme/base.html             ← tema 2.2.1 (ag-scroll-area, header inlinizzato in base.html)
+  └── templates/base.html          ← base Plancia: sidebar, header, footer, CSS
+        └── templates/base_gestione.html  ← wrapper minimo per pagine staff
+```
+
+**Struttura layout (tema 2.2.0)**: nessun override di `agesci_theme/base.html` — il tema gestisce
+già tutto correttamente. `.ag-scroll-area` è l'unico container con `overflow-y: auto` (su ≥992px);
+`<main>` e `{% block footer %}` sono fratelli al suo interno. NON rimettere `overflow-y` su `<main>`.
+
+**`templates/base.html`**:
+- **Sidebar su tutte le pagine** (`{% block sidebar %}` con `ag-sidebar--dark`): voci di nav
+  (Home, Diari, Helpdesk; Gestione/Sistema per staff). Su mobile nascosta via CSS (`d-none`
+  sotto 992px) — la nav mobile è nell'offcanvas (hamburger in header).
+- **Dropdown utente in sidebar** (`{% block sidebar_user %}`): sezione `ag-sidebar__user` in
+  fondo alla sidebar con avatar colorato per ruolo, switcher multi-ruolo, link profilo/email/
+  password/MFA e logout. Usa `dropup`. NON è nell'header.
+- **Badge offline in `ag-header-top`**: `offline-indicator`, `photos-pending-badge`,
+  `offline-sync-badge` sono nel wrapper `ms-auto` della barra superiore (prima dell'hamburger),
+  visibili anche quando la breadcrumb occupa `ag-header-bottom`.
+- **Breadcrumb**: `ag-header-bottom` mostra `{% include "agesci_theme/partials/breadcrumb.html" %}`
+  se `breadcrumb_items` è nel contesto, altrimenti `header_search`/`header_actions` (vuoti).
+  `header_actions` è libero per override dai template figli.
+- **`header_nav`** è vuoto — non inserire voci lì, usare `{% block sidebar_items %}`.
+- Blocchi **header**, **sidebar**, **footer** e relativi sub-blocchi sono **tutti inlinizzati**
+  in `base.html` (HTML diretto, non `{% include %}`). **Motivo**: i blocchi Django dentro
+  `{% include %}` non partecipano all'ereditarietà — sarebbero sempre vuoti.
+- Per aggiungere voci alla sidebar: sovrascrivere `{% block sidebar_items %}` nel template
+  figlio (il blocco è nella catena di ereditarietà, non in un include).
+
+**Breadcrumb nelle view**: aggiungere `ctx["breadcrumb_items"]` in `get_context_data()`.
+Formato: lista di dict `{"label": "...", "url": "..."}` — l'ultimo elemento ha `url: None`
+(voce attiva senza link). Esempio:
+```python
+ctx["breadcrumb_items"] = [
+    {"label": "Home", "url": "/"},
+    {"label": "Diari", "url": reverse("diaries:list")},
+    {"label": str(diario.squadriglia), "url": None},
+]
+```
+View già aggiornate: `EdizioneDetailView`, `EdizioneListView`, `HomeView`, `DiarioListView`,
+`DiarioDetailView`, `ProfiloView`, `UtenteListView`, `TicketListView`.
+
+**`templates/base_gestione.html`**: solo `{% extends "base.html" %}`. La sidebar mostrata
+è quella di `base.html` (che include già tutte le voci gestione per staff/admin).
+
+- **Tema v2 — blocchi header**: `brand_url`, `brand_text`, `header_actions`, `offcanvas_nav`
+  esistono e funzionano. `header_nav` è vuoto per scelta (nav in sidebar). Non sovrascrivere
+  `{% block header %}` salvo casi eccezionali.
+- **Tema v2 — footer**: blocchi `footer_brand_text`, `footer_col1_title`, `footer_col1_links`,
+  `footer_col2_title`, `footer_col2_links`, `footer_text`, `footer_copyright`, `footer_links`
+  funzionano perché inlinizzati in `base.html`. Non usare `class="footer-agesci mt-auto"`.
+- **Componenti opzionali**: `{% load agesci_components %}` — tag disponibili: `ag_hero`,
+  `ag_feature_card`, `ag_feature_grid`, `ag_jumbotron`, `ag_badge`, `ag_button`, `ag_breadcrumb`,
+  `ag_dropdown`, `ag_list_group`, `ag_modal_trigger`, `ag_masonry_grid`.
+- **Messages**: il tema gestisce `{% block messages %}` globalmente — **non aggiungere**
   `{% if messages %}` nei template, causerebbe duplicati.
 - **Icone**: `{% load bootstrap_icons %}` + `{% bs_icon "nome" %}`. Mai `<i class="bi bi-*">`.
-- **Footer**: `class="footer-agesci mt-auto"` — `mt-auto` obbligatorio per il layout sticky.
 - **Abbreviazioni nell'UI**: CSQ/CRP/PGV non devono apparire nell'interfaccia. Usare "Capo
   Squadriglia", "Capo Reparto", "Pattuglia GV". Le abbreviazioni restano solo nel codice.
 
@@ -215,6 +269,52 @@ docker compose --env-file .env.prod up -d web worker beat
   sull'host che persiste tra i deploy. Se eseguito dopo `up -d`, il container web carica il
   vecchio manifest e serve i vecchi hash degli asset anche se i file sono stati aggiornati.
 
+### Deploy in staging
+**Cartella**: `/srv/staging.plancia`. Branch `v2-offline`.
+
+Apache su staging serve `/static/` da `staticfiles-staging/` (non `staticfiles/`). Il bind mount
+del compose scrive sempre in `staticfiles/`, quindi il collectstatic va eseguito due volte:
+1. con volume override → aggiorna `staticfiles-staging/` (file che Apache serve)
+2. senza override → aggiorna `staticfiles/staticfiles.json` (manifest che Django legge in memory)
+
+Se manca il secondo step, Django emette URL con hash vecchi e il browser carica CSS sbagliati
+(es. versione del tema priva delle classi sidebar) pur avendo i file corretti su disco.
+
+```bash
+git pull
+docker compose --env-file .env.staging build --no-cache web worker beat
+# 1. Aggiorna staticfiles-staging/ (Apache)
+docker compose --env-file .env.staging run --rm \
+  -v /srv/staging.plancia/staticfiles-staging:/app/staticfiles \
+  web uv run python manage.py collectstatic --noinput
+# 2. Aggiorna staticfiles/ (manifest Django — OBBLIGATORIO dopo ogni cambio tema)
+docker compose --env-file .env.staging run --rm \
+  web uv run python manage.py collectstatic --noinput
+docker compose --env-file .env.staging up -d web worker beat
+```
+
+Il symlink `.env.prod → .env.staging` è necessario perché `docker-compose.yml` referenzia
+`env_file: [.env.prod]` nei servizi — è già presente su staging.
+
+**Volume DB staging**: il `docker-compose.yml` definisce il volume `plancia_db`, che Docker Compose
+prefissa col nome progetto → `stagingplancia_plancia_db`. Esiste anche `stagingplancia_plancia_staging_db`
+(vecchio nome, da una versione precedente del compose) che contiene il dump anonimizzato della
+produzione. Se staging appare vuoto dopo un `up -d`, il container DB sta usando `plancia_db` (vuoto)
+invece di `plancia_staging_db` (con i dati). Recovery:
+```bash
+# Verifica quale volume è montato
+docker inspect stagingplancia-db-1 --format '{{range .Mounts}}{{.Name}}{{end}}'
+
+# Se è plancia_db (vuoto): ferma lo stack, avvia pg_old sull'altro volume, dump e restore
+docker compose --env-file .env.staging stop web worker beat
+docker run -d --name pg_old -v stagingplancia_plancia_staging_db:/var/lib/postgresql/data -p 127.0.0.1:5434:5432 postgres:17
+sleep 4
+docker exec stagingplancia-db-1 psql -U plancia_staging -d postgres -c 'DROP DATABASE plancia_staging;' -c 'CREATE DATABASE plancia_staging OWNER plancia_staging;'
+docker exec pg_old pg_dump -U plancia_staging plancia_staging | docker exec -i stagingplancia-db-1 psql -U plancia_staging plancia_staging
+docker rm -f pg_old
+docker compose --env-file .env.staging up -d web worker beat
+```
+
 ### Verifica post-deploy
 ```bash
 docker compose --env-file .env.prod logs web --tail=30
@@ -245,6 +345,16 @@ Accessibile solo a CRP, Incaricati EG e Admin — non al Capo Squadriglia.
 - Resize automatico al caricamento: `_resize_immagine()` in `apps/diaries/views.py`
 - Dimensione configurabile: `Impostazioni.allegati_max_px` (default 1024px)
 
+## Gestione errori HTTP
+
+- **404**: `config.error_views.page_not_found` → `templates/404.html` + email agli ADMINS via `mail_admins()`.
+- **500**: `config.error_views.server_error` → `templates/500.html` (standalone, non estende base.html).
+  Email agli ADMINS gestita da `AdminEmailHandler` in `LOGGING["loggers"]["django.request"]`.
+- **CSRF**: `config.error_views.csrf_failure` (impostato via `CSRF_FAILURE_VIEW`) → `templates/403_csrf.html`.
+- **403 generico**: `templates/403.html` (permessi negati, non CSRF).
+- **Configurazione admin**: variabile d'ambiente `ADMIN_EMAILS` (lista separata da virgola).
+  `SERVER_EMAIL` per il mittente delle notifiche. Se `ADMIN_EMAILS` è vuota, le notifiche sono disabilitate.
+
 ## Cosa NON fare
 - Non cambiare `AUTH_USER_MODEL` né l'app label dopo le prime migrazioni.
 - Non rendere visibili valutazioni/relazioni oltre i ruoli previsti.
@@ -252,5 +362,7 @@ Accessibile solo a CRP, Incaricati EG e Admin — non al Capo Squadriglia.
 - Non versionare CSV reali (dati minori): usare solo `fixtures/`.
 - Non rendere il codice socio editabile a mano; validarlo come numerico 4–8 cifre.
 - Non aggiungere `{% if messages %}` nei template (il tema li gestisce globalmente).
+- Non usare i vecchi blocchi v1 `navbar`, `nav_items`, `breadcrumb`, `subnav` (rimossi nel tema v2).
+- Non usare `class="footer-agesci mt-auto"` (il footer v2 è gestito interamente dal tema).
 - Non usare `<i class="bi bi-*">`: usare `{% bs_icon %}`.
 - Non usare `mt-5` sul footer: usare `mt-auto`.
