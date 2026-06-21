@@ -23,6 +23,11 @@ import time
 
 import pytest
 import requests
+
+pytestmark = pytest.mark.skipif(
+    not os.environ.get("STAGING_PASSWORD"),
+    reason="Test E2E staging: impostare STAGING_PASSWORD per eseguirli",
+)
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
