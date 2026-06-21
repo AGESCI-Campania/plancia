@@ -258,6 +258,17 @@
 <header>
   {# ── Barra superiore: logo + nav + badge offline + hamburger (mobile) ── #}
   <div class="ag-header-top px-3 py-2 d-flex flex-wrap align-items-center">
+    {# Pulsante indietro mobile: visibile solo se c'è un genitore nel breadcrumb #}
+    {% if breadcrumb_items|length > 1 %}
+      {% with parent=breadcrumb_items|slice:"-2:-1"|first %}
+      <a href="{{ parent.url }}" class="d-lg-none btn btn-link p-1 me-1 text-white"
+         aria-label="Torna a {{ parent.label }}" title="{{ parent.label }}" style="opacity:.85;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+          <path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0"/>
+        </svg>
+      </a>
+      {% endwith %}
+    {% endif %}
     <a href="{% block brand_url %}{% url 'home' %}{% endblock %}" class="ag-header-brand my-2 my-lg-0">
       <img src="{% static agesci_theme_logo_navbar %}" alt="{{ agesci_theme_nome }}">
       <span class="d-none d-sm-inline">{% block brand_text %}{{ impostazioni.titolo|default:"Plancia" }}{% endblock %}</span>
