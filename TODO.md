@@ -45,7 +45,7 @@ al ritorno della connettività.
 | 9 | Test su staging con dati realistici | 4–5 gg | ✅ |
 | 10 | Aggiornamento manuali (utente CSQ, admin, CLAUDE.md, README.md) | 3–4 gg | ✅ |
 | 11 | Merge main → branch, test regressione finale | 1–2 gg | ✅ |
-| 12 | PR → main, tag `v2.0.0`, deploy produzione | 1–2 gg | |
+| 12 | PR → main, tag `v2.0.0`, deploy produzione | 1–2 gg | ✅ |
 | | **Totale stimato** | **45–58 gg** | |
 
 Circa **9–12 settimane** a tempo pieno.
