@@ -15,7 +15,7 @@
  */
 
 const CACHE_PREFIX  = 'plancia';
-const CACHE_VERSION = 'v4'; // bump: /accounts/ e /allauth/ esclusi dalla cache (CSRF fresco)
+const CACHE_VERSION = 'v5'; // bump: release v2.0.0
 const STATIC_CACHE  = `${CACHE_PREFIX}-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `${CACHE_PREFIX}-dynamic-${CACHE_VERSION}`;
 const API_CACHE     = `${CACHE_PREFIX}-api-${CACHE_VERSION}`;
