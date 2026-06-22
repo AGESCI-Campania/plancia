@@ -361,6 +361,12 @@ I PDF sono esclusi dal repository (artefatti generati).
 
 ## Changelog
 
+### v2.0.3
+
+- **PWA Settings → App su iOS**: aggiunto campo `id: "/"` nel web manifest (override
+  `templates/manifest.json`) — iOS 17.4+ usa `id` per identificare stabilmente la PWA e
+  mostrarla in Impostazioni → App con gestione dello spazio.
+
 ### v2.0.2
 
 - **Fix icona PWA su iOS**: override di `templates/pwa.html` con `{% static %}` per `apple-touch-icon`
