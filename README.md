@@ -361,6 +361,11 @@ I PDF sono esclusi dal repository (artefatti generati).
 
 ## Changelog
 
+### v2.0.4
+
+- **Download PDF diari**: il pulsante "Scarica PDF" ora forza il download del file invece
+  di aprirlo nel viewer integrato del browser (aggiunto attributo `download` sui link).
+
 ### v2.0.3
 
 - **PWA Settings → App su iOS**: aggiunto campo `id: "/"` nel web manifest (override

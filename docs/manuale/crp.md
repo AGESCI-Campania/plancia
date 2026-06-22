@@ -131,8 +131,9 @@ il pulsante **"Scarica PDF"**. Il PDF include:
 
 La generazione del PDF avviene in background tramite un task asincrono: al termine ricevi
 una mail con il link per scaricarlo. Se il PDF è già stato generato in precedenza,
-viene servito direttamente dalla cache su Drive. Ogni rigenerazione sostituisce il file
-precedente su Drive (la cartella di output mantiene sempre una sola versione).
+viene scaricato direttamente dalla cache su Drive — il browser avvia il download
+automaticamente senza aprire il file nella scheda corrente. Ogni rigenerazione sostituisce il
+file precedente su Drive (la cartella di output mantiene sempre una sola versione).
 
 > Il Capo Squadriglia **non ha accesso al PDF** — il documento è destinato al Capo Reparto,
 > alla Pattuglia GV e agli Incaricati EG. L'esito della valutazione non compare mai nel PDF.
