@@ -361,6 +361,17 @@ I PDF sono esclusi dal repository (artefatti generati).
 
 ## Changelog
 
+### v2.0.2
+
+- **Fix icona PWA su iOS**: override di `templates/pwa.html` con `{% static %}` per `apple-touch-icon`
+  e `icon-512x512` — `ManifestStaticFilesStorage` genera URL hashati che bustano la cache WebKit
+  automaticamente ad ogni aggiornamento del file.
+
+### v2.0.1
+
+- **Pulsante indietro mobile nell'header**: nelle pagine con breadcrumb, su schermi stretti (<992px)
+  compare un pulsante `‹` che riporta alla voce precedente della breadcrumb (breadcrumb-aware).
+
 ### v2.0.0 (in sviluppo — branch `v2-offline`)
 
 **PWA offline-first**

@@ -1,0 +1,37 @@
+{% load static %}
+<link rel="manifest" href="/manifest.json">
+
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="application-name" content="{{ PWA_APP_NAME }}">
+<meta name="theme-color" content="{{ PWA_APP_THEME_COLOR }}">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="{{ PWA_APP_NAME }}">
+<meta name="apple-mobile-web-app-status-bar-style" content="{{ PWA_APP_STATUS_BAR_COLOR }}">
+
+{# URL con hash via ManifestStaticFilesStorage — busta la cache WebKit al cambio del file #}
+<link rel="apple-touch-icon" sizes="180x180" href="{% static 'images/icons/apple-touch-icon.png' %}">
+
+{% for splash in PWA_APP_SPLASH_SCREEN %}
+<link href="{{ splash.src }}" media="{{ splash.media }}" rel="apple-touch-startup-image"/>
+{% endfor %}
+
+<meta name="msapplication-TileColor" content="{{ PWA_APP_BACKGROUND_COLOR }}">
+<meta name="msapplication-TileImage" content="{% static 'images/icons/icon-512x512.png' %}">
+<link rel="icon" sizes="512x512" href="{% static 'images/icons/icon-512x512.png' %}">
+
+<script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/serviceworker.js', {
+            scope: '{{ PWA_APP_SCOPE }}'
+        }).then(function (registration) {
+            {% if PWA_APP_DEBUG_MODE %}
+            console.log('django-pwa: ServiceWorker registration successful with scope: ', registration.scope);
+            {% endif %}
+        }, function (err) {
+            {% if PWA_APP_DEBUG_MODE %}
+            console.log('django-pwa: ServiceWorker registration failed: ', err);
+            {% endif %}
+        });
+    }
+</script>
