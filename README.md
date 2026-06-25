@@ -361,6 +361,15 @@ I PDF sono esclusi dal repository (artefatti generati).
 
 ## Changelog
 
+### v2.0.5
+
+- **Fix apertura PDF su PWA iOS**: rimosso l'attributo `download` dai link al PDF diario
+  e sostituito con `target="_blank"`. Su iOS, in modalità standalone (PWA installata), la
+  WebView non ha la toolbar di Safari: navigare verso un PDF apriva un'anteprima a schermo
+  intero senza alcun modo per tornare indietro o scaricare/condividere il file. Con
+  `target="_blank"` il PDF viene aperto nel browser di sistema (Safari), che fornisce la
+  sua toolbar completa.
+
 ### v2.0.4
 
 - **Download PDF diari**: il pulsante "Scarica PDF" ora forza il download del file invece

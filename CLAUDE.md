@@ -339,6 +339,12 @@ Accessibile solo a CRP, Incaricati EG e Admin — non al Capo Squadriglia.
 - **Progress bar**: il task chiama `self.update_state(state="PROGRESS", meta={progresso, completati, totale})`
   ad ogni diario; il task_id è salvato in Redis `pdf_massivo_task_id:{edizione_pk}`. Endpoint polling:
   `GET /impostazioni/task-progresso/<task_id>/` → JSON. JS nella pagina cache-pdf fa polling ogni 2s.
+- **Link al PDF**: usare sempre `target="_blank" rel="noopener"`, **mai** l'attributo `download`.
+  Il backend imposta già `Content-Disposition: attachment` (basta per far scaricare il file su
+  desktop/Android). Su iOS, in modalità standalone (PWA installata), la WebView non ha la toolbar
+  di Safari: l'attributo `download` forza la navigazione dentro la WebView e apre un'anteprima a
+  schermo intero senza alcun modo per tornare indietro o condividere il file. `target="_blank"`
+  delega l'apertura al browser di sistema (Safari), che fornisce la sua toolbar completa.
 
 ## Allegati
 

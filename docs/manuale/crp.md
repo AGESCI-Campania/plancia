@@ -130,9 +130,10 @@ il pulsante **"Scarica PDF"**. Il PDF include:
 - **Relazione finale** compilata dal Capo Reparto (modulo 6)
 
 La generazione del PDF avviene in background tramite un task asincrono: al termine ricevi
-una mail con il link per scaricarlo. Se il PDF è già stato generato in precedenza,
-viene scaricato direttamente dalla cache su Drive — il browser avvia il download
-automaticamente senza aprire il file nella scheda corrente. Ogni rigenerazione sostituisce il
+una mail con il link per scaricarlo. Se il PDF è già stato generato in precedenza, viene
+scaricato direttamente dalla cache su Drive. Il pulsante apre il PDF in una nuova scheda
+del browser (o, sulla PWA installata da iPhone/iPad, nel browser di sistema): da lì puoi
+scaricarlo o condividerlo con la toolbar del browser. Ogni rigenerazione sostituisce il
 file precedente su Drive (la cartella di output mantiene sempre una sola versione).
 
 > Il Capo Squadriglia **non ha accesso al PDF** — il documento è destinato al Capo Reparto,
