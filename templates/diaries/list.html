@@ -157,6 +157,7 @@
                  title="Scarica PDF"
                  data-bs-toggle="tooltip"
                  target="_blank" rel="noopener" data-pdf-link
+                 data-pdf-apri-url="{% url 'diaries:pdf_apri' d.pk %}"
                  onclick="event.stopPropagation()">
                 {% bs_icon "file-earmark-pdf" size="14" %}
               </a>

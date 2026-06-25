@@ -2,25 +2,38 @@
  *
  * Su iOS, le PWA installate ("Aggiungi a Home") girano in una WebView priva della
  * toolbar di Safari. WebKit intercetta la navigazione verso un PDF con la sua
- * anteprima Quick Look indipendentemente da target="_blank": l'anteprima resta
- * senza alcun pulsante per uscire o condividere il file, anche dopo il fix lato
- * link (vedi CLAUDE.md § PDF diari).
+ * anteprima Quick Look anche con target="_blank": l'anteprima resta senza alcun
+ * pulsante per uscire o condividere il file, e senza l'opzione "Apri in" per le app
+ * di lettura PDF installate (Acrobat ecc.), perché quella richiede la toolbar di
+ * Safari che la WebView standalone non ha (vedi CLAUDE.md § PDF diari).
  *
- * Per questi dispositivi intercettiamo il click sui link al PDF e usiamo la Web
- * Share API per mostrare il foglio di condivisione nativo di iOS (Annulla, Salva
- * su File, Condividi, Stampa...). Su tutte le altre piattaforme il link resta
- * invariato: target="_blank" + Content-Disposition: attachment funzionano già.
+ * Fix in due tentativi:
+ * 1. Apriamo la pagina "launcher" (`data-pdf-apri-url`, HTML non previewable) in una
+ *    nuova finestra: una pagina HTML, a differenza del PDF, viene delegata dal
+ *    sistema al browser Safari vero e proprio. Una volta lì, il redirect lato
+ *    client della pagina apre il PDF dentro Safari, con la toolbar nativa completa
+ *    (incluso "Apri in" Acrobat e altri lettori PDF).
+ * 2. Se la finestra non si apre (popup bloccato), fallback al download via fetch +
+ *    Web Share API: foglio di condivisione nativo (Annulla, Salva su File,
+ *    Condividi, Stampa) — non mostra "Apri in" ma almeno non blocca l'utente.
+ *
+ * Su tutte le altre piattaforme lo script non interviene: il link normale
+ * (target="_blank" + Content-Disposition: attachment) funziona già.
  */
 (function () {
   'use strict';
 
   var isIosStandalone = window.navigator.standalone === true;
-  if (!isIosStandalone || !navigator.canShare) return;
+  if (!isIosStandalone) return;
 
   document.querySelectorAll('a[data-pdf-link]').forEach(function (link) {
     link.addEventListener('click', function (event) {
       event.preventDefault();
-      apriPdfCondiviso(link);
+      var apriUrl = link.getAttribute('data-pdf-apri-url');
+      var win = apriUrl ? window.open(apriUrl, '_blank') : null;
+      if (!win && navigator.canShare) {
+        condividiPdf(link);
+      }
     });
   });
 
@@ -30,7 +43,7 @@
     return match ? match[1] : fallback;
   }
 
-  function apriPdfCondiviso(link) {
+  function condividiPdf(link) {
     var href = link.href;
     link.classList.add('disabled');
     link.setAttribute('aria-disabled', 'true');

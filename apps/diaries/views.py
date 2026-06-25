@@ -730,6 +730,27 @@ class DiarioPdfView(DiarioAccessMixin, View):
         return redirect("diaries:detail", pk=pk)
 
 
+class DiarioPdfApriView(DiarioAccessMixin, View):
+    """GET /diari/<pk>/pdf/apri/ — pagina HTML intermedia che reindirizza al PDF.
+
+    Serve solo alla PWA iOS standalone (vedi plancia-pdf-ios.js): un link verso il
+    PDF, anche con target="_blank", viene intercettato dall'anteprima Quick Look di
+    WebKit restando dentro la WebView dell'app, senza toolbar. Una pagina HTML (non
+    previewable) forza invece la delega della navigazione al browser di sistema
+    (Safari): il redirect lato client che segue apre quindi il PDF dentro Safari,
+    con la toolbar nativa completa — incluso "Apri in" Acrobat e altri lettori PDF.
+    """
+
+    def get(self, request, pk):
+        from django.shortcuts import render
+
+        diario = self._get_diario(pk)
+        if request.user.ruolo == Ruolo.CSQ:
+            messages.error(request, "Il PDF del diario non è disponibile per il Capo Squadriglia.")
+            return redirect("diaries:detail", pk=pk)
+        return render(request, "diaries/pdf_apri.html", {"diario": diario})
+
+
 class AllegatoPreviewView(DiarioAccessMixin, View):
     """GET /diari/<pk>/allegati/<allegato_pk>/preview/ → immagine (Drive o file locale)."""
 

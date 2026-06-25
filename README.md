@@ -361,6 +361,18 @@ I PDF sono esclusi dal repository (artefatti generati).
 
 ## Changelog
 
+### v2.0.7
+
+- **Fix apertura PDF su PWA iOS (parte 3)**: il foglio di condivisione nativo (v2.0.6) non
+  mostra le app di lettura PDF installate (Acrobat ecc.) — limite della Web Share API su
+  iOS, che espone solo Mail/Messaggi/AirDrop/Copia/Salva su File/Stampa, non le estensioni
+  "Apri in" delle app. Aggiunta una pagina HTML intermedia (`diaries:pdf_apri`,
+  `DiarioPdfApriView`, `templates/diaries/pdf_apri.html`): aprirla in una nuova finestra da
+  iOS standalone forza la delega della navigazione al vero Safari (le pagine HTML, a
+  differenza dei PDF, non vengono intercettate da Quick Look); il redirect lato client che
+  segue apre quindi il PDF dentro Safari, con la toolbar nativa completa e "Apri in" Acrobat.
+  Il foglio di condivisione resta come fallback se la finestra non si apre (popup bloccato).
+
 ### v2.0.6
 
 - **Fix apertura PDF su PWA iOS (parte 2)**: `target="_blank"` (v2.0.5) non era

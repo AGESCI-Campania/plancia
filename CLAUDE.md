@@ -339,17 +339,22 @@ Accessibile solo a CRP, Incaricati EG e Admin — non al Capo Squadriglia.
 - **Progress bar**: il task chiama `self.update_state(state="PROGRESS", meta={progresso, completati, totale})`
   ad ogni diario; il task_id è salvato in Redis `pdf_massivo_task_id:{edizione_pk}`. Endpoint polling:
   `GET /impostazioni/task-progresso/<task_id>/` → JSON. JS nella pagina cache-pdf fa polling ogni 2s.
-- **Link al PDF**: usare sempre `target="_blank" rel="noopener" data-pdf-link`, **mai** l'attributo
-  `download`. Il backend imposta già `Content-Disposition: attachment` (basta per far scaricare
-  il file su desktop/Android). Su iOS, in modalità standalone (PWA installata), la WebView non ha
-  la toolbar di Safari: **né** `download` **né** `target="_blank"` bastano — WebKit intercetta
-  comunque la navigazione verso un PDF con la sua anteprima Quick Look, priva di pulsanti per
-  uscire o condividere, perché l'app standalone non aggiunge alcuna chrome attorno alla preview
-  (a differenza della vera app Safari). Il fix reale è **`static/js/plancia-pdf-ios.js`**: su
-  `window.navigator.standalone` intercetta il click sui link `[data-pdf-link]`, scarica il PDF
-  via `fetch` e lo apre con `navigator.share()` (foglio di condivisione nativo iOS). Su tutte le
-  altre piattaforme lo script non interviene e il link normale (`target="_blank"` + attachment)
-  funziona già.
+- **Link al PDF**: usare sempre `target="_blank" rel="noopener" data-pdf-link
+  data-pdf-apri-url="{% url 'diaries:pdf_apri' pk %}"`, **mai** l'attributo `download`. Il
+  backend imposta già `Content-Disposition: attachment` (basta per far scaricare il file su
+  desktop/Android). Su iOS, in modalità standalone (PWA installata), la WebView non ha la
+  toolbar di Safari: **né** `download` **né** `target="_blank"` diretto al PDF bastano — WebKit
+  intercetta comunque la navigazione con la sua anteprima Quick Look, priva di pulsanti per
+  uscire/condividere/"Apri in" (Acrobat ecc.), perché l'app standalone non aggiunge alcuna
+  chrome attorno alla preview (a differenza della vera app Safari). Il fix è
+  **`static/js/plancia-pdf-ios.js`**: su `window.navigator.standalone` intercetta il click sui
+  link `[data-pdf-link]` e apre `data-pdf-apri-url` (`DiarioPdfApriView` → `templates/diaries/
+  pdf_apri.html`) in una nuova finestra — una pagina HTML, non previewable, viene delegata dal
+  sistema al vero Safari, che poi segue il redirect lato client verso il PDF **dentro Safari**
+  (toolbar nativa completa, incluso "Apri in" Acrobat). Se la finestra non si apre (popup
+  bloccato), fallback a `fetch` + `navigator.share()` (foglio di condivisione nativo, senza
+  "Apri in" ma senza intrappolare l'utente). Su tutte le altre piattaforme lo script non
+  interviene e il link normale (`target="_blank"` + attachment) funziona già.
 
 ## Allegati
 

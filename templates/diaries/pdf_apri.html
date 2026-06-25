@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Apertura PDF — Plancia</title>
+  <style>
+    body {
+      font-family: -apple-system, system-ui, sans-serif;
+      display: flex;
+      min-height: 100vh;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 1.5rem;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <p>
+    Apertura del PDF in corso…<br>
+    <a href="{% url 'diaries:pdf' diario.pk %}" id="pdf-link">Tocca qui se non si apre automaticamente</a>
+  </p>
+  <script>
+    window.location.replace(document.getElementById('pdf-link').href);
+  </script>
+</body>
+</html>

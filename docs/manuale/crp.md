@@ -133,9 +133,10 @@ La generazione del PDF avviene in background tramite un task asincrono: al termi
 una mail con il link per scaricarlo. Se il PDF è già stato generato in precedenza, viene
 scaricato direttamente dalla cache su Drive. Il pulsante apre il PDF in una nuova scheda
 del browser, da cui puoi scaricarlo o condividerlo con la toolbar del browser. Sulla PWA
-installata da iPhone/iPad si apre invece il foglio di condivisione nativo di iOS, con cui
-puoi salvare il PDF su File, stamparlo o condividerlo. Ogni rigenerazione sostituisce il
-file precedente su Drive (la cartella di output mantiene sempre una sola versione).
+installata da iPhone/iPad il pulsante apre il PDF in Safari, da cui puoi scaricarlo,
+stamparlo o aprirlo direttamente in Acrobat o altre app di lettura PDF installate. Ogni
+rigenerazione sostituisce il file precedente su Drive (la cartella di output mantiene
+sempre una sola versione).
 
 > Il Capo Squadriglia **non ha accesso al PDF** — il documento è destinato al Capo Reparto,
 > alla Pattuglia GV e agli Incaricati EG. L'esito della valutazione non compare mai nel PDF.
