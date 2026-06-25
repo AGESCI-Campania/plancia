@@ -361,6 +361,16 @@ I PDF sono esclusi dal repository (artefatti generati).
 
 ## Changelog
 
+### v2.0.6
+
+- **Fix apertura PDF su PWA iOS (parte 2)**: `target="_blank"` (v2.0.5) non era
+  sufficiente — su iOS standalone WebKit intercetta comunque la navigazione verso un PDF
+  con la sua anteprima Quick Look, senza pulsanti per uscire o condividere, indipendentemente
+  dal `target`. Aggiunto `static/js/plancia-pdf-ios.js`: su iOS standalone intercetta il
+  click sui link al PDF, lo scarica via `fetch` e lo apre con il foglio di condivisione
+  nativo (`navigator.share()`), con Annulla/Salva su File/Condividi sempre disponibili.
+  Su tutte le altre piattaforme il comportamento resta invariato.
+
 ### v2.0.5
 
 - **Fix apertura PDF su PWA iOS**: rimosso l'attributo `download` dai link al PDF diario

@@ -132,8 +132,9 @@ il pulsante **"Scarica PDF"**. Il PDF include:
 La generazione del PDF avviene in background tramite un task asincrono: al termine ricevi
 una mail con il link per scaricarlo. Se il PDF è già stato generato in precedenza, viene
 scaricato direttamente dalla cache su Drive. Il pulsante apre il PDF in una nuova scheda
-del browser (o, sulla PWA installata da iPhone/iPad, nel browser di sistema): da lì puoi
-scaricarlo o condividerlo con la toolbar del browser. Ogni rigenerazione sostituisce il
+del browser, da cui puoi scaricarlo o condividerlo con la toolbar del browser. Sulla PWA
+installata da iPhone/iPad si apre invece il foglio di condivisione nativo di iOS, con cui
+puoi salvare il PDF su File, stamparlo o condividerlo. Ogni rigenerazione sostituisce il
 file precedente su Drive (la cartella di output mantiene sempre una sola versione).
 
 > Il Capo Squadriglia **non ha accesso al PDF** — il documento è destinato al Capo Reparto,

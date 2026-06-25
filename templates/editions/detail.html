@@ -250,7 +250,7 @@
                 <a href="{% url 'diaries:pdf' d.pk %}"
                    class="btn btn-sm btn-outline-secondary ms-1"
                    title="Scarica PDF" data-bs-toggle="tooltip"
-                   target="_blank" rel="noopener"
+                   target="_blank" rel="noopener" data-pdf-link
                    onclick="event.stopPropagation()">
                   {% bs_icon "file-earmark-pdf" size="14" %}
                 </a>

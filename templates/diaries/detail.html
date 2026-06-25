@@ -33,7 +33,7 @@
       </form>
     {% endif %}
     {% if puo_pdf %}
-      <a href="{% url 'diaries:pdf' diario.pk %}" class="btn btn-outline-secondary btn-sm" target="_blank" rel="noopener">
+      <a href="{% url 'diaries:pdf' diario.pk %}" class="btn btn-outline-secondary btn-sm" target="_blank" rel="noopener" data-pdf-link>
         {% bs_icon "file-earmark-pdf" size="14" extra_classes="me-1" %}Scarica PDF
       </a>
     {% endif %}
