@@ -361,6 +361,20 @@ I PDF sono esclusi dal repository (artefatti generati).
 
 ## Changelog
 
+### v2.0.8
+
+- **Fix PDF su PWA iOS (parte 4 — approccio blob)**: l'approccio v2.0.7 (pagina HTML
+  intermedia + `window.open`) causava una regressione: `window.open` restituisce sempre un
+  riferimento non-null su iOS (non viene "bloccato" in senso tecnico), quindi il fallback
+  con il foglio di condivisione non veniva mai raggiunto, ma la finestra aperta non si
+  comportava come Safari vero — il PDF finiva comunque in Quick Look senza toolbar,
+  bloccando l'utente. Nuovo approccio (ispirato a Sergii Novikov, 2024): `fetch(pdfUrl)`
+  → blob → `URL.createObjectURL()` → `<a download href="blob:...">` click. iOS tratta un
+  blob URL con attributo `download` come un download (mostra il foglio Share/Download
+  nativo con "Apri in Acrobat", "Salva su File", ecc.) invece di una navigazione verso
+  un PDF (Quick Look). Non richiede contesto user-gesture sincrono. Aggiunto anche
+  rilevamento `display-mode: standalone` oltre a `window.navigator.standalone`.
+
 ### v2.0.7
 
 - **Fix apertura PDF su PWA iOS (parte 3)**: il foglio di condivisione nativo (v2.0.6) non

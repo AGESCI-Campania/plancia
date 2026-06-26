@@ -1,50 +1,36 @@
-/* Plancia — apertura PDF diario su PWA iOS standalone
+/* Plancia — download PDF diario su PWA iOS standalone
  *
  * Su iOS, le PWA installate ("Aggiungi a Home") girano in una WebView priva della
- * toolbar di Safari. WebKit intercetta la navigazione verso un PDF con la sua
- * anteprima Quick Look anche con target="_blank": l'anteprima resta senza alcun
- * pulsante per uscire o condividere il file, e senza l'opzione "Apri in" per le app
- * di lettura PDF installate (Acrobat ecc.), perché quella richiede la toolbar di
- * Safari che la WebView standalone non ha (vedi CLAUDE.md § PDF diari).
+ * toolbar di Safari. WebKit intercetta la navigazione verso un PDF con Quick Look,
+ * che nella WebView standalone non ha pulsanti Share/"Apri in" (vedi CLAUDE.md § PDF diari).
  *
- * Fix in due tentativi:
- * 1. Apriamo la pagina "launcher" (`data-pdf-apri-url`, HTML non previewable) in una
- *    nuova finestra: una pagina HTML, a differenza del PDF, viene delegata dal
- *    sistema al browser Safari vero e proprio. Una volta lì, il redirect lato
- *    client della pagina apre il PDF dentro Safari, con la toolbar nativa completa
- *    (incluso "Apri in" Acrobat e altri lettori PDF).
- * 2. Se la finestra non si apre (popup bloccato), fallback al download via fetch +
- *    Web Share API: foglio di condivisione nativo (Annulla, Salva su File,
- *    Condividi, Stampa) — non mostra "Apri in" ma almeno non blocca l'utente.
+ * Soluzione (ispirata a Sergii Novikov, 2024):
+ *   fetch(pdfUrl) → blob → URL.createObjectURL() → <a download> click
+ * Un blob URL con attributo `download` viene trattato da iOS come un download, non
+ * come navigazione: appare il foglio Share nativo con "Apri in Acrobat", "Salva su File",
+ * ecc. Non richiede contesto user-gesture sincrono (a differenza di navigator.share).
  *
- * Su tutte le altre piattaforme lo script non interviene: il link normale
- * (target="_blank" + Content-Disposition: attachment) funziona già.
+ * Fallback:
+ *   1. navigator.share({ files }) — se il blob download non è disponibile
+ *   2. window.location.href    — se il PDF non è ancora pronto o in caso di errore
+ *
+ * Attivo solo su PWA standalone (window.navigator.standalone o display-mode:standalone).
+ * Su tutte le altre piattaforme lo script non interviene.
  */
 (function () {
   'use strict';
 
-  var isIosStandalone = window.navigator.standalone === true;
-  if (!isIosStandalone) return;
+  var isStandalone = window.navigator.standalone === true ||
+    window.matchMedia('(display-mode: standalone)').matches;
+  if (!isStandalone) return;
 
-  document.querySelectorAll('a[data-pdf-link]').forEach(function (link) {
-    link.addEventListener('click', function (event) {
-      event.preventDefault();
-      var apriUrl = link.getAttribute('data-pdf-apri-url');
-      var win = apriUrl ? window.open(apriUrl, '_blank') : null;
-      if (!win && navigator.canShare) {
-        condividiPdf(link);
-      }
-    });
-  });
+  document.addEventListener('click', function (event) {
+    var link = event.target.closest('a[data-pdf-link]');
+    if (!link) return;
 
-  function nomeFileDa(response, fallback) {
-    var header = response.headers.get('Content-Disposition') || '';
-    var match = /filename="?([^"]+)"?/.exec(header);
-    return match ? match[1] : fallback;
-  }
-
-  function condividiPdf(link) {
+    event.preventDefault();
     var href = link.href;
+
     link.classList.add('disabled');
     link.setAttribute('aria-disabled', 'true');
 
@@ -52,30 +38,64 @@
       .then(function (response) {
         var contentType = response.headers.get('Content-Type') || '';
         if (!response.ok || contentType.indexOf('application/pdf') === -1) {
-          // PDF non ancora pronto (rigenerazione in corso) o redirect d'errore:
-          // navighiamo normalmente, l'utente vedrà il messaggio sulla pagina di dettaglio.
+          // PDF non ancora pronto (task Celery in corso) o errore:
+          // navighiamo normalmente, l'utente vede il messaggio sulla pagina.
           window.location.href = href;
           return null;
         }
+        var nome = nomeFileDa(response, 'diario.pdf');
         return response.blob().then(function (blob) {
-          var nome = nomeFileDa(response, 'diario.pdf');
-          var file = new File([blob], nome, { type: 'application/pdf' });
-          if (navigator.canShare({ files: [file] })) {
-            return navigator.share({ files: [file] });
-          }
-          window.location.href = href;
-          return null;
+          scaricaBlob(blob, nome, href);
         });
       })
-      .catch(function (err) {
-        // AbortError: l'utente ha chiuso il foglio di condivisione, non è un errore reale.
-        if (err && err.name !== 'AbortError') {
-          window.location.href = href;
-        }
+      .catch(function () {
+        window.location.href = href;
       })
       .finally(function () {
         link.classList.remove('disabled');
         link.removeAttribute('aria-disabled');
       });
+  });
+
+  function nomeFileDa(response, fallback) {
+    var header = response.headers.get('Content-Disposition') || '';
+    var match = /filename[^;=\n]*=["']?([^"'\n;]+)["']?/.exec(header);
+    return match ? match[1].trim() : fallback;
+  }
+
+  function scaricaBlob(blob, nome, fallbackHref) {
+    // Tentativo 1: blob URL + <a download> — non richiede user-gesture sincrono,
+    // su iOS mostra il foglio Share/Download nativo invece di Quick Look.
+    try {
+      var blobUrl = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = nome;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(blobUrl); }, 1000);
+      return;
+    } catch (e) {
+      // createObjectURL non disponibile (raro) → tenta share
+    }
+
+    // Tentativo 2: Web Share API con file (iOS 15+)
+    try {
+      var file = new File([blob], nome, { type: 'application/pdf' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file] }).catch(function (err) {
+          if (err && err.name !== 'AbortError') {
+            window.location.href = fallbackHref;
+          }
+        });
+        return;
+      }
+    } catch (e) {
+      // navigator.share non disponibile
+    }
+
+    // Fallback finale: navigazione normale
+    window.location.href = fallbackHref;
   }
 })();

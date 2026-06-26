@@ -340,21 +340,18 @@ Accessibile solo a CRP, Incaricati EG e Admin — non al Capo Squadriglia.
   ad ogni diario; il task_id è salvato in Redis `pdf_massivo_task_id:{edizione_pk}`. Endpoint polling:
   `GET /impostazioni/task-progresso/<task_id>/` → JSON. JS nella pagina cache-pdf fa polling ogni 2s.
 - **Link al PDF**: usare sempre `target="_blank" rel="noopener" data-pdf-link
-  data-pdf-apri-url="{% url 'diaries:pdf_apri' pk %}"`, **mai** l'attributo `download`. Il
-  backend imposta già `Content-Disposition: attachment` (basta per far scaricare il file su
+  data-pdf-apri-url="{% url 'diaries:pdf_apri' pk %}"`, **mai** l'attributo `download` sull'
+  anchor HTML originale. Il backend imposta già `Content-Disposition: attachment` (basta su
   desktop/Android). Su iOS, in modalità standalone (PWA installata), la WebView non ha la
-  toolbar di Safari: **né** `download` **né** `target="_blank"` diretto al PDF bastano — WebKit
-  intercetta comunque la navigazione con la sua anteprima Quick Look, priva di pulsanti per
-  uscire/condividere/"Apri in" (Acrobat ecc.), perché l'app standalone non aggiunge alcuna
-  chrome attorno alla preview (a differenza della vera app Safari). Il fix è
-  **`static/js/plancia-pdf-ios.js`**: su `window.navigator.standalone` intercetta il click sui
-  link `[data-pdf-link]` e apre `data-pdf-apri-url` (`DiarioPdfApriView` → `templates/diaries/
-  pdf_apri.html`) in una nuova finestra — una pagina HTML, non previewable, viene delegata dal
-  sistema al vero Safari, che poi segue il redirect lato client verso il PDF **dentro Safari**
-  (toolbar nativa completa, incluso "Apri in" Acrobat). Se la finestra non si apre (popup
-  bloccato), fallback a `fetch` + `navigator.share()` (foglio di condivisione nativo, senza
-  "Apri in" ma senza intrappolare l'utente). Su tutte le altre piattaforme lo script non
-  interviene e il link normale (`target="_blank"` + attachment) funziona già.
+  toolbar di Safari: WebKit intercetta la navigazione verso un PDF con Quick Look, priva di
+  pulsanti Share/"Apri in" (Acrobat ecc.). Il fix è **`static/js/plancia-pdf-ios.js`**: su
+  `window.navigator.standalone` (o `display-mode: standalone`) intercetta il click, scarica il
+  PDF via `fetch`, lo converte in un blob URL e triggera un `<a download href="blob:...">` — iOS
+  tratta un blob URL con `download` come un download, non come navigazione verso un PDF, quindi
+  mostra il foglio Share/Download nativo (incluso "Apri in" Acrobat, "Salva su File"). Fallback
+  gerarchico: `navigator.share({ files })` (iOS 15+), poi `window.location.href`. Se il PDF non
+  è ancora pronto (Content-Type non è `application/pdf`), lo script naviga normalmente verso
+  l'URL del diario. Su tutte le altre piattaforme lo script non interviene.
 
 ## Allegati
 
