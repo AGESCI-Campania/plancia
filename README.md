@@ -361,6 +361,19 @@ I PDF sono esclusi dal repository (artefatti generati).
 
 ## Changelog
 
+### v2.0.9
+
+- **Fix PDF su PWA iOS (parte 5 — due tap + navigator.share)**: il blob URL con
+  attributo `download` (v2.0.8) apre comunque Quick Look su iOS standalone, perché
+  WebKit tratta i blob PDF come navigazione indipendentemente dall'attributo. La causa
+  radice è che `navigator.share({ files })` — l'unica API che mostra il foglio Share
+  nativo con "Apri in Acrobat" — deve essere chiamata durante una user gesture attiva.
+  Dopo un `fetch()` asincrono iOS considera il contesto gesture scaduto. Soluzione a
+  due tap: il 1° tap avvia il fetch in background e cambia il bottone in verde quando
+  il PDF è pronto; il 2° tap (nuova user gesture) chiama `navigator.share({ files })`
+  che mostra il foglio Share nativo. Il fallback per iOS < 15 (no file-sharing)
+  rimane `window.location.href`.
+
 ### v2.0.8
 
 - **Fix PDF su PWA iOS (parte 4 — approccio blob)**: l'approccio v2.0.7 (pagina HTML

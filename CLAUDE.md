@@ -343,15 +343,16 @@ Accessibile solo a CRP, Incaricati EG e Admin — non al Capo Squadriglia.
   data-pdf-apri-url="{% url 'diaries:pdf_apri' pk %}"`, **mai** l'attributo `download` sull'
   anchor HTML originale. Il backend imposta già `Content-Disposition: attachment` (basta su
   desktop/Android). Su iOS, in modalità standalone (PWA installata), la WebView non ha la
-  toolbar di Safari: WebKit intercetta la navigazione verso un PDF con Quick Look, priva di
-  pulsanti Share/"Apri in" (Acrobat ecc.). Il fix è **`static/js/plancia-pdf-ios.js`**: su
-  `window.navigator.standalone` (o `display-mode: standalone`) intercetta il click, scarica il
-  PDF via `fetch`, lo converte in un blob URL e triggera un `<a download href="blob:...">` — iOS
-  tratta un blob URL con `download` come un download, non come navigazione verso un PDF, quindi
-  mostra il foglio Share/Download nativo (incluso "Apri in" Acrobat, "Salva su File"). Fallback
-  gerarchico: `navigator.share({ files })` (iOS 15+), poi `window.location.href`. Se il PDF non
-  è ancora pronto (Content-Type non è `application/pdf`), lo script naviga normalmente verso
-  l'URL del diario. Su tutte le altre piattaforme lo script non interviene.
+  toolbar di Safari: WebKit intercetta qualsiasi navigazione verso un PDF — URL diretto,
+  blob URL, redirect — con Quick Look, che in standalone non ha Share né "Apri in" Acrobat.
+  L'unica via d'uscita è `navigator.share({ files })`, che mostra il foglio Share nativo, ma
+  deve essere chiamato durante una user gesture (dopo `fetch()` il contesto è scaduto).
+  Il fix è **`static/js/plancia-pdf-ios.js`**: **approccio a due tap** — **1° tap** avvia
+  `fetch` in background, il bottone diventa verde quando il PDF è in memoria;
+  **2° tap** (nuova user gesture) chiama `navigator.share({ files: [file] })` → foglio Share
+  nativo con "Apri in Acrobat Reader", "Salva su File" ecc. Se il PDF non è ancora pronto
+  (Content-Type non PDF) naviga normalmente. Fallback iOS < 15: `window.location.href`.
+  Su tutte le altre piattaforme lo script non interviene.
 
 ## Allegati
 
