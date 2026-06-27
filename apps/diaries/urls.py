@@ -13,8 +13,8 @@ from apps.diaries.views import (
     DiarioDetailView,
     DiarioInviaView,
     DiarioListView,
-    DiarioPdfApriView,
     DiarioPdfView,
+    DiarioPdfViewerView,
     DiarioRiapriView,
     ImpresaUpdateView,
     MissioneUpdateView,
@@ -42,7 +42,7 @@ urlpatterns = [
         name="cambia_crp_reparto",
     ),
     path("<int:pk>/pdf/", DiarioPdfView.as_view(), name="pdf"),
-    path("<int:pk>/pdf/apri/", DiarioPdfApriView.as_view(), name="pdf_apri"),
+    path("<int:pk>/pdf/visualizza/", DiarioPdfViewerView.as_view(), name="pdf_viewer"),
     # Allegati (foto)
     path("<int:pk>/allegati/", AllegatoListView.as_view(), name="allegati_list"),
     path("<int:pk>/allegati/upload/", AllegatoUploadView.as_view(), name="allegati_upload"),

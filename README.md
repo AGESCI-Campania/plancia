@@ -361,6 +361,20 @@ I PDF sono esclusi dal repository (artefatti generati).
 
 ## Changelog
 
+### v2.1.0
+
+- **Viewer inline per PDF, CSV e XLSX su PWA standalone**: sostituisce l'approccio a due
+  tap con una pagina viewer dedicata (`/diari/<pk>/pdf/visualizza/`). Il fetch del file
+  parte al caricamento della pagina; quando pronto il pulsante "Scarica" si attiva con un
+  solo tap. Su iOS PWA usa `navigator.share({ files })`; su Android e desktop mostra
+  l'anteprima PDF nell'`<iframe>` e usa `<a download>`. Script `plancia-file-viewer.js`
+  caricato solo nel viewer, rimosso `plancia-pdf-ios.js` globale.
+- **Excel esiti scaricabile via HTTP** (`/edizioni/<pk>/excel/visualizza/`): genera e serve
+  l'XLSX degli esiti dell'edizione on-demand (sincrono, via `genera_excel_edizione()`).
+  Bottone "Esiti Excel" nella pagina di dettaglio edizione per Admin/Segreteria/Incaricati EG.
+- **Viewer per CSV scarti import** (`/import/<pk>/scarti/visualizza/`): stessa UX del viewer
+  PDF, con pulsante "Scarica" che funziona su PWA iOS e Android.
+
 ### v2.0.9
 
 - **Fix PDF su PWA iOS (parte 5 — due tap + navigator.share)**: il blob URL con

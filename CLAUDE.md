@@ -339,20 +339,18 @@ Accessibile solo a CRP, Incaricati EG e Admin — non al Capo Squadriglia.
 - **Progress bar**: il task chiama `self.update_state(state="PROGRESS", meta={progresso, completati, totale})`
   ad ogni diario; il task_id è salvato in Redis `pdf_massivo_task_id:{edizione_pk}`. Endpoint polling:
   `GET /impostazioni/task-progresso/<task_id>/` → JSON. JS nella pagina cache-pdf fa polling ogni 2s.
-- **Link al PDF**: usare sempre `target="_blank" rel="noopener" data-pdf-link
-  data-pdf-apri-url="{% url 'diaries:pdf_apri' pk %}"`, **mai** l'attributo `download` sull'
-  anchor HTML originale. Il backend imposta già `Content-Disposition: attachment` (basta su
-  desktop/Android). Su iOS, in modalità standalone (PWA installata), la WebView non ha la
-  toolbar di Safari: WebKit intercetta qualsiasi navigazione verso un PDF — URL diretto,
-  blob URL, redirect — con Quick Look, che in standalone non ha Share né "Apri in" Acrobat.
-  L'unica via d'uscita è `navigator.share({ files })`, che mostra il foglio Share nativo, ma
-  deve essere chiamato durante una user gesture (dopo `fetch()` il contesto è scaduto).
-  Il fix è **`static/js/plancia-pdf-ios.js`**: **approccio a due tap** — **1° tap** avvia
-  `fetch` in background, il bottone diventa verde quando il PDF è in memoria;
-  **2° tap** (nuova user gesture) chiama `navigator.share({ files: [file] })` → foglio Share
-  nativo con "Apri in Acrobat Reader", "Salva su File" ecc. Se il PDF non è ancora pronto
-  (Content-Type non PDF) naviga normalmente. Fallback iOS < 15: `window.location.href`.
-  Su tutte le altre piattaforme lo script non interviene.
+- **Link al PDF**: i link puntano a `{% url 'diaries:pdf_viewer' pk %}` (non direttamente
+  a `diaries:pdf`). Il viewer è una pagina dedicata (`templates/shared/file_viewer.html`)
+  che fa il `fetch()` del file al caricamento e mostra un pulsante "Scarica". Su iOS PWA
+  standalone usa `navigator.share({ files })` (un solo tap, nessun Quick Look); su
+  Android e desktop carica il blob in un `<iframe>` e usa `<a download>`. Lo script è
+  **`static/js/plancia-file-viewer.js`** (caricato solo nella pagina viewer, non globalmente).
+  Se il PDF non è ancora pronto (Content-Type non PDF) naviga normalmente verso la view del
+  diario che mostrerà il messaggio di stato.
+- **Excel esiti**: `EsitiExcelView` in `apps/editions/views.py` genera l'XLSX al volo da
+  `genera_excel_edizione()` e lo serve via HTTP. URL `editions:excel` e viewer
+  `editions:excel_viewer`. Bottone "Esiti Excel" nella toolbar di `editions/detail.html`
+  (visibile a chi può gestire l'edizione).
 
 ## Allegati
 

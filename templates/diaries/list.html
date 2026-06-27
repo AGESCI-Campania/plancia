@@ -152,12 +152,10 @@
               {% bs_icon "folder2-open" size="14" %}
             </a>
             {% if d.stato == 'inviato' or d.stato == 'in_valutazione' or d.stato == 'in_revisione' or d.stato == 'approvato' or d.stato == 'non_approvato' or d.stato == 'maggiori_info' %}
-              <a href="{% url 'diaries:pdf' d.pk %}"
+              <a href="{% url 'diaries:pdf_viewer' d.pk %}"
                  class="btn btn-sm btn-outline-secondary ms-1"
                  title="Scarica PDF"
                  data-bs-toggle="tooltip"
-                 target="_blank" rel="noopener" data-pdf-link
-                 data-pdf-apri-url="{% url 'diaries:pdf_apri' d.pk %}"
                  onclick="event.stopPropagation()">
                 {% bs_icon "file-earmark-pdf" size="14" %}
               </a>

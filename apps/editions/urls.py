@@ -8,6 +8,8 @@ from apps.editions.views import (
     EdizioneDetailView,
     EdizioneListView,
     EdizioneUpdateView,
+    EsitiExcelView,
+    EsitiExcelViewerView,
 )
 
 app_name = "editions"
@@ -19,4 +21,6 @@ urlpatterns = [
     path("<int:pk>/modifica/", EdizioneUpdateView.as_view(), name="update"),
     path("<int:pk>/stato/<str:azione>/", EdizioneCambioStatoView.as_view(), name="stato"),
     path("dilazione/<int:pk>/", DilazioneCreateView.as_view(), name="dilazione"),
+    path("<int:pk>/excel/", EsitiExcelView.as_view(), name="excel"),
+    path("<int:pk>/excel/visualizza/", EsitiExcelViewerView.as_view(), name="excel_viewer"),
 ]

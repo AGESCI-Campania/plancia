@@ -730,25 +730,41 @@ class DiarioPdfView(DiarioAccessMixin, View):
         return redirect("diaries:detail", pk=pk)
 
 
-class DiarioPdfApriView(DiarioAccessMixin, View):
-    """GET /diari/<pk>/pdf/apri/ — pagina HTML intermedia che reindirizza al PDF.
-
-    Serve solo alla PWA iOS standalone (vedi plancia-pdf-ios.js): un link verso il
-    PDF, anche con target="_blank", viene intercettato dall'anteprima Quick Look di
-    WebKit restando dentro la WebView dell'app, senza toolbar. Una pagina HTML (non
-    previewable) forza invece la delega della navigazione al browser di sistema
-    (Safari): il redirect lato client che segue apre quindi il PDF dentro Safari,
-    con la toolbar nativa completa — incluso "Apri in" Acrobat e altri lettori PDF.
-    """
+class DiarioPdfViewerView(DiarioAccessMixin, View):
+    """GET /diari/<pk>/pdf/visualizza/ — pagina viewer PWA-friendly per il PDF del diario."""
 
     def get(self, request, pk):
+        from urllib.parse import urlparse
+
         from django.shortcuts import render
+        from django.urls import reverse
 
         diario = self._get_diario(pk)
         if request.user.ruolo == Ruolo.CSQ:
             messages.error(request, "Il PDF del diario non è disponibile per il Capo Squadriglia.")
             return redirect("diaries:detail", pk=pk)
-        return render(request, "diaries/pdf_apri.html", {"diario": diario})
+
+        nome = f"Diario_{diario.squadriglia.nome}_{diario.edizione.anno}.pdf"
+        referer = request.META.get("HTTP_REFERER", "")
+        back_url = reverse("diaries:detail", args=[pk])
+        if referer:
+            parsed = urlparse(referer)
+            if parsed.path:
+                back_url = parsed.path + (("?" + parsed.query) if parsed.query else "")
+
+        return render(request, "shared/file_viewer.html", {
+            "file_url": reverse("diaries:pdf", args=[pk]),
+            "file_filename": nome,
+            "file_mime": "application/pdf",
+            "back_url": back_url,
+            "page_title": f"PDF — {diario.squadriglia.nome}",
+            "breadcrumb_items": [
+                {"label": "Home", "url": "/"},
+                {"label": "Diari", "url": reverse("diaries:list")},
+                {"label": str(diario.squadriglia), "url": reverse("diaries:detail", args=[pk])},
+                {"label": "PDF", "url": None},
+            ],
+        })
 
 
 class AllegatoPreviewView(DiarioAccessMixin, View):

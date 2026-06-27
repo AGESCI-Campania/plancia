@@ -76,6 +76,40 @@ class ScartiCsvView(RuoloRequiredMixin, View):
         return response
 
 
+class ScartiCsvViewerView(RuoloRequiredMixin, View):
+    """GET /imports/<pk>/scarti/visualizza/ — pagina viewer PWA-friendly per il CSV scarti."""
+
+    ruoli_ammessi = _STAFF
+
+    def get(self, request, pk):
+        from urllib.parse import urlparse
+
+        from django.shortcuts import render
+        from django.urls import reverse
+
+        log = get_object_or_404(LogImportazione, pk=pk)
+        referer = request.META.get("HTTP_REFERER", "")
+        back_url = reverse("imports:log_detail", args=[pk])
+        if referer:
+            parsed = urlparse(referer)
+            if parsed.path:
+                back_url = parsed.path + (("?" + parsed.query) if parsed.query else "")
+
+        return render(request, "shared/file_viewer.html", {
+            "file_url": reverse("imports:scarti_csv", args=[pk]),
+            "file_filename": f"scarti_import_{pk}.csv",
+            "file_mime": "text/csv",
+            "back_url": back_url,
+            "page_title": f"Scarti import #{pk}",
+            "breadcrumb_items": [
+                {"label": "Home", "url": "/"},
+                {"label": "Import", "url": reverse("imports:log_list")},
+                {"label": f"Import #{pk}", "url": reverse("imports:log_detail", args=[pk])},
+                {"label": "Scarti CSV", "url": None},
+            ],
+        })
+
+
 class RiconciliaRigaView(RuoloRequiredMixin, View):
     """Associa manualmente una RigaImportazione(da_riconciliare) al Socio(capo) corretto."""
 

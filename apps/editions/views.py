@@ -2,8 +2,9 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Count
-from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse_lazy
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse, reverse_lazy
 from django.views.generic import CreateView, DetailView, ListView, TemplateView, UpdateView, View
 
 from apps.accounts.mixins import StaffPlanciaRequiredMixin
@@ -165,6 +166,53 @@ class EdizioneCambioStatoView(StaffPlanciaRequiredMixin, View):
         except ValueError as exc:
             messages.error(request, str(exc))
         return redirect("editions:detail", pk=pk)
+
+
+class EsitiExcelView(StaffPlanciaRequiredMixin, View):
+    """GET /edizioni/<pk>/excel/ — scarica l'Excel degli esiti per l'edizione."""
+
+    def get(self, request, pk):
+        from apps.exports.service import genera_excel_edizione
+
+        edizione = get_object_or_404(Edizione, pk=pk)
+        excel = genera_excel_edizione(edizione)
+        nome = f"Esiti_GV_{edizione.anno}.xlsx"
+        response = HttpResponse(
+            excel,
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        response["Content-Disposition"] = f'attachment; filename="{nome}"'
+        response["Content-Length"] = len(excel)
+        return response
+
+
+class EsitiExcelViewerView(StaffPlanciaRequiredMixin, View):
+    """GET /edizioni/<pk>/excel/visualizza/ — pagina viewer PWA-friendly per l'Excel esiti."""
+
+    def get(self, request, pk):
+        from urllib.parse import urlparse
+
+        edizione = get_object_or_404(Edizione, pk=pk)
+        referer = request.META.get("HTTP_REFERER", "")
+        back_url = reverse("editions:detail", args=[pk])
+        if referer:
+            parsed = urlparse(referer)
+            if parsed.path:
+                back_url = parsed.path + (("?" + parsed.query) if parsed.query else "")
+
+        return render(request, "shared/file_viewer.html", {
+            "file_url": reverse("editions:excel", args=[pk]),
+            "file_filename": f"Esiti_GV_{edizione.anno}.xlsx",
+            "file_mime": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "back_url": back_url,
+            "page_title": f"Excel — {edizione}",
+            "breadcrumb_items": [
+                {"label": "Home", "url": "/"},
+                {"label": "Edizioni", "url": reverse("editions:list")},
+                {"label": str(edizione), "url": reverse("editions:detail", args=[pk])},
+                {"label": "Excel esiti", "url": None},
+            ],
+        })
 
 
 class DilazioneCreateView(StaffPlanciaRequiredMixin, View):

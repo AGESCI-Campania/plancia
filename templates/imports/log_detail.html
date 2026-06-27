@@ -136,7 +136,7 @@
           Righe scartate
           <span class="badge bg-danger ms-1">{{ righe_scartate.count }}</span>
         </h2>
-        <a href="{% url 'imports:scarti_csv' log.pk %}" class="btn btn-outline-secondary btn-sm ms-auto">
+        <a href="{% url 'imports:scarti_viewer' log.pk %}" class="btn btn-outline-secondary btn-sm ms-auto">
           {% bs_icon "download" size="14" extra_classes="me-1" %} Scarica CSV
         </a>
       </div>
