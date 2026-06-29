@@ -10,6 +10,7 @@ from apps.editions.views import (
     EdizioneUpdateView,
     EsitiExcelView,
     EsitiExcelViewerView,
+    ExportDiariView,
 )
 
 app_name = "editions"
@@ -23,4 +24,5 @@ urlpatterns = [
     path("dilazione/<int:pk>/", DilazioneCreateView.as_view(), name="dilazione"),
     path("<int:pk>/excel/", EsitiExcelView.as_view(), name="excel"),
     path("<int:pk>/excel/visualizza/", EsitiExcelViewerView.as_view(), name="excel_viewer"),
+    path("<int:pk>/export-diari/", ExportDiariView.as_view(), name="export_diari"),
 ]

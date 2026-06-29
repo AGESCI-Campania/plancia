@@ -98,27 +98,8 @@ class DiarioListView(LoginRequiredMixin, ListView):
     context_object_name = "diari"
 
     def get_queryset(self):
-        user = self.request.user
-        qs = Diario.objects.select_related(
-            "edizione",
-            "squadriglia__reparto__gruppo__zona",
-            "csq", "crp", "anagrafica",
-        )
-        if user.is_superuser or user.is_staff_plancia:
-            return qs
-        if user.ruolo == Ruolo.CSQ and user.socio:
-            return qs.filter(csq=user.socio)
-        if user.ruolo == Ruolo.CRP and user.socio:
-            return qs.filter(crp=user.socio)
-        if user.ruolo == Ruolo.PGV:
-            # PGV vede solo i diari a lui assegnati tramite AssegnazionePGV
-            from apps.evaluations.models import AssegnazionePGV
-
-            assegnati = AssegnazionePGV.objects.filter(pgv=user).values_list(
-                "valutazione__diario_id", flat=True
-            )
-            return qs.filter(pk__in=assegnati)
-        return qs.none()
+        from apps.diaries.visibility import diari_visibili
+        return diari_visibili(self.request.user)
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -546,25 +527,30 @@ class DiarioInviaView(DiarioAccessMixin, View):
     """
 
     def post(self, request, pk):
+        from apps.evaluations.actions import (
+            AzioneNonConsentita,
+            PermessoNegato,
+            csq_invia,
+        )
+        from apps.evaluations.actions import (
+            invia as action_invia,
+        )
         diario = self._get_diario(pk)
-        user = request.user
         try:
             if diario.stato == StatoDiario.IN_COMPILAZIONE:
-                if user.ruolo != Ruolo.CSQ and not user.is_superuser and not user.is_staff_plancia:
-                    raise PermissionDenied
-                diario.csq_invia()
+                csq_invia(diario, request.user)
                 messages.success(
                     request,
                     "Parte del Capo Squadriglia inviata. Il Capo Reparto può ora compilare la relazione finale.",
                 )
             elif diario.stato == StatoDiario.RELAZIONE_FINALE:
-                if user.ruolo != Ruolo.CRP and not user.is_superuser and not user.is_staff_plancia:
-                    raise PermissionDenied
-                diario.invia()
+                action_invia(diario, request.user)
                 messages.success(request, "Diario inviato allo staff.")
             else:
                 messages.error(request, "Invio non consentito nello stato attuale.")
-        except ValueError as exc:
+        except PermessoNegato:
+            raise PermissionDenied from None
+        except AzioneNonConsentita as exc:
             messages.error(request, str(exc))
         return redirect("diaries:detail", pk=pk)
 
@@ -573,13 +559,14 @@ class DiarioRiapriView(DiarioAccessMixin, View):
     """NON_APPROVATO / MAGGIORI_INFO → IN_COMPILAZIONE (staff only)."""
 
     def post(self, request, pk):
+        from apps.evaluations.actions import AzioneNonConsentita, PermessoNegato, riapri
         diario = self._get_diario(pk)
-        if not request.user.is_staff_plancia and not request.user.is_superuser:
-            raise PermissionDenied
         try:
-            diario.riapri()
+            riapri(diario, request.user)
             messages.success(request, "Diario riaperto per integrazioni.")
-        except ValueError as exc:
+        except PermessoNegato:
+            raise PermissionDenied from None
+        except AzioneNonConsentita as exc:
             messages.error(request, str(exc))
         return redirect("diaries:detail", pk=pk)
 

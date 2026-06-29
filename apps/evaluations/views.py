@@ -11,13 +11,20 @@ from django.views.generic import DetailView
 
 from apps.accounts.mixins import RuoloRequiredMixin
 from apps.accounts.models import Ruolo
-from apps.diaries.models import Diario, StatoDiario
-from apps.evaluations.models import AssegnazionePGV, EsitoValutazione, Valutazione
-
-
-def _get_valutazione_or_create(diario) -> Valutazione:
-    val, _ = Valutazione.objects.get_or_create(diario=diario)
-    return val
+from apps.diaries.models import Diario
+from apps.evaluations.actions import (
+    AzioneNonConsentita,
+    PermessoNegato,
+    assegna_pgv,
+    conferma_proposta,
+    modifica_valutazione,
+    proponi_pgv,
+    pubblica_esito,
+    pubblica_tutti,
+    rigetta_proposta,
+    valuta_direttamente,
+)
+from apps.evaluations.models import EsitoValutazione, Valutazione
 
 
 class ValutazioneDetailView(LoginRequiredMixin, DetailView):
@@ -30,13 +37,11 @@ class ValutazioneDetailView(LoginRequiredMixin, DetailView):
     def get_object(self, queryset=None):
         diario = get_object_or_404(Diario, pk=self.kwargs["diario_pk"])
         ruolo = self.request.user.ruolo
-        if ruolo in (Ruolo.CSQ, Ruolo.CRP):
-            if not diario.pubblicato_at:
-                raise PermissionDenied
-        val = _get_valutazione_or_create(diario)
-        if ruolo == Ruolo.PGV:
-            if not val.assegnazioni_pgv.filter(pgv=self.request.user).exists():
-                raise PermissionDenied
+        if ruolo in (Ruolo.CSQ, Ruolo.CRP) and not diario.pubblicato_at:
+            raise PermissionDenied
+        val, _ = Valutazione.objects.get_or_create(diario=diario)
+        if ruolo == Ruolo.PGV and not val.assegnazioni_pgv.filter(pgv=self.request.user).exists():
+            raise PermissionDenied
         return val
 
     def get_context_data(self, **kwargs):
@@ -68,10 +73,11 @@ class AssegnaPGVView(RuoloRequiredMixin, View):
 
         from apps.accounts.models import User
         pgv = get_object_or_404(User, pk=pgv_pk, ruolo=Ruolo.PGV)
-        val = _get_valutazione_or_create(diario)
-        _, created = AssegnazionePGV.objects.get_or_create(
-            valutazione=val, pgv=pgv, defaults={"assegnato_da": request.user}
-        )
+        try:
+            created, _ = assegna_pgv(diario, pgv, request.user)
+        except AzioneNonConsentita as e:
+            messages.error(request, str(e))
+            return redirect("evaluations:detail", diario_pk=diario.pk)
         if created:
             messages.success(request, f"Diario assegnato a {pgv.get_full_name() or pgv.email}.")
         else:
@@ -86,22 +92,13 @@ class ValutaDirettamenteView(RuoloRequiredMixin, View):
 
     def post(self, request, diario_pk):
         diario = get_object_or_404(Diario, pk=diario_pk)
-        if diario.stato not in (StatoDiario.INVIATO, StatoDiario.IN_VALUTAZIONE, StatoDiario.IN_REVISIONE):
-            messages.error(request, "Il diario non è in stato valutabile.")
-            return redirect("evaluations:detail", diario_pk=diario.pk)
-
-        if diario.stato == StatoDiario.INVIATO:
-            diario.avvia_valutazione()
-
-        esito = request.POST.get("esito")
+        esito = request.POST.get("esito", "")
         note = request.POST.get("note", "")
-        if esito not in EsitoValutazione.values:
-            messages.error(request, "Esito non valido.")
-            return redirect("evaluations:detail", diario_pk=diario.pk)
-
-        val = _get_valutazione_or_create(diario)
-        val.valuta_direttamente(request.user, esito, note)
-        messages.success(request, "Valutazione registrata.")
+        try:
+            valuta_direttamente(diario, esito, note, request.user)
+            messages.success(request, "Valutazione registrata.")
+        except AzioneNonConsentita as e:
+            messages.error(request, str(e))
         return redirect("evaluations:detail", diario_pk=diario.pk)
 
 
@@ -112,25 +109,15 @@ class PropostaValutazioneView(RuoloRequiredMixin, View):
 
     def post(self, request, diario_pk):
         diario = get_object_or_404(Diario, pk=diario_pk)
-        try:
-            val_check = diario.valutazione
-        except Valutazione.DoesNotExist:
-            raise PermissionDenied
-        if not val_check.assegnazioni_pgv.filter(pgv=request.user).exists():
-            raise PermissionDenied
-
-        esito = request.POST.get("esito")
+        esito = request.POST.get("esito", "")
         note = request.POST.get("note", "")
-        if esito == EsitoValutazione.MAGGIORI_INFO:
-            messages.error(request, "Maggiori informazioni non può essere proposto da un PGV.")
-            return redirect("evaluations:detail", diario_pk=diario.pk)
-        if esito not in EsitoValutazione.values:
-            messages.error(request, "Esito non valido.")
-            return redirect("evaluations:detail", diario_pk=diario.pk)
-
-        val = _get_valutazione_or_create(diario)
-        val.proponi_pgv(request.user, esito, note)
-        messages.success(request, "Proposta registrata. In attesa di conferma dall'Incaricato.")
+        try:
+            proponi_pgv(diario, esito, note, request.user)
+            messages.success(request, "Proposta registrata. In attesa di conferma dall'Incaricato.")
+        except PermessoNegato:
+            raise PermissionDenied from None
+        except AzioneNonConsentita as e:
+            messages.error(request, str(e))
         return redirect("evaluations:detail", diario_pk=diario.pk)
 
 
@@ -141,12 +128,11 @@ class ConfermaPropostaView(RuoloRequiredMixin, View):
 
     def post(self, request, diario_pk):
         diario = get_object_or_404(Diario, pk=diario_pk)
-        val = get_object_or_404(Valutazione, diario=diario)
         note = request.POST.get("note", "")
         try:
-            val.conferma(request.user, note)
+            conferma_proposta(diario, note, request.user)
             messages.success(request, "Proposta confermata.")
-        except ValueError as e:
+        except AzioneNonConsentita as e:
             messages.error(request, str(e))
         return redirect("evaluations:detail", diario_pk=diario.pk)
 
@@ -158,11 +144,10 @@ class RigettaPropostaView(RuoloRequiredMixin, View):
 
     def post(self, request, diario_pk):
         diario = get_object_or_404(Diario, pk=diario_pk)
-        val = get_object_or_404(Valutazione, diario=diario)
         try:
-            val.rigetta_proposta(request.user)
+            rigetta_proposta(diario, request.user)
             messages.success(request, "Proposta rigettata. Il diario torna in valutazione.")
-        except ValueError as e:
+        except AzioneNonConsentita as e:
             messages.error(request, str(e))
         return redirect("evaluations:detail", diario_pk=diario.pk)
 
@@ -174,13 +159,12 @@ class ModificaValutazioneView(RuoloRequiredMixin, View):
 
     def post(self, request, diario_pk):
         diario = get_object_or_404(Diario, pk=diario_pk)
-        val = get_object_or_404(Valutazione, diario=diario)
-        esito = request.POST.get("esito")
+        esito = request.POST.get("esito", "")
         note = request.POST.get("note", "")
         try:
-            val.modifica(request.user, esito, note)
+            modifica_valutazione(diario, esito, note, request.user)
             messages.success(request, "Valutazione aggiornata.")
-        except ValueError as e:
+        except AzioneNonConsentita as e:
             messages.error(request, str(e))
         return redirect("evaluations:detail", diario_pk=diario.pk)
 
@@ -192,14 +176,11 @@ class PubblicaEsitoView(RuoloRequiredMixin, View):
 
     def post(self, request, diario_pk):
         diario = get_object_or_404(Diario, pk=diario_pk)
-        val = get_object_or_404(Valutazione, diario=diario)
-        if not val.esito:
-            messages.error(request, "Nessun esito da pubblicare.")
-            return redirect("evaluations:detail", diario_pk=diario.pk)
-        from django.utils import timezone
-        diario.pubblicato_at = timezone.now()
-        diario.save(update_fields=["pubblicato_at"])
-        messages.success(request, "Esito pubblicato.")
+        try:
+            pubblica_esito(diario, request.user)
+            messages.success(request, "Esito pubblicato.")
+        except AzioneNonConsentita as e:
+            messages.error(request, str(e))
         return redirect("evaluations:detail", diario_pk=diario.pk)
 
 
@@ -209,28 +190,13 @@ class PubblicaEsitiEdizioneView(RuoloRequiredMixin, View):
     ruoli_ammessi = (Ruolo.INCARICATO_EG, Ruolo.ADMIN)
 
     def post(self, request, edizione_pk):
-        from django.utils import timezone
-
         from apps.editions.models import Edizione
-        from apps.evaluations.models import StatoValutazione
 
         edizione = get_object_or_404(Edizione, pk=edizione_pk)
-        scadenza = request.POST.get("scadenza")
-
-        qs = edizione.diari.filter(
-            pubblicato_at__isnull=True,
-            valutazione__stato=StatoValutazione.CONFERMATA,
-            valutazione__esito__isnull=False,
-        )
-        if scadenza:
-            qs = qs.filter(scadenza_riferimento=scadenza)
-
-        count = 0
-        ts = timezone.now()
-        for diario in qs.select_related("valutazione"):
-            diario.pubblicato_at = ts
-            diario.save(update_fields=["pubblicato_at"])
-            count += 1
-
-        messages.success(request, f"Pubblicati {count} esiti.")
+        scadenza = request.POST.get("scadenza") or None
+        try:
+            count = pubblica_tutti(edizione, request.user, scadenza)
+            messages.success(request, f"Pubblicati {count} esiti.")
+        except AzioneNonConsentita as e:
+            messages.error(request, str(e))
         return redirect("editions:detail", pk=edizione.pk)

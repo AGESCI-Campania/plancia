@@ -7,9 +7,11 @@ from django.urls import reverse
 
 from apps.accounts.adapters import ruolo_richiede_mfa
 
-# URL con prefisso esclusi dall'enforcement: MFA setup, login/logout, assets.
+# URL con prefisso esclusi dall'enforcement: MFA setup, login/logout, assets, API.
 _PERCORSI_ESCLUSI = (
     "/accounts/",   # login, logout, password, MFA setup
+    "/_allauth/",   # allauth headless API
+    "/api/v1/",     # REST API (auth via X-Session-Token, non redirect)
     "/static/",
     "/media/",
     "/favicon.ico",

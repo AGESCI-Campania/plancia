@@ -277,12 +277,11 @@ def task_genera_pdf_massivo(self, edizione_pk: int, utente_pk: int | None = None
     conn = get_connection_per_tipo("standard")
 
     def _mail(subject: str, body: str, to: list[str]) -> None:
-        try:
+        import contextlib
+        with contextlib.suppress(Exception):
             EmailMultiAlternatives(
                 subject=subject, body=body, from_email=imp.from_email_completo, to=to, connection=conn,
             ).send()
-        except Exception:
-            pass
 
     # --- stati dei diari da includere (inviati o oltre) ----------------------
     from apps.diaries.models import Diario, StatoDiario
@@ -424,3 +423,45 @@ def task_genera_pdf_massivo(self, edizione_pk: int, utente_pk: int | None = None
     )
 
     return {"ok": True, "totale": totale, "completati": len(completati), "errori": len(errori)}
+
+
+@shared_task
+def task_export_diari(edizione_pk: int, utente_pk: int, formato: str) -> dict:
+    """Genera l'export riassuntivo dei diari e lo invia via email come allegato."""
+    try:
+        from django.core.mail import EmailMultiAlternatives
+
+        from apps.accounts.models import User
+        from apps.diaries.models import Diario
+        from apps.editions.models import Edizione
+        from apps.exports.service import genera_export_diari
+        from apps.siteconfig.email_backends import get_connection_per_tipo
+        from apps.siteconfig.models import Impostazioni
+
+        edizione = Edizione.objects.get(pk=edizione_pk)
+        utente = User.objects.get(pk=utente_pk)
+        imp = Impostazioni.get()
+
+        qs = Diario.objects.filter(edizione=edizione)
+        contenuto, content_type, filename = genera_export_diari(qs, utente, formato)
+
+        anno = edizione.anno
+        filename = f"Export_diari_{anno}.{formato}"
+
+        msg = EmailMultiAlternatives(
+            subject=f"[Plancia] Export diari {anno} pronto",
+            body=(
+                f"Ciao {utente.first_name or utente.email},\n\n"
+                f"L'export riassuntivo dei diari per l'edizione {edizione} è allegato a questa email.\n\n"
+                f"Formato: {formato.upper()}"
+            ),
+            from_email=imp.from_email_completo,
+            to=[utente.email],
+            connection=get_connection_per_tipo("standard"),
+        )
+        msg.attach(filename, contenuto, content_type.split(";")[0].strip())
+        msg.send()
+        return {"ok": True, "size": len(contenuto)}
+    except Exception as exc:
+        import traceback as tb_module
+        return {"ok": False, "error": str(exc), "traceback": tb_module.format_exc()}

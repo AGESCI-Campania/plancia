@@ -4,6 +4,7 @@ from django.contrib import admin
 from django.urls import include, path
 
 from apps.accounts.views import PlanciaAuthenticateView, PlanciaPasswordChangeView
+from apps.api.api import api
 from apps.editions.views import HomeView
 from apps.notifications.webhooks import AnymailWebhookDispatchView
 from apps.siteconfig.views import FlowerProxyView, MailpitProxyView, PaginaStaticaPublicView
@@ -20,6 +21,7 @@ urlpatterns = [
     path("accounts/2fa/authenticate/", PlanciaAuthenticateView.as_view(), name="mfa_authenticate"),
     path("accounts/password/change/", PlanciaPasswordChangeView.as_view(), name="account_change_password"),
     path("accounts/", include("allauth.urls")),
+    path("_allauth/", include("allauth.headless.urls")),
     path("utenti/", include("apps.accounts.urls", namespace="accounts")),
     path("", include("pwa.urls")),
     path("hijack/", include("hijack.urls")),
@@ -31,6 +33,7 @@ urlpatterns = [
     path("impostazioni/", include("apps.siteconfig.urls", namespace="siteconfig")),
     path("import/", include("apps.imports.urls", namespace="imports")),
     path("stats/", include("apps.stats.urls", namespace="stats")),
+    path("api/v1/", api.urls),
     path("api/soci/", include("apps.org.urls")),
     path("api/diari/", include("apps.diaries.api_urls")),
     path("drive/", include("apps.storage_drive.urls", namespace="storage_drive")),

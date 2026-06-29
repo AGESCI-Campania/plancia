@@ -18,7 +18,10 @@ documento prevale su questo file.
 ## Stack
 - Python **≥ 3.14**, Django **≥ 6.0**. PostgreSQL **≥ 17**. Redis + **Celery** per job asincroni.
 - **uv** per dipendenze/venv. **Bootstrap 5** via **`django-agesci-campania-theme` 2.2.1**.
-  Icone SVG inline con **`django-bootstrap-icons`**. **WeasyPrint** (PDF), **openpyxl** (Excel).
+  Icone SVG inline con **`django-bootstrap-icons`**. **WeasyPrint** (PDF), **openpyxl** (Excel),
+  **odfpy** (export ODS).
+- **REST API**: **django-ninja 1.6.2** (OpenAPI automatico, type-driven), **django-cors-headers**
+  (CORS per app mobile), **allauth headless** (auth app-mode con `X-Session-Token`).
 - Auth: **django-allauth** (email + social Google/Microsoft/Apple, **MFA**), **django-guardian**
   (object-level), **django-axes** (brute-force).
 - Social login (guida: `docs/guide/social_auth.md`). Drive OAuth (guida: `docs/guide/google_drive_oauth.md`).
@@ -30,9 +33,10 @@ documento prevale su questo file.
 config/         # settings/base|dev|prod, urls, celery
 apps/           # accounts org editions diaries evaluations notifications
                 # storage_drive exports helpdesk stats siteconfig imports
+                # api (REST: auth, permissions, schemas/, routers/)
 deploy/         # Dockerfile, nginx, entrypoint.sh, backup.sh
 fixtures/       # CSV sintetici (NIENTE dati reali)
-docs/           # specifica di progetto
+docs/           # specifica di progetto; docs/api/ (REST API)
 ```
 `AUTH_USER_MODEL = "accounts.User"` — non modificabile dopo la prima migrazione.
 
@@ -55,7 +59,7 @@ uv run mypy .
 | `diaries` | `Diario` (FSM 8 stati), moduli 1–6, `Allegato` |
 | `notifications` | `MailTemplate`, `Invito`, `TipoInvito`, `DeliveryStatus` |
 | `evaluations` | `Valutazione`, `AssegnazionePGV` |
-| `exports` | PDF WeasyPrint + Excel openpyxl, tasks Celery |
+| `exports` | PDF WeasyPrint + Excel openpyxl + ODS/CSV riassuntivo diari, tasks Celery |
 | `storage_drive` | `DriveCredenziali`, `DriveFile`, service `carica_file/crea_cartella` |
 | `siteconfig` | `Impostazioni` (singleton), `FooterLink`, `GmailSMTPCredenziali`, `PaginaStatica` |
 | `imports` | `LogImportazione`, `RigaImportazione`, commands `import_coca/ragazzi/squadriglie/risposte_eg` |
@@ -65,6 +69,15 @@ uv run mypy .
 Autocomplete Socio: `GET /api/soci/?q=&categoria=` (Tom Select 2). URL montati in `config/urls.py`.
 Context processor `impostazioni` inietta `Impostazioni` (singleton) in ogni template — usare
 `{{ impostazioni.titolo }}` senza passarlo esplicitamente nelle viste.
+
+**REST API** (`apps/api/`):
+- `api.py` — istanza `NinjaAPI`, montaggi router
+- `auth.py` — `PlanciaAuth`: legge `X-Session-Token` (allauth headless app-mode) o cookie sessione
+- `permissions.py` — `is_staff_plancia`, `puo_vedere_diario`, `puo_editare_diario`, `puo_editare_relazione_finale`, `puo_vedere_valutazione`
+- `schemas/` — Pydantic schemas per ogni dominio (`diaries.py`, `evaluations.py`, …)
+- `routers/` — un modulo per gruppo (`me`, `editions`, `org`, `diaries`, `evaluations`)
+
+Documentazione API: `docs/api/overview.md` (auth, ruoli, errori) · `docs/api/endpoints.md` (riferimento completo).
 
 ## Gotchas e trappole
 
@@ -179,6 +192,36 @@ View già aggiornate: `EdizioneDetailView`, `EdizioneListView`, `HomeView`, `Dia
   `diario.avvia_valutazione()` automaticamente — non serve più che l'edizione transiti prima.
   Se c'è una proposta PGV `IN_REVISIONE`, l'Incaricato può comunque sovrascriverla con
   `valuta_direttamente()`. Test in `apps/evaluations/tests/test_flussi.py`.
+
+### Azioni FSM e valutazione — `apps/evaluations/actions.py`
+
+**Unica fonte di verità** per logica di dominio e permessi su transizioni FSM e valutazione.
+Usata sia dalle view web sia dai router API. Tre eccezioni:
+
+- `AzioneNonConsentita(ValueError)` — base, catturata dalle view web
+- `PermessoNegato(AzioneNonConsentita)` → view web: `raise PermissionDenied from None`; API: 403
+- `StatoNonValido(AzioneNonConsentita)` → view web: `messages.error`; API: 422
+
+Funzioni esposte: `csq_invia`, `invia`, `riapri`, `assegna_pgv`, `valuta_direttamente`,
+`proponi_pgv`, `conferma_proposta`, `rigetta_proposta`, `modifica_valutazione`, `pubblica_esito`,
+`pubblica_tutti`.
+
+**Non** replicare controlli di permesso nelle view web per queste azioni — `RuoloRequiredMixin`
+fa il check grossolano (ruolo ammesso?), `actions.py` fa il check fine-grained (es. "è il CSQ
+*di questo* diario?").
+
+### Visibilità diari — `apps/diaries/visibility.py`
+
+`diari_visibili(user) -> QuerySet[Diario]` — unica fonte di verità per filtrare i diari
+accessibili per ruolo. Usata da `DiarioListView.get_queryset()` e dal router API `/diari`.
+Non duplicare questa logica nelle view.
+
+### Middleware — bypass per API e allauth headless
+
+`MFAEnforcementMiddleware` (`apps/accounts/middleware.py`) e `MaintenanceModeMiddleware`
+(`apps/siteconfig/middleware.py`) **bypassano** i path `/api/v1/` e `/_allauth/`.
+Il middleware manutenzione risponde con JSON `{"detail": "...", "maintenance": true}` (non HTML)
+su path API. Non aggiungere redirect HTML su path `/api/v1/`.
 
 ### Drive e OAuth
 - **PKCE obbligatorio** (da ottobre 2024): `DriveOAuthInitView` genera `code_verifier/challenge`,
@@ -347,10 +390,17 @@ Accessibile solo a CRP, Incaricati EG e Admin — non al Capo Squadriglia.
   **`static/js/plancia-file-viewer.js`** (caricato solo nella pagina viewer, non globalmente).
   Se il PDF non è ancora pronto (Content-Type non PDF) naviga normalmente verso la view del
   diario che mostrerà il messaggio di stato.
-- **Excel esiti**: `EsitiExcelView` in `apps/editions/views.py` genera l'XLSX al volo da
-  `genera_excel_edizione()` e lo serve via HTTP. URL `editions:excel` e viewer
-  `editions:excel_viewer`. Bottone "Esiti Excel" nella toolbar di `editions/detail.html`
-  (visibile a chi può gestire l'edizione).
+- **Excel esiti** (`editions:excel` / `editions:excel_viewer`): `EsitiExcelView` in
+  `apps/editions/views.py` genera l'XLSX degli esiti dell'edizione al volo da
+  `genera_excel_edizione()`. Bottone "Esiti Excel" nella toolbar di `editions/detail.html`
+  (visibile a chi può gestire l'edizione). Sempre sincrono.
+- **Export riassuntivo diari** (`editions:export_diari`): `ExportDiariView` in
+  `apps/editions/views.py`. URL `GET /edizioni/<pk>/export-diari/?formato=xlsx|ods|csv`.
+  Genera un foglio unico con tutti i moduli (visibilità filtrata per ruolo). Usa
+  `genera_export_diari()` in `apps/exports/service.py`. Async ibrido: CSV sempre sync;
+  xlsx/ods → sync se diari ≤ `EXPORT_DIARI_SOGLIA_ASYNC` (env, default 50), altrimenti
+  task Celery + email. **Non confondere** con l'export Esiti: quello è solo voti/esiti;
+  questo contiene tutto il contenuto dei moduli.
 
 ## Allegati
 
@@ -378,3 +428,7 @@ Accessibile solo a CRP, Incaricati EG e Admin — non al Capo Squadriglia.
 - Non usare `class="footer-agesci mt-auto"` (il footer v2 è gestito interamente dal tema).
 - Non usare `<i class="bi bi-*">`: usare `{% bs_icon %}`.
 - Non usare `mt-5` sul footer: usare `mt-auto`.
+- Non duplicare logica di visibilità diari fuori da `diari_visibili()` (`apps/diaries/visibility.py`).
+- Non duplicare logica di permessi/stato per FSM e valutazione fuori da `apps/evaluations/actions.py`.
+- Non aggiungere redirect HTML su path `/api/v1/` nei middleware — rispondere con JSON o bypass.
+- Non confondere export Esiti (`genera_excel_edizione`) con export Diari (`genera_export_diari`): sono due cose distinte.

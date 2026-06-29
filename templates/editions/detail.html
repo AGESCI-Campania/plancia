@@ -22,6 +22,19 @@
       <a href="{% url 'editions:excel_viewer' edizione.pk %}" class="btn btn-outline-success btn-sm">
         {% bs_icon "file-earmark-excel" size="14" extra_classes="me-1" %}Esiti Excel
       </a>
+      <div class="btn-group">
+        <a href="{% url 'editions:export_diari' edizione.pk %}?formato=xlsx" class="btn btn-outline-secondary btn-sm">
+          {% bs_icon "table" size="14" extra_classes="me-1" %}Esporta diari
+        </a>
+        <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+          <span class="visually-hidden">Formato</span>
+        </button>
+        <ul class="dropdown-menu">
+          <li><a class="dropdown-item" href="{% url 'editions:export_diari' edizione.pk %}?formato=xlsx">Excel (xlsx)</a></li>
+          <li><a class="dropdown-item" href="{% url 'editions:export_diari' edizione.pk %}?formato=ods">Calc (ods)</a></li>
+          <li><a class="dropdown-item" href="{% url 'editions:export_diari' edizione.pk %}?formato=csv">CSV</a></li>
+        </ul>
+      </div>
       {% if edizione.stato == 'bozza' %}
         <form method="post" action="{% url 'editions:stato' edizione.pk 'apri' %}">
           {% csrf_token %}<button class="btn btn-success btn-sm">Apri edizione</button>

@@ -1,5 +1,5 @@
 # apps/diaries/tests/test_visibilita.py
-"""Test delle regole di visibilità (docs sez. 5 — tre livelli: view, queryset)."""
+"""Test delle regole di visibilità (docs sez. 5 — tre livelli: view, queryset, funzione)."""
 import pytest
 from django.utils import timezone
 
@@ -261,3 +261,78 @@ class TestScopingDiari:
         client.force_login(user_csq)
         response = client.get(f"/diari/{altro_diario.pk}/")
         assert response.status_code == 403
+
+
+class TestDiariVisibili:
+    """Test diretti su apps.diaries.visibility.diari_visibili()."""
+
+    def test_staff_vede_tutti(self, db, diario, user_crp):
+        from apps.accounts.models import Ruolo
+        user_crp.ruolo = Ruolo.SEGRETERIA
+        user_crp.save()
+        from apps.diaries.visibility import diari_visibili
+        qs = diari_visibili(user_crp)
+        assert diario in qs
+
+    def test_csq_vede_solo_il_proprio(self, db, diario, user_csq):
+        from apps.diaries.visibility import diari_visibili
+        qs = diari_visibili(user_csq)
+        assert list(qs) == [diario]
+
+    def test_csq_non_vede_diari_altrui(self, db, diario, user_csq, edizione):
+        from apps.org.models import Gruppo, Reparto, Socio, Squadriglia, Zona
+        from apps.diaries.visibility import diari_visibili
+        zona2 = Zona.objects.create(nome="Zona Altra TV")
+        gruppo2 = Gruppo.objects.create(nome="Gruppo Altro TV", zona=zona2)
+        reparto2 = Reparto.objects.create(nome="Reparto Altro TV", gruppo=gruppo2)
+        sq2 = Squadriglia.objects.create(nome="Volpi", reparto=reparto2)
+        csq2 = Socio.objects.create(
+            codice_socio="911001", nome="Altro", cognome="Csq",
+            email="altro_csq@test.it", categoria="ragazzo", zona=zona2, gruppo=gruppo2,
+        )
+        Diario.objects.create(
+            edizione=edizione, squadriglia=sq2, csq=csq2,
+            tipo=TipoDiario.NUOVO, stato=StatoDiario.IN_COMPILAZIONE,
+            scadenza_riferimento=ScadenzaRiferimento.PRIMA,
+        )
+        qs = diari_visibili(user_csq)
+        assert qs.count() == 1
+        assert qs.first().csq == user_csq.socio
+
+    def test_crp_vede_solo_propri_diari(self, db, diario, user_crp):
+        from apps.diaries.visibility import diari_visibili
+        qs = diari_visibili(user_crp)
+        assert diario in qs
+        for d in qs:
+            assert d.crp == user_crp.socio
+
+    def test_filtro_edizione(self, db, diario, user_crp, edizione):
+        from apps.editions.models import Edizione
+        from apps.diaries.visibility import diari_visibili
+        altra_edizione = Edizione.objects.create(anno=2099)
+        qs = diari_visibili(user_crp, edizione=edizione)
+        assert diario in qs
+        assert all(d.edizione_id == edizione.pk for d in qs)
+
+    def test_pgv_vede_solo_assegnati(self, db, diario, user_csq, edizione):
+        from apps.accounts.models import Ruolo, User
+        from apps.evaluations.models import AssegnazionePGV, Valutazione
+        from apps.diaries.visibility import diari_visibili
+
+        pgv = User.objects.create_user(
+            username="pgv_tv", email="pgv_tv@test.it", password="x", ruolo=Ruolo.PGV
+        )
+        val = Valutazione.objects.create(diario=diario)
+        AssegnazionePGV.objects.create(pgv=pgv, valutazione=val)
+
+        qs = diari_visibili(pgv)
+        assert diario in qs
+
+    def test_ruolo_sconosciuto_vede_niente(self, db, diario):
+        from apps.accounts.models import User
+        from apps.diaries.visibility import diari_visibili
+        u = User.objects.create_user(
+            username="nessuno_tv", email="nessuno_tv@test.it", password="x"
+        )
+        qs = diari_visibili(u)
+        assert qs.count() == 0

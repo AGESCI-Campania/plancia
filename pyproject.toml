@@ -1,6 +1,6 @@
 [project]
 name = "plancia"
-version = "2.1.0"
+version = "2.2.0"
 description = "Plancia - Gestione Guidoncini Verdi, AGESCI Campania (Branca E/G)"
 readme = "README.md"
 requires-python = ">=3.14"
@@ -32,6 +32,9 @@ dependencies = [
     "django-bootstrap-icons>=0.9.0",
     "django-anymail>=15.0",
     "flower>=2.0.1",
+    "odfpy>=1.4.1",
+    "django-ninja>=1.6.2",
+    "django-cors-headers>=4.9.0",
 ]
 
 [dependency-groups]

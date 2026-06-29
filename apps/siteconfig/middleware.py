@@ -1,6 +1,11 @@
 # apps/siteconfig/middleware.py
+import json
+
 from django.conf import settings as django_settings
+from django.http import HttpResponse
 from django.shortcuts import render
+
+_API_PREFIXES = ("/api/v1/", "/_allauth/")
 
 
 class AxesSettingsSyncMiddleware:
@@ -35,8 +40,15 @@ class MaintenanceModeMiddleware:
         user = getattr(request, "user", None)
         is_admin = bool(user and user.is_authenticated and user.is_superuser)
         path = request.path_info
-        # lascia passare admin, login e admin-site anche in manutenzione
+        is_api = any(path.startswith(p) for p in _API_PREFIXES)
+        # admin e login bypassano in silenzio; API ricevono 503 JSON invece di HTML
         bypass = is_admin or path.startswith("/admin") or path.startswith("/accounts")
         if imp.manutenzione and not bypass:
+            if is_api:
+                return HttpResponse(
+                    json.dumps({"detail": "Servizio in manutenzione. Riprovare più tardi."}),
+                    content_type="application/json",
+                    status=503,
+                )
             return render(request, "siteconfig/maintenance.html", status=503)
         return self.get_response(request)

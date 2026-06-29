@@ -3,6 +3,7 @@
 [![Python](https://img.shields.io/badge/python-3.14%2B-blue.svg)](https://www.python.org/)
 [![Django](https://img.shields.io/badge/Django-6.0%2B-092E20.svg?logo=django&logoColor=white)](https://www.djangoproject.com/)
 [![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3-7952B3.svg?logo=bootstrap&logoColor=white)](https://getbootstrap.com/)
+[![django-ninja](https://img.shields.io/badge/API-django--ninja-009688.svg)](https://django-ninja.dev/)
 [![uv](https://img.shields.io/badge/packaged%20with-uv-DE5FE9.svg?logo=uv&logoColor=white)](https://github.com/astral-sh/uv)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -17,7 +18,8 @@ pubblicano l'esito; output in PDF ed Excel, file su Google Drive, frontend respo
 ## Stack
 Python ≥ 3.14 · Django ≥ 6.0 · PostgreSQL ≥ 17 · Redis + Celery · django-allauth (MFA, social) ·
 django-guardian · django-axes · django-pwa · Bootstrap 5 · django-agesci-campania-theme 2.2.2 ·
-django-bootstrap-icons · WeasyPrint · openpyxl · Google Drive (OAuth).
+django-bootstrap-icons · WeasyPrint · openpyxl · odfpy · Google Drive (OAuth).  
+**REST API**: django-ninja (OpenAPI/Swagger automatico) · django-cors-headers · allauth headless.  
 **PWA offline-first**: Service Worker · IndexedDB · Background Sync · resize immagini client-side.
 Gestione dipendenze con **uv**; ambiente opzionale con **mise**.
 
@@ -143,16 +145,41 @@ I **static files** (`/static/`) sono serviti direttamente da nginx/Apache dalla 
 `staticfiles/` sull'host (montata in `/app/staticfiles` nel container via volume bind).
 I **media** (upload foto) usano il volume named `plancia_media`.
 
+## REST API
+
+Plancia espone una REST API versionata per il futuro frontend mobile.
+
+- **Base URL**: `/api/v1/`
+- **Schema interattivo (Swagger UI)**: `/api/v1/docs`
+- **Auth**: sessione web (cookie) oppure header `X-Session-Token` (allauth headless app-mode)
+- **Formato**: JSON, OpenAPI 3.0 generato automaticamente da django-ninja
+
+**Endpoint principali:**
+
+| Gruppo | Endpoint | Descrizione |
+|---|---|---|
+| Me | `GET /api/v1/me` | Utente corrente |
+| Edizioni | `GET /api/v1/edizioni[/{pk}]` | Lista/dettaglio edizioni |
+| Org | `GET /api/v1/org/albero` | Albero zone → squadriglie |
+| Diari | `GET /api/v1/diari[/{pk}]` | Lista/dettaglio (filtrata per ruolo) |
+| Diari write | `PUT /api/v1/diari/{pk}/anagrafica|presentazione|imprese/{n}|missione|relazione-finale` | Salvataggio moduli con optimistic locking |
+| FSM | `POST /api/v1/diari/{pk}/azioni/{csq-invia\|invia\|riapri}` | Transizioni di stato |
+| Valutazione | `GET/POST /api/v1/diari/{pk}/valutazione/…` | Azioni di valutazione |
+
+Documentazione completa: [`docs/api/overview.md`](docs/api/overview.md) · [`docs/api/endpoints.md`](docs/api/endpoints.md)
+
+**CORS**: configura `CORS_ALLOWED_ORIGINS` nell'env per abilitare l'accesso da app mobile.
+
 ## Struttura
 ```
 config/      progetto Django (settings split, urls, celery, wsgi/asgi)
 apps/        app di dominio (accounts, org, editions, diaries, evaluations,
              notifications, storage_drive, exports, helpdesk, stats,
-             siteconfig, imports)
+             siteconfig, imports, api)
 deploy/      Dockerfile-related, vhost template, configure-prod.sh, conf nginx, backup.sh
 fixtures/    CSV sintetici per provare gli import (nessun dato reale)
 logs/        log applicativi + log email simulati (logs/email/)
-docs/        specifica di progetto
+docs/        specifica di progetto e documentazione API (docs/api/)
 .run/        run configuration condivise PyCharm
 ```
 
@@ -360,6 +387,22 @@ pandoc --defaults pandoc-defaults.yaml \
 I PDF sono esclusi dal repository (artefatti generati).
 
 ## Changelog
+
+### v2.2.0
+
+- **REST API v1** (`/api/v1/`): endpoint completi per lettura, scrittura moduli, transizioni
+  FSM e azioni di valutazione. Autenticazione via sessione web o `X-Session-Token` (allauth
+  headless). Schema OpenAPI interattivo su `/api/v1/docs`. Optimistic locking sui moduli
+  CSQ (campo `version`, risposta `409` su conflitto). CORS configurabile via env.
+- **`apps/evaluations/actions.py`** (nuovo): service layer condiviso tra view web e API per
+  tutte le azioni di valutazione e transizioni FSM; le view web sono state refactorate per
+  delegare a questo layer — nessun cambio di comportamento esterno.
+- **Export riassuntivo diari** (`GET /edizioni/<pk>/export-diari/?formato=xlsx|ods|csv`):
+  foglio unico con tutti i moduli, visibilità filtrata per ruolo, async ibrido a soglia
+  (`EXPORT_DIARI_SOGLIA_ASYNC`, default 50). Aggiunto formato ODS (`odfpy`).
+- **`diari_visibili(user)`** in `apps/diaries/visibility.py`: funzione condivisa tra list
+  view web e API per filtrare i diari accessibili per ruolo.
+- **Documentazione API**: `docs/api/overview.md`, `docs/api/endpoints.md`, `docs/api/export.md`.
 
 ### v2.1.0
 

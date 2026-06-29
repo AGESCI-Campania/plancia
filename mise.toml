@@ -44,3 +44,7 @@ run = "uv run ruff format ."
 
 [tasks.test]
 run = "uv run pytest"
+
+[tasks.openapi-validate]
+description = "Esporta lo schema OpenAPI dell'API REST e verifica che sia JSON valido"
+run = "uv run python manage.py export_openapi_schema --output /tmp/plancia-openapi.json && python -m json.tool /tmp/plancia-openapi.json > /dev/null && echo 'OpenAPI schema valido'"

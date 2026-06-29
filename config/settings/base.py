@@ -80,6 +80,7 @@ THIRD_PARTY_APPS = [
     "agesci_theme",
     "allauth",
     "allauth.account",
+    "allauth.headless",
     "allauth.mfa",
     "allauth.mfa.webauthn",
     "allauth.socialaccount",
@@ -95,6 +96,7 @@ THIRD_PARTY_APPS = [
     "hijack.contrib.admin",
     "django_bootstrap_icons",
     "anymail",
+    "corsheaders",
 ]
 
 LOCAL_APPS = [
@@ -110,6 +112,7 @@ LOCAL_APPS = [
     "apps.stats",
     "apps.siteconfig",
     "apps.imports",
+    "apps.api",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -117,6 +120,7 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "allauth.usersessions.middleware.UserSessionsMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -246,6 +250,13 @@ MFA_TOTP_ISSUER = "Plancia AGESCI Campania"
 MFA_SUPPORTED_TYPES = ["totp", "recovery_codes", "webauthn"]
 MFA_PASSKEY_LOGIN_ENABLED = True
 MFA_PASSKEY_SIGNUP_ENABLED = False
+
+# --- allauth headless -------------------------------------------------------
+# HEADLESS_ONLY=False: manteniamo l'UI web tradizionale affiancata all'API.
+# TOKEN_STRATEGY sessions: il client mobile invia il session key nell'header X-Session-Token.
+HEADLESS_ONLY = False
+HEADLESS_TOKEN_STRATEGY = "allauth.headless.tokens.strategies.sessions.SessionTokenStrategy"
+HEADLESS_CLIENTS = ("browser", "app")
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -561,3 +572,29 @@ GOOGLE_GMAIL_SMTP_REDIRECT_URI = env.str(
     "GOOGLE_GMAIL_SMTP_REDIRECT_URI",
     default="http://localhost:8000/impostazioni/gmail-smtp/oauth/callback/",
 )
+
+# --- Export riassuntivo diari -----------------------------------------------
+# Soglia diari oltre la quale l'export xlsx/ods avviene in modo asincrono (via email).
+EXPORT_DIARI_SOGLIA_ASYNC: int = 50
+# Il CSV è sempre generato in modo sincrono (piccolo e veloce).
+EXPORT_DIARI_CSV_SEMPRE_SYNC: bool = True
+
+# --- CORS (django-cors-headers) ---------------------------------------------
+# Origini autorizzate per l'API REST (es. app mobile React Native).
+# In produzione impostare CORS_ALLOWED_ORIGINS nell'env.
+CORS_ALLOWED_ORIGINS: list[str] = env.list("CORS_ALLOWED_ORIGINS", default=[])
+# Necessario perché il client mobile invia i cookie di sessione (o X-Session-Token).
+CORS_ALLOW_CREDENTIALS = True
+# Header custom necessario per l'auth app-client di allauth headless.
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+    "x-session-token",
+]

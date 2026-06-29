@@ -105,21 +105,8 @@ class EdizioneDetailView(LoginRequiredMixin, DetailView):
         return {"per_stato": per_stato, "totale": totale}
 
     def _diari_visibili(self, edizione, user):
-        qs = edizione.diari.select_related(
-            "squadriglia__reparto__gruppo__zona",
-            "csq", "crp", "anagrafica",
-        )
-        if user.is_staff_plancia or user.is_superuser:
-            return qs
-        if user.ruolo == "pgv":
-            return qs
-        # CSQ: solo il proprio diario
-        if user.ruolo == "csq" and user.socio:
-            return qs.filter(csq=user.socio)
-        # CRP: solo i diari del proprio reparto
-        if user.ruolo == "crp" and user.socio:
-            return qs.filter(crp=user.socio)
-        return qs.none()
+        from apps.diaries.visibility import diari_visibili
+        return diari_visibili(user, edizione=edizione)
 
 
 class EdizioneCreateView(StaffPlanciaRequiredMixin, CreateView):
@@ -213,6 +200,47 @@ class EsitiExcelViewerView(StaffPlanciaRequiredMixin, View):
                 {"label": "Excel esiti", "url": None},
             ],
         })
+
+
+class ExportDiariView(StaffPlanciaRequiredMixin, View):
+    """GET /edizioni/<pk>/export-diari/?formato=xlsx|ods|csv — export riassuntivo diari."""
+
+    FORMATI_VALIDI = {"xlsx", "ods", "csv"}
+
+    def get(self, request, pk):
+        from django.conf import settings
+
+        from apps.diaries.models import Diario
+        from apps.exports.service import genera_export_diari
+
+        edizione = get_object_or_404(Edizione, pk=pk)
+        formato = request.GET.get("formato", "xlsx").lower()
+        if formato not in self.FORMATI_VALIDI:
+            formato = "xlsx"
+
+        qs = Diario.objects.filter(edizione=edizione)
+        n_diari = qs.count()
+
+        soglia = getattr(settings, "EXPORT_DIARI_SOGLIA_ASYNC", 50)
+        csv_sempre_sync = getattr(settings, "EXPORT_DIARI_CSV_SEMPRE_SYNC", True)
+        usa_async = n_diari > soglia and not (csv_sempre_sync and formato == "csv")
+
+        if usa_async:
+            from apps.exports.tasks import task_export_diari
+            task_export_diari.delay(edizione.pk, request.user.pk, formato)
+            messages.success(
+                request,
+                f"L'export ({formato.upper()}) di {n_diari} diari è in preparazione. "
+                f"Riceverai il file via email appena pronto."
+            )
+            return redirect("editions:detail", pk=pk)
+
+        contenuto, content_type, filename = genera_export_diari(qs, request.user, formato)
+        filename = f"Export_diari_{edizione.anno}.{formato}"
+        response = HttpResponse(contenuto, content_type=content_type)
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        response["Content-Length"] = len(contenuto)
+        return response
 
 
 class DilazioneCreateView(StaffPlanciaRequiredMixin, View):

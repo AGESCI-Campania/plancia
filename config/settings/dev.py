@@ -34,6 +34,9 @@ except ImportError:
 # In dev disattiviamo il blocco di axes per comodità
 AXES_ENABLED = False
 
+# In dev accetta richieste CORS da qualsiasi origine (es. emulatore mobile locale).
+CORS_ALLOW_ALL_ORIGINS = True
+
 # Bypass TOTP per test/screenshot: qualunque utente con TOTP configurato
 # può usare questo codice fisso anziché il codice reale generato dall'app.
 # NON abilitare in produzione.
