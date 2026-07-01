@@ -90,6 +90,65 @@ Parametro `page` (default 1), dimensione pagina configurabile via `?page_size=N`
 
 ---
 
+## Rate limiting
+
+Le chiamate a `/api/v1/` sono soggette a rate limiting basato su Redis (fixed window).  
+Il client è identificato tramite `X-Session-Token` (se presente) o indirizzo IP.
+
+I limiti sono configurabili in **Impostazioni → API** da Admin/Segreteria:
+
+| Parametro | Default |
+|---|---|
+| Max richieste al minuto | 60 |
+| Max richieste all'ora | 1000 |
+
+Quando il limite viene superato la risposta è `429 Too Many Requests` con header `Retry-After`:
+
+```
+HTTP/1.1 429 Too Many Requests
+Retry-After: 23
+Content-Type: application/json
+
+{"detail": "Troppe richieste. Riprova tra 23 secondi.", "retry_after": 23}
+```
+
+Il rate limiting può essere disabilitato globalmente da Impostazioni (`api_ratelimit_abilitato = false`).
+
+---
+
+## App version control
+
+Ogni chiamata a `/api/v1/` può includere l'header `X-App-Version` con la versione dell'app mobile:
+
+```
+GET /api/v1/me
+X-Session-Token: <token>
+X-App-Version: 1.2.0
+```
+
+Il server risponde con comportamenti diversi in base alla versione configurata in Impostazioni:
+
+| Condizione | Risposta |
+|---|---|
+| Versione ≥ `app_versione_minima` e ≥ `app_versione_deprecata` | Normale |
+| Versione ≥ `app_versione_minima` ma < `app_versione_deprecata` | Normale + header `X-App-Upgrade-Warning: true` |
+| Versione < `app_versione_minima` | `426 Upgrade Required` (blocco hard) |
+| Header assente | Nessuna azione (client browser) |
+
+Risposta `426`:
+```json
+{
+  "detail": "Versione app non supportata. Aggiorna l'app per continuare.",
+  "upgrade_required": true,
+  "versione_minima": "2.0.0"
+}
+```
+
+Per controllare la compatibilità al lancio dell'app senza autenticazione, usa `GET /api/v1/app-status`
+(vedi [`endpoints.md`](endpoints.md)).
+
+---
+
 ## Gestione errori
 
 | HTTP | Significato | Struttura risposta |
@@ -100,6 +159,8 @@ Parametro `page` (default 1), dimensione pagina configurabile via `?page_size=N`
 | `404` | Risorsa non trovata | `{"detail": "..."}` |
 | `409` | Conflitto versione (optimistic lock) | `{"error": "conflict", "server_version": N}` |
 | `422` | Stato non valido per l'azione | `{"detail": "..."}` |
+| `426` | Versione app non supportata | `{"detail": "...", "upgrade_required": true, "versione_minima": "..."}` |
+| `429` | Rate limit superato | `{"detail": "...", "retry_after": N}` |
 | `503` | Manutenzione | `{"detail": "Servizio in manutenzione", "maintenance": true}` |
 
 ### Optimistic locking (moduli write)

@@ -1,7 +1,42 @@
 # API REST Plancia — Riferimento Endpoint
 
-Tutti gli endpoint sono sotto `/api/v1/`. Autenticazione richiesta su tutti.  
-Per autenticazione e gestione errori vedi [`overview.md`](overview.md).
+Tutti gli endpoint sono sotto `/api/v1/`. Autenticazione richiesta su tutti eccetto `/app-status`.  
+Per autenticazione, rate limiting e gestione errori vedi [`overview.md`](overview.md).
+
+---
+
+## /system
+
+### GET /app-status
+
+Restituisce informazioni sulla compatibilità della versione app. **Non richiede autenticazione.**
+
+L'app mobile chiama questo endpoint al lancio (passando l'header `X-App-Version`) per decidere se mostrare un banner di aggiornamento o bloccare l'accesso.
+
+**Header opzionale:** `X-App-Version: 1.2.0`
+
+**Risposta 200:**
+```json
+{
+  "upgrade_required": false,
+  "upgrade_available": true,
+  "versione_minima": "1.0.0",
+  "deprecata_sotto": "1.2.0",
+  "messaggio": "È disponibile una nuova versione dell'app.",
+  "funzioni_limitate": ["pdf", "export_diari"]
+}
+```
+
+| Campo | Descrizione |
+|---|---|
+| `upgrade_required` | Se `true`, la versione è bloccata (< `app_versione_minima`) |
+| `upgrade_available` | Se `true`, esiste una versione più recente (< `app_versione_deprecata`) ma si può continuare |
+| `versione_minima` | Versione minima supportata (da Impostazioni) |
+| `deprecata_sotto` | Versioni inferiori ricevono warning ma funzionano |
+| `messaggio` | Testo da mostrare all'utente (da Impostazioni) |
+| `funzioni_limitate` | Slug di funzioni disabilitate per versioni deprecate (vuoto se `upgrade_available` è `false`) |
+
+Se l'header `X-App-Version` è assente, tutti i flag sono `false` e le stringhe sono quelle configurate in Impostazioni.
 
 ---
 
