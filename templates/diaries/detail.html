@@ -17,6 +17,7 @@
       {% elif diario.stato == 'in_valutazione' or diario.stato == 'in_revisione' %}bg-warning text-dark
       {% elif diario.stato == 'approvato' %}bg-success
       {% elif diario.stato == 'non_approvato' %}bg-danger
+      {% elif diario.stato == 'maggiori_info' %}bg-warning text-dark
       {% else %}bg-secondary{% endif %}
       fs-6">{{ diario.get_stato_display }}</span>
     <span class="badge bg-light text-dark ms-1">{{ diario.get_tipo_display }}</span>

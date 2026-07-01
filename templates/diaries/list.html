@@ -138,6 +138,7 @@
               {% elif d.stato == 'in_valutazione' or d.stato == 'in_revisione' %}bg-warning text-dark
               {% elif d.stato == 'approvato' %}bg-success
               {% elif d.stato == 'non_approvato' %}bg-danger
+              {% elif d.stato == 'maggiori_info' %}bg-warning text-dark
               {% else %}bg-secondary{% endif %}
             ">{{ d.get_stato_display }}</span>
           </td>
