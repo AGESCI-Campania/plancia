@@ -46,11 +46,15 @@ class Impostazioni(models.Model):
 
     # Mail — provider e modalità
     email_mode = models.CharField(
-        max_length=20, choices=EmailMode.choices, default=EmailMode.SIMULATO,
+        max_length=20,
+        choices=EmailMode.choices,
+        default=EmailMode.SIMULATO,
         verbose_name="Modalità invio mail",
     )
     email_provider = models.CharField(
-        max_length=20, choices=EmailProvider.choices, default=EmailProvider.SMTP,
+        max_length=20,
+        choices=EmailProvider.choices,
+        default=EmailProvider.SMTP,
         verbose_name="provider email",
         help_text="SMTP tradizionale oppure provider transazionale (con tracking bounce/errori).",
     )
@@ -64,21 +68,29 @@ class Impostazioni(models.Model):
     smtp_use_tls = models.BooleanField(default=True, verbose_name="SMTP usa TLS")
     # Impostazioni provider transazionale (usate quando email_provider != smtp)
     email_provider_api_key = models.CharField(
-        max_length=500, blank=True, verbose_name="API key provider",
+        max_length=500,
+        blank=True,
+        verbose_name="API key provider",
         help_text="Chiave API del provider transazionale. Non usata con SMTP.",
     )
     email_provider_webhook_secret = models.CharField(
-        max_length=500, blank=True, verbose_name="webhook secret",
+        max_length=500,
+        blank=True,
+        verbose_name="webhook secret",
         help_text="Secret per verificare i webhook di tracking (bounce, consegna, ecc.).",
     )
     # Routing: quale backend usare per tipo di invio
     email_backend_standard = models.CharField(
-        max_length=20, choices=BackendPosta.choices, default=BackendPosta.SMTP,
+        max_length=20,
+        choices=BackendPosta.choices,
+        default=BackendPosta.SMTP,
         verbose_name="backend email standard",
         help_text="Backend per email di sistema (reset password, MFA, notifiche singole).",
     )
     email_backend_massivo = models.CharField(
-        max_length=20, choices=BackendPosta.choices, default=BackendPosta.TRANSAZIONALE,
+        max_length=20,
+        choices=BackendPosta.choices,
+        default=BackendPosta.TRANSAZIONALE,
         verbose_name="backend invii massivi",
         help_text="Backend per inviti bulk (Capi Reparto e Capi Squadriglia).",
     )
@@ -95,7 +107,8 @@ class Impostazioni(models.Model):
 
     # Footer
     footer_testo = models.TextField(
-        blank=True, verbose_name="testo footer",
+        blank=True,
+        verbose_name="testo footer",
         help_text="Testo centrale del footer. Se vuoto usa il default.",
     )
 
@@ -138,10 +151,57 @@ class Impostazioni(models.Model):
         ),
     )
 
+    # API — rate limiting
+    api_ratelimit_abilitato = models.BooleanField(
+        default=True,
+        verbose_name="rate limiting API abilitato",
+        help_text="Se attivo, limita il numero di chiamate API per utente/IP.",
+    )
+    api_ratelimit_per_minuto = models.PositiveIntegerField(
+        default=60,
+        verbose_name="max richieste al minuto (API)",
+        help_text="Richieste API consentite per minuto per token/IP. 0 = illimitato.",
+    )
+    api_ratelimit_per_ora = models.PositiveIntegerField(
+        default=1000,
+        verbose_name="max richieste all'ora (API)",
+        help_text="Richieste API consentite per ora per token/IP. 0 = illimitato.",
+    )
+
+    # App version control
+    app_versione_minima = models.CharField(
+        max_length=20,
+        blank=True,
+        default="",
+        verbose_name="versione app minima",
+        help_text="Versioni app inferiori a questa ricevono 426 e non possono accedere. Es: 2.0.0. Vuoto = nessun blocco.",
+    )
+    app_versione_deprecata = models.CharField(
+        max_length=20,
+        blank=True,
+        default="",
+        verbose_name="versione app deprecata (warning)",
+        help_text="Versioni inferiori a questa ricevono header X-App-Upgrade-Warning ma continuano a funzionare. Es: 2.1.0.",
+    )
+    app_messaggio_aggiornamento = models.TextField(
+        blank=True,
+        default="",
+        verbose_name="messaggio aggiornamento app",
+        help_text="Messaggio mostrato in-app quando è disponibile un aggiornamento.",
+    )
+    app_funzioni_limitate = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name="funzioni limitate per versioni deprecate",
+        help_text='Lista di slug-funzione non disponibili nelle versioni deprecate. Es: ["pdf", "export_diari"].',
+    )
+
     # Stato piattaforma / diagnostica
     manutenzione = models.BooleanField(default=False)
-    debug_diagnostico = models.BooleanField(default=False)  # logging verboso (NON ribalta settings.DEBUG)
-    debug_toolbar = models.BooleanField(default=False)      # visibile ai soli admin
+    debug_diagnostico = models.BooleanField(
+        default=False
+    )  # logging verboso (NON ribalta settings.DEBUG)
+    debug_toolbar = models.BooleanField(default=False)  # visibile ai soli admin
 
     aggiornato_at = models.DateTimeField(auto_now=True)
 
@@ -207,7 +267,10 @@ class FooterLink(models.Model):
     tipo = models.CharField(max_length=20, choices=TipoLink.choices, blank=True, default="")
     url = models.CharField(max_length=500, blank=True, default="", verbose_name="URL")
     etichetta = models.CharField(
-        max_length=20, blank=True, default="", verbose_name="etichetta",
+        max_length=20,
+        blank=True,
+        default="",
+        verbose_name="etichetta",
         help_text="Se vuota usa il nome del tipo (es. 'Sito web').",
     )
     ordine = models.PositiveSmallIntegerField(default=0)
@@ -240,6 +303,7 @@ class GmailSMTPCredenziali(models.Model):
     @property
     def scaduto(self) -> bool:
         from django.utils import timezone
+
         if not self.expires_at:
             return True
         return timezone.now() >= self.expires_at

@@ -121,6 +121,8 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
+    "apps.siteconfig.middleware.ApiRateLimitMiddleware",
+    "apps.siteconfig.middleware.AppVersionMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "allauth.usersessions.middleware.UserSessionsMiddleware",
     "django.middleware.common.CommonMiddleware",

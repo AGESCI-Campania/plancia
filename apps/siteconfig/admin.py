@@ -18,6 +18,14 @@ class ImpostazioniAdmin(admin.ModelAdmin):
                        "smtp_user", "smtp_password", "smtp_use_tls"],
             "classes": ["collapse"],
         }),
+        ("API — rate limiting", {
+            "fields": ["api_ratelimit_abilitato", "api_ratelimit_per_minuto", "api_ratelimit_per_ora"],
+            "classes": ["collapse"],
+        }),
+        ("App version control", {
+            "fields": ["app_versione_minima", "app_versione_deprecata", "app_messaggio_aggiornamento", "app_funzioni_limitate"],
+            "classes": ["collapse"],
+        }),
         ("Stato piattaforma", {"fields": ["manutenzione", "debug_toolbar", "debug_diagnostico"]}),
     ]
     readonly_fields = ["aggiornato_at"]
