@@ -312,6 +312,23 @@ docker compose --env-file .env.prod up -d web worker beat
   sull'host che persiste tra i deploy. Se eseguito dopo `up -d`, il container web carica il
   vecchio manifest e serve i vecchi hash degli asset anche se i file sono stati aggiornati.
 
+### Release
+
+Ad ogni nuova versione, **dopo** il deploy in produzione:
+
+```bash
+# 1. Bump versione in pyproject.toml, aggiorna changelog in README.md, committa
+# 2. Crea il tag
+git tag vX.Y.Z
+git push origin vX.Y.Z
+
+# 3. Crea la GitHub Release (obbligatorio — non solo il tag)
+gh release create vX.Y.Z --title "vX.Y.Z" --notes "..."
+```
+
+Le note della release si estraggono dalla sezione corrispondente del changelog in `README.md`.
+**Tag e `gh release create` vanno sempre eseguiti insieme** nello stesso deploy.
+
 ### Deploy in staging
 **Cartella**: `/srv/staging.plancia`. Branch `v2-offline`.
 
