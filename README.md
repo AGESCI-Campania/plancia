@@ -393,6 +393,10 @@ I PDF sono esclusi dal repository (artefatti generati).
 
 ## Changelog
 
+### v2.3.1
+
+- **Documentazione**: `docs/api/overview.md` aggiornato con sezioni rate limiting e app version control; `docs/api/endpoints.md` aggiornato con endpoint `GET /api/v1/app-status`; `CLAUDE.md` aggiornato con router `system` e i due nuovi middleware API.
+
 ### v2.3.0
 
 - **Rate limiting API** (`ApiRateLimitMiddleware`): fixed-window Redis su `/api/v1/`, limiti per minuto e per ora configurabili in Impostazioni → API. Identifica il client tramite `X-Session-Token` o IP; risponde `429` con header `Retry-After`.
