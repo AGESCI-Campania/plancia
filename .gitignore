@@ -40,6 +40,7 @@ htmlcov/
 site/
 
 tmp/
+memory/
 
 # File Excel dati sensibili (import JotForm, ecc.)
 *.xlsx

@@ -83,7 +83,7 @@ class Valutazione(models.Model):
         elif self.esito == EsitoValutazione.MAGGIORI_INFO:
             if d.stato not in (StatoDiario.MAGGIORI_INFO,):
                 d.richiedi_info()
-        elif self.stato == StatoValutazione.IN_REVISIONE:
+        elif self.stato == StatoValutazione.IN_REVISIONE and self.proposta_esito is not None:
             if d.stato != StatoDiario.IN_REVISIONE:
                 d.proponi(self.proposta_esito)
 
