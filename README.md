@@ -390,6 +390,14 @@ I PDF sono esclusi dal repository (artefatti generati).
 
 ## Changelog
 
+### v2.3.0
+
+- **Rate limiting API** (`ApiRateLimitMiddleware`): fixed-window Redis su `/api/v1/`, limiti per minuto e per ora configurabili in Impostazioni → API. Identifica il client tramite `X-Session-Token` o IP; risponde `429` con header `Retry-After`.
+- **App version control** (`AppVersionMiddleware`): legge l'header `X-App-Version` su ogni chiamata `/api/v1/`; restituisce `426 Upgrade Required` se la versione è inferiore a `app_versione_minima`; aggiunge `X-App-Upgrade-Warning: true` se è inferiore a `app_versione_deprecata`.
+- **`GET /api/v1/app-status`**: endpoint pubblico (no auth) per il controllo di compatibilità al lancio dell'app; restituisce `upgrade_required`, `upgrade_available`, `versione_minima`, `funzioni_limitate` e `messaggio`.
+- **`Impostazioni`**: nuovi campi rate limiting (`api_ratelimit_abilitato`, `api_ratelimit_per_minuto`, `api_ratelimit_per_ora`) e version control (`app_versione_minima`, `app_versione_deprecata`, `app_messaggio_aggiornamento`, `app_funzioni_limitate`).
+- **Fix**: `Valutazione.applica_esito` non transita più il diario a `IN_REVISIONE` quando `proposta_esito` è `None`.
+
 ### v2.2.0
 
 - **REST API v1** (`/api/v1/`): endpoint completi per lettura, scrittura moduli, transizioni
