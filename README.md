@@ -155,20 +155,23 @@ Plancia espone una REST API versionata per il frontend mobile attualmente in svi
 - **Schema interattivo (Swagger UI)**: `/api/v1/docs`
 - **Auth**: sessione web (cookie) oppure header `X-Session-Token` (allauth headless app-mode)
 - **Formato**: JSON, OpenAPI 3.0 generato automaticamente da django-ninja
+- **Rate limiting**: fixed-window Redis (60 req/min, 1000 req/ora per token/IP); `429` con `Retry-After`
+- **App version control**: header `X-App-Version` → `426` se versione < minima, `X-App-Upgrade-Warning` se deprecata
 
 **Endpoint principali:**
 
 | Gruppo | Endpoint | Descrizione |
 |---|---|---|
+| System | `GET /api/v1/app-status` | Compatibilità versione app (no auth) |
 | Me | `GET /api/v1/me` | Utente corrente |
 | Edizioni | `GET /api/v1/edizioni[/{pk}]` | Lista/dettaglio edizioni |
 | Org | `GET /api/v1/org/albero` | Albero zone → squadriglie |
 | Diari | `GET /api/v1/diari[/{pk}]` | Lista/dettaglio (filtrata per ruolo) |
-| Diari write | `PUT /api/v1/diari/{pk}/anagrafica|presentazione|imprese/{n}|missione|relazione-finale` | Salvataggio moduli con optimistic locking |
+| Diari write | `PUT /api/v1/diari/{pk}/anagrafica\|presentazione\|imprese/{n}\|missione\|relazione-finale` | Salvataggio moduli con optimistic locking |
 | FSM | `POST /api/v1/diari/{pk}/azioni/{csq-invia\|invia\|riapri}` | Transizioni di stato |
 | Valutazione | `GET/POST /api/v1/diari/{pk}/valutazione/…` | Azioni di valutazione |
 
-Documentazione completa: [`docs/api/overview.md`](docs/api/overview.md) · [`docs/api/endpoints.md`](docs/api/endpoints.md)
+Documentazione completa: [`docs/api/overview.md`](docs/api/overview.md) · [`docs/api/endpoints.md`](docs/api/endpoints.md) · [`docs/api/export.md`](docs/api/export.md)
 
 **CORS**: configura `CORS_ALLOWED_ORIGINS` nell'env per abilitare l'accesso da app mobile.
 
