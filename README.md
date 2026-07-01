@@ -147,7 +147,9 @@ I **media** (upload foto) usano il volume named `plancia_media`.
 
 ## REST API
 
-Plancia espone una REST API versionata per il futuro frontend mobile.
+Plancia espone una REST API versionata per il frontend mobile attualmente in sviluppo.
+
+> **App mobile (in sviluppo)**: [github.com/AGESCI-Campania/diario-di-bordo-app](https://github.com/AGESCI-Campania/diario-di-bordo-app)
 
 - **Base URL**: `/api/v1/`
 - **Schema interattivo (Swagger UI)**: `/api/v1/docs`
