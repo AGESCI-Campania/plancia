@@ -75,9 +75,10 @@ Context processor `impostazioni` inietta `Impostazioni` (singleton) in ogni temp
 - `auth.py` — `PlanciaAuth`: legge `X-Session-Token` (allauth headless app-mode) o cookie sessione
 - `permissions.py` — `is_staff_plancia`, `puo_vedere_diario`, `puo_editare_diario`, `puo_editare_relazione_finale`, `puo_vedere_valutazione`
 - `schemas/` — Pydantic schemas per ogni dominio (`diaries.py`, `evaluations.py`, …)
-- `routers/` — un modulo per gruppo (`me`, `editions`, `org`, `diaries`, `evaluations`)
+- `routers/` — un modulo per gruppo (`system`, `me`, `editions`, `org`, `diaries`, `evaluations`)
+  - `system.py` — `GET /app-status` (no auth): compatibilità versione app mobile
 
-Documentazione API: `docs/api/overview.md` (auth, ruoli, errori) · `docs/api/endpoints.md` (riferimento completo).
+Documentazione API: `docs/api/overview.md` (auth, ruoli, rate limiting, errori) · `docs/api/endpoints.md` (riferimento completo) · `docs/api/export.md` (export riassuntivo diari).
 
 ## Gotchas e trappole
 
@@ -222,6 +223,15 @@ Non duplicare questa logica nelle view.
 (`apps/siteconfig/middleware.py`) **bypassano** i path `/api/v1/` e `/_allauth/`.
 Il middleware manutenzione risponde con JSON `{"detail": "...", "maintenance": true}` (non HTML)
 su path API. Non aggiungere redirect HTML su path `/api/v1/`.
+
+**Middleware API** (in `apps/siteconfig/middleware.py`, attivi solo su `/api/v1/`):
+- `ApiRateLimitMiddleware` — fixed-window Redis; identifica client via `X-Session-Token` o IP;
+  limiti (per minuto e per ora) configurabili in `Impostazioni`; risponde `429` con `Retry-After`.
+- `AppVersionMiddleware` — legge `X-App-Version`; blocca con `426` se < `app_versione_minima`;
+  aggiunge `X-App-Upgrade-Warning: true` se < `app_versione_deprecata`; inietta
+  `request.app_version` e `request.app_update_available` per uso nei router.
+
+Ordine in `MIDDLEWARE`: entrambi **dopo** `CorsMiddleware` e **prima** di `SessionMiddleware`.
 
 ### Drive e OAuth
 - **PKCE obbligatorio** (da ottobre 2024): `DriveOAuthInitView` genera `code_verifier/challenge`,
