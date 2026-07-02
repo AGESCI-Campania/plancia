@@ -18,6 +18,13 @@ _SESTANTE_CLAIM_TO_RUOLO: dict[str, str] = {
 _RUOLI_GLOBALI: set[str] = set(_SESTANTE_CLAIM_TO_RUOLO.values())
 
 
+def _sestante_groups(extra_data: dict) -> list[str]:
+    # In allauth ≥65.11, extra_data è {"userinfo": {...}, "id_token": {...}}.
+    # I claim come `groups` si trovano dentro "userinfo" (o "id_token" come fallback).
+    data = extra_data.get("userinfo") or extra_data.get("id_token") or extra_data
+    return data.get("groups", [])
+
+
 def _sync_ruoli_globali(user, groups: list[str]) -> None:
     """Aggiorna user.ruolo in base al claim groups di Sestante.
 
@@ -157,7 +164,7 @@ class PlanciaSocialAccountAdapter(DefaultSocialAccountAdapter):
                     pass
 
         if sociallogin.account.provider == "sestante" and sociallogin.is_existing:
-            groups = sociallogin.account.extra_data.get("groups", [])
+            groups = _sestante_groups(sociallogin.account.extra_data)
             _sync_ruoli_globali(sociallogin.user, groups)
 
     def populate_user(self, request, sociallogin, data):
@@ -165,7 +172,7 @@ class PlanciaSocialAccountAdapter(DefaultSocialAccountAdapter):
         user = super().populate_user(request, sociallogin, data)
         if sociallogin.account.provider == "sestante":
             from apps.accounts.models import Ruolo
-            groups = sociallogin.account.extra_data.get("groups", [])
+            groups = _sestante_groups(sociallogin.account.extra_data)
             user.ruolo = next(
                 (_SESTANTE_CLAIM_TO_RUOLO[c] for c in _SESTANTE_CLAIM_TO_RUOLO if c in groups),
                 Ruolo.CSQ,
