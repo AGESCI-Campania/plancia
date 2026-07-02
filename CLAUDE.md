@@ -22,9 +22,9 @@ documento prevale su questo file.
   **odfpy** (export ODS).
 - **REST API**: **django-ninja 1.6.2** (OpenAPI automatico, type-driven), **django-cors-headers**
   (CORS per app mobile), **allauth headless** (auth app-mode con `X-Session-Token`).
-- Auth: **django-allauth** (email + social Google/Microsoft/Apple, **MFA**), **django-guardian**
+- Auth: **django-allauth** (email + social Google/Microsoft/Apple + **SSO Sestante**, **MFA**), **django-guardian**
   (object-level), **django-axes** (brute-force).
-- Social login (guida: `docs/guide/social_auth.md`). Drive OAuth (guida: `docs/guide/google_drive_oauth.md`).
+- Social login (guida: `docs/guide/social_auth.md`). SSO OIDC con Sestante (guida: `docs/guide/sso_sestante.md`). Drive OAuth (guida: `docs/guide/google_drive_oauth.md`).
   **Apple Sign In**: `key`=TEAM_ID, `secret`=KEY_ID — la versione precedente aveva i campi scambiati
   causando 401 al callback; non invertire.
 

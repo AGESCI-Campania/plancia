@@ -87,6 +87,7 @@ THIRD_PARTY_APPS = [
     "allauth.socialaccount.providers.google",
     "allauth.socialaccount.providers.microsoft",
     "allauth.socialaccount.providers.apple",
+    "allauth.socialaccount.providers.openid_connect",
     "allauth.usersessions",
     "guardian",
     "axes",
@@ -206,6 +207,8 @@ _APPLE_CLIENT_ID      = env.str("SOCIAL_APPLE_CLIENT_ID", default="")
 _APPLE_TEAM_ID        = env.str("SOCIAL_APPLE_TEAM_ID", default="")
 _APPLE_KEY_ID         = env.str("SOCIAL_APPLE_KEY_ID", default="")
 _APPLE_PRIVATE_KEY    = env.str("SOCIAL_APPLE_PRIVATE_KEY", default="").replace("\\n", "\n")
+_SESTANTE_CLIENT_ID     = env.str("SOCIAL_SESTANTE_CLIENT_ID", default="")
+_SESTANTE_CLIENT_SECRET = env.str("SOCIAL_SESTANTE_CLIENT_SECRET", default="")
 
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
@@ -235,6 +238,20 @@ SOCIALACCOUNT_PROVIDERS = {
                 "certificate_key": _APPLE_PRIVATE_KEY,  # chiave privata PEM
             },
         },
+    },
+    "openid_connect": {
+        "SERVERS": [
+            {
+                "id": "sestante",
+                "name": "SSO AGESCI Campania",
+                "server_url": "https://auth.agescicampania.org/application/o/plancia/",
+                "APP": {
+                    "client_id": _SESTANTE_CLIENT_ID,
+                    "secret":    _SESTANTE_CLIENT_SECRET,
+                },
+                "SCOPE": ["openid", "profile", "email"],
+            }
+        ]
     },
 }
 

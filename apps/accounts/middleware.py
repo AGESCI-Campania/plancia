@@ -51,5 +51,10 @@ class MFAEnforcementMiddleware:
             return False
         if any(request.path_info.startswith(p) for p in _PERCORSI_ESCLUSI):
             return False
+        # SSO Sestante: la MFA è garantita dall'IdP, non va richiesta di nuovo qui.
+        from allauth.socialaccount.models import SocialAccount
+        if SocialAccount.objects.filter(user=user, provider="sestante").exists():
+            return False
+
         from allauth.mfa.utils import is_mfa_enabled
         return not is_mfa_enabled(user)
