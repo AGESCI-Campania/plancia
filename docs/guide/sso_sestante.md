@@ -63,7 +63,9 @@ del social account e aggiorna `user.ruolo` secondo questa logica:
 | nessuno dei due (se ruolo era locale) | invariato |
 
 I ruoli locali (PGV, CRP, CSQ, INCARICATO_EG) **non vengono mai toccati** dal flusso SSO.
-La fonte del claim è `sociallogin.account.extra_data.get("groups", [])`.
+La fonte del claim è `extra_data["userinfo"]["groups"]`. In allauth ≥65.11, `extra_data` ha
+struttura `{"userinfo": {...}, "id_token": {...}}`; non usare `extra_data.get("groups")` direttamente.
+Usare l'helper `_sestante_groups(extra_data)` definito in `adapters.py`.
 
 ### MFA
 

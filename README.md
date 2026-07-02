@@ -393,6 +393,13 @@ I PDF sono esclusi dal repository (artefatti generati).
 
 ## Changelog
 
+### v2.4.0
+
+- **SSO Sestante (Fase 1)**: integrazione OIDC con `auth.agescicampania.org` (Authentik). Login con account AGESCI Campania via `allauth.socialaccount.providers.openid_connect`. Auto-provisioning per nuovi utenti; sincronizzazione bidirezionale dei ruoli globali (`admin-multipiattaforma` → Admin, `segreteria` → Segreteria) ad ogni login tramite claim `groups`. Il login locale (email/password/MFA) rimane attivo in parallelo.
+- **Bypass MFA per utenti SSO**: `MFAEnforcementMiddleware` non richiede TOTP agli utenti autenticati tramite Sestante (la MFA è già garantita dall'IdP).
+- **Fix**: lettura del claim `groups` da `extra_data["userinfo"]` anziché da root (struttura allauth ≥65.11).
+- **Documentazione**: `docs/guide/sso_sestante.md` — guida architettura, stato implementazione e vincoli.
+
 ### v2.3.1
 
 - **Documentazione**: `docs/api/overview.md` aggiornato con sezioni rate limiting e app version control; `docs/api/endpoints.md` aggiornato con endpoint `GET /api/v1/app-status`; `CLAUDE.md` aggiornato con router `system` e i due nuovi middleware API.
