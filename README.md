@@ -393,6 +393,10 @@ I PDF sono esclusi dal repository (artefatti generati).
 
 ## Changelog
 
+### v2.4.1
+
+- **Fix MFA pipeline SSO**: `PlanciaMFAAdapter.is_mfa_enabled()` restituisce `False` durante la pipeline di login quando il provider è Sestante. Risolve il doppio TOTP (allauth ≥65 invoca `AuthenticateStage` anche dopo social login se l'utente ha TOTP configurato).
+
 ### v2.4.0
 
 - **SSO Sestante (Fase 1)**: integrazione OIDC con `auth.agescicampania.org` (Authentik). Login con account AGESCI Campania via `allauth.socialaccount.providers.openid_connect`. Auto-provisioning per nuovi utenti; sincronizzazione bidirezionale dei ruoli globali (`admin-multipiattaforma` → Admin, `segreteria` → Segreteria) ad ogni login tramite claim `groups`. Il login locale (email/password/MFA) rimane attivo in parallelo.

@@ -138,6 +138,21 @@ class PlanciaMFAAdapter(DefaultMFAAdapter):
         # Il TOTP non può essere rimosso; i recovery codes sì (sono rigenerabili).
         return authenticator.type != Authenticator.Type.TOTP
 
+    def is_mfa_enabled(self, user, types=None) -> bool:
+        # Sestante verifica già la MFA: non richiedere TOTP anche su Plancia.
+        # Il bypass è attivo solo durante la pipeline di login (prima che Django
+        # autentichi l'utente nella sessione), non nelle view MFA post-login.
+        from allauth.core import context as allauth_context
+        request = allauth_context.request
+        if request is not None and not request.user.is_authenticated:
+            methods = request.session.get("account_authentication_methods", [])
+            if any(
+                m.get("method") == "socialaccount" and m.get("provider") == "sestante"
+                for m in methods
+            ):
+                return False
+        return super().is_mfa_enabled(user, types=types)
+
 
 class PlanciaSocialAccountAdapter(DefaultSocialAccountAdapter):
     """Gestisce il social login per Plancia.
@@ -148,9 +163,7 @@ class PlanciaSocialAccountAdapter(DefaultSocialAccountAdapter):
     """
 
     def is_auto_signup_allowed(self, request, sociallogin):
-        if sociallogin.account.provider == "sestante":
-            return True
-        return False
+        return sociallogin.account.provider == "sestante"
 
     def pre_social_login(self, request, sociallogin):
         """Collega per email gli utenti esistenti; sincronizza ruoli globali per Sestante."""
