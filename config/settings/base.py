@@ -291,6 +291,15 @@ MFA_PASSKEY_SIGNUP_ENABLED = False
 HEADLESS_ONLY = False
 HEADLESS_TOKEN_STRATEGY = "allauth.headless.tokens.strategies.sessions.SessionTokenStrategy"
 HEADLESS_CLIENTS = ("browser", "app")
+# Pagine della SPA (frontend/src/router) a cui puntano i link delle email di allauth e i
+# redirect dei provider social/SSO. Con HEADLESS_ONLY=True (Fase 6) sono le uniche.
+HEADLESS_FRONTEND_URLS = {
+    "account_confirm_email": "/email/verifica/{key}",
+    "account_reset_password": "/accesso/password",
+    "account_reset_password_from_key": "/password/reset/{key}",
+    "account_signup": "/accesso",
+    "socialaccount_login_error": "/accesso/ritorno",
+}
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},

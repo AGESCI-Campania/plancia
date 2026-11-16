@@ -98,6 +98,32 @@ Context processor `impostazioni` inietta `Impostazioni` (singleton) in ogni temp
 
 Documentazione API: `docs/api/overview.md` (auth, ruoli, rate limiting, errori) · `docs/api/endpoints.md` (riferimento 2.x) · `docs/api/fase2-*.md` (endpoint 3.0 per dominio) · `docs/api/export.md` (export riassuntivo diari).
 
+## Frontend (SPA, Plancia 3 — `frontend/`)
+Vue 3.5 + TypeScript 6 + Vite 8 + vue-router 5 + Pinia 4 + Dexie 4 + vite-plugin-pwa 2,
+**Bootstrap 6 alpha** (pin esatto) con i partial SCSS del tema AGESCI 3.0.0a3 copiati in
+`frontend/src/theme/` (non modificarli: ricopiarli; stili propri in `plancia.scss`).
+```bash
+cd frontend && npm install
+npm run dev            # :5173, proxy verso Django :8000 (vite.config.ts → PERCORSI_BACKEND)
+npm run typecheck && npm run lint && npm test
+npm run api:tipi       # rigenera src/api/schema.d.ts dallo schema OpenAPI (manage.py esporta_openapi)
+npm run e2e            # Playwright (desktop + iPhone); PLANCIA_E2E_EMAIL/PASSWORD per il login
+npm run icone          # icone PWA da docs/icona-pwa/ (non ridisegnarle)
+```
+- **Auth**: allauth headless *browser* (`src/api/allauth.ts`), cookie di sessione + `X-CSRFToken`.
+  Pagine in `src/views/auth/`; `HEADLESS_FRONTEND_URLS` in settings punta a quelle rotte.
+  Operazioni sensibili: `conRiautenticazione*` (`src/composables/riautenticazione.ts`).
+- **MFA obbligatoria anche sull'API**: `apps/api/auth.py` risponde 403 `mfa_da_configurare`
+  a chi deve configurarla (tranne `/api/v1/me…`); regola unica `adapters.mfa_da_configurare`.
+- **Tipi**: `src/api/tipi.ts` dagli schemi generati; nomi delle classi `Schema` dell'API
+  **unici** (ninja nomina gli schemi OpenAPI con il nome della classe; c'è un test).
+- **Permessi in UI**: solo i flag di `me.menu` e i `puo_*` calcolati dal backend.
+- **Versioni**: `__VERSIONE_APP__` da `pyproject.toml`; footer con App/Server
+  (`/api/v1/sito.versione`); modale `AggiornamentoApp.vue` se diverse (SW in modalità prompt).
+- **Dialog/drawer** Bootstrap 6 sul `<dialog>` nativo (`FinestraDialogo.vue`, sidebar);
+  i menu usano la data API di Bootstrap (`import 'bootstrap'` in `main.ts`).
+- Componenti: icone `IconaBs` (sprite di bootstrap-icons), mai `<i class="bi">`.
+
 ## Gotchas e trappole
 
 ### Template e UI — Architettura layout (v2-offline)

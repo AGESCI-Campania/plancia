@@ -92,7 +92,7 @@ def me_schema(request, user: User) -> MeEstesoSchema:
     from allauth.mfa.utils import is_mfa_enabled
 
     from apps.accounts import services
-    from apps.accounts.adapters import ruolo_richiede_mfa, sessione_da_sestante
+    from apps.accounts.adapters import mfa_da_configurare, ruolo_richiede_mfa
 
     mfa_attiva = is_mfa_enabled(user)
     mfa_richiesta = ruolo_richiede_mfa(user)
@@ -114,10 +114,7 @@ def me_schema(request, user: User) -> MeEstesoSchema:
         mfa_attiva=mfa_attiva,
         mfa_richiesta=mfa_richiesta,
         # Stesse esenzioni di MFAEnforcementMiddleware (impersonazione, sessione Sestante)
-        mfa_da_configurare=bool(
-            mfa_richiesta and not mfa_attiva and operatore is None
-            and not sessione_da_sestante(request)
-        ),
+        mfa_da_configurare=mfa_da_configurare(request, user),
         menu=MenuSchema(**services.flag_menu(user)),
         impersonato_da=utente_breve(operatore),
         puo_modificare_email=services.puo_modificare_email(user),

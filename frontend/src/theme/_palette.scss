@@ -1,0 +1,31 @@
+// =============================================================
+//  Palette ufficiale AGESCI
+//  Fonte: Manuale Immagine Coordinata AGESCI 2011, sez. 7 "Colori"
+//  I codici Pantone/RGB sono quelli riportati nel manuale associativo.
+// =============================================================
+
+// --- Colori istituzionali ---------------------------------------------------
+$agesci-viola:        #7a1e99;  // Pantone 527C  - viola istituzionale
+$agesci-viola-scuro:  #622599;  // Pantone 072C  - viola scuro
+$agesci-giallo-oro:   #ffcc1e;  // Pantone 123C  - giallo oro
+$agesci-azzurro:      #6689cc;  // Pantone 279C  - azzurro
+
+// --- Colori di Branca / ambito ----------------------------------------------
+$agesci-giallo-lc:    #f9d616;  // Pantone 109C  - Branca L/C (giallo)
+$agesci-verde-eg:     #3d8e33;  // Pantone 363C  - Branca E/G (verde)
+
+// NOTA: il manuale 2011 riporta per il rosso (Pantone 032C) un valore RGB
+// 80/15/17 che corrisponde a un marrone scuro: refuso di stampa del PDF
+// (confermato). Si usa il valore standard Pantone 032C, coerente con l'uso
+// associativo per la Branca R/S.
+$agesci-rosso-rs:     #ef3340;  // Pantone 032C  - Branca R/S (rosso)
+
+// --- Colori aggiuntivi (non da manuale) --------------------------------------
+$agesci-generico-2:  #462d7b;  // Viola indaco - variante "Generico 2" (non da manuale 2011)
+
+// --- Neutri di supporto ------------------------------------------------------
+$agesci-nero:         #1a1a1a;
+$agesci-grigio-scuro: #343a40;
+$agesci-grigio:       #6c757d;
+$agesci-grigio-chiaro:#f4f4f6;
+$agesci-bianco:       #ffffff;

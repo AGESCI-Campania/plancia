@@ -9,7 +9,7 @@ from datetime import datetime
 from ninja import Schema
 
 
-class UtenteBreveSchema(Schema):
+class UtenteTicketSchema(Schema):
     id: int
     nome: str
     email: str
@@ -40,8 +40,8 @@ class TicketSchema(Schema):
     categoria_display: str
     stato: str
     stato_display: str
-    aperto_da: UtenteBreveSchema
-    assegnato_a: UtenteBreveSchema | None
+    aperto_da: UtenteTicketSchema
+    assegnato_a: UtenteTicketSchema | None
     diario: DiarioBreveSchema | None
     creato_at: datetime
     aggiornato_at: datetime
@@ -58,7 +58,7 @@ class TicketSchema(Schema):
 
 class RispostaSchema(Schema):
     id: int
-    autore: UtenteBreveSchema
+    autore: UtenteTicketSchema
     testo: str
     creata_at: datetime
 
@@ -106,7 +106,7 @@ class RispostaIn(Schema):
     testo: str
 
 
-class SceltaSchema(Schema):
+class SceltaHelpdeskSchema(Schema):
     chiave: str
     etichetta: str
 
@@ -114,7 +114,7 @@ class SceltaSchema(Schema):
 class OpzioniTicketSchema(Schema):
     """Valori per il form di apertura: categorie, stati e diari collegabili."""
 
-    categorie: list[SceltaSchema]
-    stati: list[SceltaSchema]
+    categorie: list[SceltaHelpdeskSchema]
+    stati: list[SceltaHelpdeskSchema]
     diari: list[DiarioBreveSchema]
     staff: bool

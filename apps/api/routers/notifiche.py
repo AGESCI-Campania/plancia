@@ -17,8 +17,8 @@ from apps.api.permissions import richiedi_ruolo, richiedi_staff
 from apps.api.schemas.notifiche import (
     AttivaInvitoIn,
     AttivazioneSchema,
-    EdizioneBreveSchema,
-    EsitoSchema,
+    EdizioneInvitiSchema,
+    EsitoNotificaSchema,
     InviaInvitiDiarioIn,
     InviaInvitiEdizioneIn,
     InvitiCrpSchema,
@@ -72,8 +72,8 @@ def _persona(socio) -> PersonaInvitoSchema | None:
     )
 
 
-def _edizione(ed) -> EdizioneBreveSchema | None:
-    return EdizioneBreveSchema(id=ed.pk, anno=ed.anno, nome=str(ed)) if ed else None
+def _edizione(ed) -> EdizioneInvitiSchema | None:
+    return EdizioneInvitiSchema(id=ed.pk, anno=ed.anno, nome=str(ed)) if ed else None
 
 
 # ---------------------------------------------------------------------------
@@ -159,7 +159,7 @@ def lista_inviti(request, filtri: Query[FiltriInviti]):
 
 
 @router.post(
-    "/inviti/invia-edizione", response={202: EsitoSchema, **_ERRORI},
+    "/inviti/invia-edizione", response={202: EsitoNotificaSchema, **_ERRORI},
     summary="Invia gli inviti dell'edizione attiva ai Capi Reparto o ai Capi Squadriglia",
 )
 def invia_inviti_edizione(request, payload: InviaInvitiEdizioneIn):
@@ -173,7 +173,7 @@ def invia_inviti_edizione(request, payload: InviaInvitiEdizioneIn):
 
 
 @router.post(
-    "/diari/{int:diario_id}/inviti", response={202: EsitoSchema, **_ERRORI},
+    "/diari/{int:diario_id}/inviti", response={202: EsitoNotificaSchema, **_ERRORI},
     summary="Invia gli inviti mancanti di un diario (Capo Squadriglia e/o Capo Reparto)",
 )
 def invia_inviti_diario(request, diario_id: int, payload: InviaInvitiDiarioIn):

@@ -289,7 +289,7 @@ def test_email_test(client_di, utenti):
 @pytest.fixture
 def senza_mfa(monkeypatch):
     """La callback è una vista Django: il middleware MFA non deve intervenire nei test."""
-    monkeypatch.setattr("apps.accounts.middleware.ruolo_richiede_mfa", lambda user: False)
+    monkeypatch.setattr("apps.accounts.middleware.mfa_da_configurare", lambda request, user: False)
 
 
 def test_gmail_oauth_avvio_e_callback_spa(client_di, settings, senza_mfa):

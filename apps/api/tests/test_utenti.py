@@ -57,7 +57,12 @@ def test_me_flag_menu(client_di, ruolo, utenti_, impostazioni, statistiche):
     assert menu["puo_gestire_inviti_crp"] is (ruolo == "crp")
 
 
-def test_me_mfa_richiesta_admin(client_di):
+def test_me_mfa_richiesta_admin(client_di, utenti, settings):
+    from allauth.mfa.models import Authenticator
+
+    settings.DEBUG = False
+    settings.SKIP_MFA_ENFORCEMENT = False
+    Authenticator.objects.filter(user=utenti["admin"]).delete()
     d = client_di("admin").get("/api/v1/me").json()
     assert d["mfa_richiesta"] is True
     assert d["mfa_attiva"] is False

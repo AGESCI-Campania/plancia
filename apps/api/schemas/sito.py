@@ -6,15 +6,15 @@ from datetime import datetime
 from ninja import Schema
 
 
-class FooterLinkSchema(Schema):
+class SitoFooterLinkSchema(Schema):
     tipo: str
     url: str
     etichetta: str
 
 
-class FooterSchema(Schema):
+class SitoFooterSchema(Schema):
     testo: str  # HTML già reso (footer_testo come template Django)
-    links: list[FooterLinkSchema]
+    links: list[SitoFooterLinkSchema]
     manuale_url: str
 
 
@@ -28,7 +28,7 @@ class PaginaSchema(PaginaBreveSchema):
     aggiornato_at: datetime | None
 
 
-class ManutenzioneSchema(Schema):
+class SitoManutenzioneSchema(Schema):
     attiva: bool
     messaggio: str
 
@@ -48,7 +48,7 @@ class SitoSchema(Schema):
     sottotitolo: str
     versione: str
     commit: str
-    footer: FooterSchema
+    footer: SitoFooterSchema
     pagine: list[PaginaBreveSchema]
-    manutenzione: ManutenzioneSchema
+    manutenzione: SitoManutenzioneSchema
     login: LoginSchema

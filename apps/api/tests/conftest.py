@@ -5,6 +5,7 @@ Uso tipico:
     def test_qualcosa(client_di, diario):
         r = client_di("crp").get(f"/api/v1/diari/{diario.pk}")
 
+Gli utenti di staff hanno la MFA (TOTP) configurata, come richiesto dal loro ruolo.
 `client_di(ruolo)` restituisce un `django.test.Client` autenticato con l'utente di quel ruolo
 (cookie di sessione, come la SPA); `"estraneo"` è un CSQ di un'altra squadriglia, `"anonimo"`
 un client non autenticato. Gli utenti hanno la `Nomina` corrispondente al ruolo attivo.
@@ -75,8 +76,22 @@ def utenti(db, org) -> dict[str, User]:
                 socio=soci.get(chiave),
             )
         Nomina.objects.get_or_create(utente=u, ruolo=u.ruolo, defaults={"socio": u.socio})
+        if chiave in RUOLI_CON_MFA:
+            _attiva_totp(u)
         risultato[chiave] = u
     return risultato
+
+
+# Ruoli con MFA obbligatoria: in produzione non usano l'API senza averla configurata.
+RUOLI_CON_MFA = ("admin", "segreteria", "incaricato_eg")
+
+
+def _attiva_totp(utente: User) -> None:
+    from allauth.mfa.models import Authenticator
+
+    Authenticator.objects.get_or_create(
+        user=utente, type=Authenticator.Type.TOTP, defaults={"data": {"secret": "A" * 16}}
+    )
 
 
 @pytest.fixture

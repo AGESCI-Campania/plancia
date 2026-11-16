@@ -1,0 +1,78 @@
+// =============================================================
+//  Branche / ambiti AGESCI -> colore primario
+//  Ogni "tema" rimappa i token "primary" di Bootstrap 6 (--bs-primary-*)
+//  e le variabili --ag-* in base all'attributo [data-branca] sul tag
+//  <html> o <body>.
+//
+//  Bootstrap 6 deriva TUTTO il colore primario da questi token:
+//  .theme-primary (bottoni, badge, alert, list-group, menu attivi…) li
+//  legge via --bs-theme-*, i link da --bs-primary-base, il focus ring da
+//  --bs-primary-focus-ring. Non servono piu' le decine di override
+//  --bs-btn-* della v2 ne' le varianti -rgb (rimosse da Bootstrap 6).
+//  Il CSS di questo tema e' fuori dai @layer di Bootstrap, quindi vince
+//  sempre sui suoi default.
+// =============================================================
+@use "sass:color";
+@use "sass:math";
+@use "sass:map";
+@use "palette" as p;
+
+// Mappa: nome ambito -> colore dominante
+$branche: (
+  "generico": p.$agesci-azzurro,      // default: blu/azzurro istituzionale
+  "capi":     p.$agesci-viola,        // Capi / Comunita' capi -> viola
+  "lc":       p.$agesci-giallo-lc,    // Branca Lupetti/Coccinelle -> giallo
+  "eg":       p.$agesci-verde-eg,     // Branca Esploratori/Guide -> verde
+  "rs":       p.$agesci-rosso-rs,     // Branca Rover/Scolte -> rosso
+  "viola":    p.$agesci-viola,        // alias esplicito
+  "generico2": p.$agesci-generico-2,  // variante "Generico 2"
+);
+
+// Funzione: schiarisce il primario senza superare il 95% di luminosità.
+// color.adjust non limita il risultato: col generico (luminosità 60%) +42%
+// dava hsl(…, 102%), cioè bianco, e i componenti "subtle" sparivano.
+@function schiarisci($c, $quanto) {
+  $l: color.channel($c, "lightness", $space: hsl);
+  @return color.change($c, $lightness: math.min($l + $quanto, 95%), $space: hsl);
+}
+
+// Funzione: restituisce un colore di testo leggibile sul primario
+@function on-color($c) {
+  @if (color.channel($c, "lightness", $space: hsl) > 62%) {
+    @return p.$agesci-nero;
+  }
+  @return p.$agesci-bianco;
+}
+
+// Genera le variabili tematiche per un dato colore primario
+@mixin tema-primario($primario) {
+  // Token Bootstrap 6 (il tema e' solo "chiaro": data-bs-theme="light" su <html>)
+  --bs-primary-base: #{$primario};
+  --bs-primary-bg: #{$primario};
+  --bs-primary-fg: #{$primario};
+  --bs-primary-fg-emphasis: #{color.adjust($primario, $lightness: -20%)};
+  --bs-primary-bg-subtle: #{schiarisci($primario, 42%)};
+  --bs-primary-bg-muted: #{schiarisci($primario, 32%)};
+  --bs-primary-border: #{schiarisci($primario, 18%)};
+  --bs-primary-focus-ring: color-mix(in srgb, #{$primario} 50%, white);
+  --bs-primary-contrast: #{on-color($primario)};
+
+  // Variabili del tema, usate dai componenti AGESCI (header, sidebar, hero…)
+  --ag-primary: #{$primario};
+  --ag-primary-hover: #{color.adjust($primario, $lightness: -8%)};
+  --ag-primary-active: #{color.adjust($primario, $lightness: -14%)};
+  --ag-primary-subtle: #{schiarisci($primario, 42%)};
+  --ag-on-primary: #{on-color($primario)};
+}
+
+// Applica il tema di default su :root
+:root {
+  @include tema-primario(map.get($branche, "generico"));
+}
+
+// Un selettore per ciascun ambito
+@each $nome, $colore in $branche {
+  [data-branca="#{$nome}"] {
+    @include tema-primario($colore);
+  }
+}

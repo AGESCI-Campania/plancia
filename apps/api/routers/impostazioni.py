@@ -27,12 +27,12 @@ from apps.api.schemas.impostazioni import (
     EdizioneCachePdfSchema,
     EdizioneIdIn,
     EmailIn,
-    EsitoSchema,
+    EsitoImpostazioniSchema,
     FilePdfSchema,
     FooterIn,
+    FooterLinkImpostazioniSchema,
     FooterLinkIn,
     FooterLinkPatch,
-    FooterLinkSchema,
     IdentitaIn,
     ImpostazioniSchema,
     InvalidaCacheIn,
@@ -40,8 +40,8 @@ from apps.api.schemas.impostazioni import (
     MailTemplateIn,
     MailTemplateRigaSchema,
     MailTemplateSchema,
+    ManutenzioneImpostazioniSchema,
     ManutenzioneIn,
-    ManutenzioneSchema,
     OrdinaLinkIn,
     PaginaStaticaIn,
     PaginaStaticaSchema,
@@ -64,8 +64,8 @@ def _scelte(choices) -> list[dict[str, str]]:
     return [{"valore": v, "etichetta": str(e)} for v, e in choices]
 
 
-def _link(link) -> FooterLinkSchema:
-    return FooterLinkSchema(
+def _link(link) -> FooterLinkImpostazioniSchema:
+    return FooterLinkImpostazioniSchema(
         id=link.pk, tipo=link.tipo, tipo_display=link.get_tipo_display(),
         url=link.url, etichetta=link.etichetta, ordine=link.ordine,
     )
@@ -178,7 +178,7 @@ def aggiorna_diagnostica(request, payload: DiagnosticaIn):
     return _aggiorna(request, "diagnostica", payload)
 
 
-@router.get("/manutenzione", response={200: ManutenzioneSchema, **_ERRORI},
+@router.get("/manutenzione", response={200: ManutenzioneImpostazioniSchema, **_ERRORI},
             summary="Stato della modalità manutenzione")
 def leggi_manutenzione(request):
     from apps.siteconfig.models import Impostazioni
@@ -187,7 +187,7 @@ def leggi_manutenzione(request):
     return {"manutenzione": Impostazioni.objects.get_or_create(pk=1)[0].manutenzione}
 
 
-@router.put("/manutenzione", response={200: ManutenzioneSchema, **_ERRORI},
+@router.put("/manutenzione", response={200: ManutenzioneImpostazioniSchema, **_ERRORI},
             summary="Attiva o disattiva la modalità manutenzione")
 def imposta_manutenzione(request, payload: ManutenzioneIn):
     from apps.siteconfig import services
@@ -207,7 +207,7 @@ def _footer_link(link_id: int):
     return get_object_or_404(FooterLink, pk=link_id, impostazioni_id=1)
 
 
-@router.get("/footer/link", response={200: list[FooterLinkSchema], **_ERRORI},
+@router.get("/footer/link", response={200: list[FooterLinkImpostazioniSchema], **_ERRORI},
             summary="Link del footer, in ordine")
 def lista_footer_link(request):
     from apps.siteconfig.models import FooterLink
@@ -216,7 +216,7 @@ def lista_footer_link(request):
     return [_link(link) for link in FooterLink.objects.filter(impostazioni_id=1)]
 
 
-@router.post("/footer/link", response={201: FooterLinkSchema, **_ERRORI},
+@router.post("/footer/link", response={201: FooterLinkImpostazioniSchema, **_ERRORI},
              summary="Aggiunge un link al footer (al massimo 4)")
 def crea_footer_link(request, payload: FooterLinkIn):
     from apps.siteconfig import services
@@ -225,7 +225,7 @@ def crea_footer_link(request, payload: FooterLinkIn):
     return Status(201, _link(services.crea_footer_link(payload.dict())))
 
 
-@router.patch("/footer/link/{int:link_id}", response={200: FooterLinkSchema, **_ERRORI},
+@router.patch("/footer/link/{int:link_id}", response={200: FooterLinkImpostazioniSchema, **_ERRORI},
               summary="Modifica un link del footer")
 def modifica_footer_link(request, link_id: int, payload: FooterLinkPatch):
     from apps.siteconfig import services
@@ -247,7 +247,7 @@ def elimina_footer_link(request, link_id: int):
     return Status(204, None)
 
 
-@router.post("/footer/link/ordina", response={200: list[FooterLinkSchema], **_ERRORI},
+@router.post("/footer/link/ordina", response={200: list[FooterLinkImpostazioniSchema], **_ERRORI},
              summary="Riordina i link del footer (tutti gli id, nel nuovo ordine)")
 def ordina_footer_link(request, payload: OrdinaLinkIn):
     from apps.siteconfig import services
@@ -426,7 +426,7 @@ def copia_template(request, chiave: str, payload: CopiaTemplateIn):
 # Email di test e Gmail SMTP OAuth
 # ---------------------------------------------------------------------------
 
-@router.post("/email/test", response={200: EsitoSchema, **_ERRORI},
+@router.post("/email/test", response={200: EsitoImpostazioniSchema, **_ERRORI},
              summary="Invia un'email di test al proprio indirizzo (SMTP o provider)")
 def test_email(request, payload: TestEmailIn):
     from apps.siteconfig import services
@@ -557,7 +557,7 @@ def invalida_cache(request, payload: InvalidaCacheIn):
     return {"detail": f"Eliminati {n} PDF dalla cache.", "eliminati": n}
 
 
-@router.post("/cache-pdf/genera", response={202: EsitoSchema, **_ERRORI},
+@router.post("/cache-pdf/genera", response={202: EsitoImpostazioniSchema, **_ERRORI},
              summary="Avvia la generazione massiva dei PDF di un'edizione")
 def genera_massivo(request, payload: EdizioneIdIn):
     from apps.editions.models import Edizione
@@ -572,7 +572,7 @@ def genera_massivo(request, payload: EdizioneIdIn):
     )})
 
 
-@router.post("/cache-pdf/interrompi", response={202: EsitoSchema, **_ERRORI},
+@router.post("/cache-pdf/interrompi", response={202: EsitoImpostazioniSchema, **_ERRORI},
              summary="Chiede l'interruzione della generazione massiva")
 def interrompi_massivo(request, payload: EdizioneIdIn):
     from apps.editions.models import Edizione

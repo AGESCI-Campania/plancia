@@ -4,7 +4,7 @@ from __future__ import annotations
 from ninja import Schema
 
 
-class EdizioneBreveSchema(Schema):
+class EdizioneStatisticheSchema(Schema):
     id: int
     anno: int
     stato: str
@@ -48,8 +48,8 @@ class StatTicketSchema(Schema):
 
 
 class StatisticheSchema(Schema):
-    edizioni: list[EdizioneBreveSchema]
-    edizione: EdizioneBreveSchema | None
+    edizioni: list[EdizioneStatisticheSchema]
+    edizione: EdizioneStatisticheSchema | None
     per_zona: list[StatZonaSchema]
     globali: StatGlobaliSchema | None
     ticket: StatTicketSchema | None

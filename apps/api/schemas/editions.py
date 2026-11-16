@@ -45,7 +45,7 @@ class StatsDiariSchema(Schema):
     per_stato: list[StatoConteggioSchema]
 
 
-class FiltriDiariSchema(Schema):
+class FiltriRiepilogoSchema(Schema):
     """Valori distinti dei diari visibili, per i filtri dell'elenco."""
 
     zone: list[str]
@@ -58,7 +58,7 @@ class RiepilogoEdizioneSchema(Schema):
     puo_gestire: bool
     totale_diari: int
     stats_diari: StatsDiariSchema | None = None
-    filtri: FiltriDiariSchema
+    filtri: FiltriRiepilogoSchema
 
 
 class EdizioneAttivaSchema(Schema):

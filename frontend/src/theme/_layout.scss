@@ -1,0 +1,29 @@
+// =============================================================
+//  _layout.scss — layout viewport fisso del tema Bootstrap
+//  (solo agesci.scss: il tema CoreUI usa il layout nativo
+//  .wrapper/.sidebar/.header di CoreUI).
+// =============================================================
+
+// --- Layout applicazione (header e sidebar fissi, solo l'area contenuto scorre)
+// body usa d-flex flex-column nel markup; qui fissiamo l'altezza al viewport.
+// Su mobile e tablet (< lg / 1024px) il layout torna al flusso normale.
+body {
+  @media (min-width: 1024px) {
+    height: 100vh;
+    overflow: hidden;
+  }
+}
+
+// ag-scroll-area: unico scroll container dell'area contenuto.
+// È un blocco semplice (non flex), così overflow-y: auto funziona
+// senza i quirk dei flex container con item flex-grow.
+// Contiene <main> + <footer> come fratelli: il footer prende tutta
+// la larghezza del wrapper (viewport − sidebar), senza essere vincolato
+// dal max-width del .container che si applica solo a <main>.
+.ag-scroll-area {
+  min-width: 0; // evita overflow orizzontale su mobile (flex item default min-width: auto)
+  @media (min-width: 1024px) {
+    min-height: 0;
+    overflow-y: auto;
+  }
+}

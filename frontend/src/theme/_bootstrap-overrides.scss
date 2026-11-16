@@ -1,0 +1,133 @@
+// =============================================================
+//  Override Bootstrap + componenti del tema AGESCI Campania
+//  Questo file usa le CSS custom properties definite in _branche.scss
+//  cosi' i componenti reagiscono automaticamente a [data-branca].
+//  Solo tema Bootstrap 6: il tema CoreUI ha la propria copia BS5 di questo
+//  partial. Le variabili del framework sono --bs-* letterali. Il layout
+//  viewport fisso sta in _layout.scss.
+// =============================================================
+@use "palette" as p;
+
+// --- Tipografia --------------------------------------------------------------
+$ag-font-sans: "Open Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+$ag-font-head: "Montserrat", "Open Sans", system-ui, sans-serif;
+
+body {
+  font-family: $ag-font-sans;
+  color: p.$agesci-grigio-scuro;
+}
+h1, h2, h3, h4, h5, h6,
+.h1, .h2, .h3, .h4, .h5, .h6 {
+  font-family: $ag-font-head;
+  font-weight: 700;
+}
+
+// --- Bottoni, badge, link, focus --------------------------------------------
+// Nessun override: Bootstrap 6 deriva .theme-primary, i link e il focus ring dai
+// token --bs-primary-* generati in _branche.scss.
+
+// Bottoni "chiari" per le barre colorate dell'header (ex btn-light / btn-outline-light v5,
+// che Bootstrap 6 non ha). Si combinano con .btn-solid / .btn-outline.
+.btn-outline.ag-btn-light {
+  --bs-btn-color: #fff;
+  --bs-btn-border-color: rgba(255, 255, 255, .7);
+  --bs-btn-hover-bg: rgba(255, 255, 255, .18);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-border-color: #fff;
+  --bs-btn-active-bg: rgba(255, 255, 255, .28);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-border-color: #fff;
+}
+.btn-solid.ag-btn-light {
+  --bs-btn-bg: #fff;
+  --bs-btn-color: #{p.$agesci-grigio-scuro};
+  --bs-btn-border-color: #fff;
+  --bs-btn-hover-bg: #f1f3f5;
+  --bs-btn-hover-color: #{p.$agesci-grigio-scuro};
+  --bs-btn-hover-border-color: #f1f3f5;
+  --bs-btn-active-bg: #e4e7ea;
+  --bs-btn-active-color: #{p.$agesci-grigio-scuro};
+  --bs-btn-active-border-color: #e4e7ea;
+}
+
+// --- Navbar di brand ---------------------------------------------------------
+.navbar-agesci {
+  background-color: var(--ag-primary);
+  --bs-navbar-color: rgba(255, 255, 255, .85);
+  --bs-navbar-hover-color: #fff;
+  --bs-navbar-active-color: #fff;
+  --bs-navbar-brand-color: #fff;
+  --bs-navbar-brand-hover-color: #fff;
+  --bs-navbar-toggler-border-color: rgba(255, 255, 255, .3);
+
+  // se la branca e' chiara (es. LC giallo) il testo bianco e' illeggibile:
+  // si usa .navbar-agesci.ag-navbar--testo-scuro (partial navbar.html, setting
+  // AGESCI_THEME_NAVBAR_TESTO_SCURO) per forzare i link scuri.
+  &.ag-navbar--testo-scuro {
+    --bs-navbar-color: rgba(0, 0, 0, .65);
+    --bs-navbar-hover-color: #000;
+    --bs-navbar-active-color: #000;
+    --bs-navbar-brand-color: #000;
+    --bs-navbar-brand-hover-color: #000;
+    --bs-navbar-toggler-border-color: rgba(0, 0, 0, .3);
+  }
+
+  .navbar-brand img {
+    height: 40px;
+    width: auto;
+  }
+}
+
+// --- Breadcrumb --------------------------------------------------------------
+.breadcrumb-agesci {
+  background-color: var(--ag-primary-subtle);
+  border-bottom: 1px solid rgba(0, 0, 0, .06);
+
+  .breadcrumb {
+    --bs-breadcrumb-divider-color: var(--ag-primary);
+    --bs-breadcrumb-link-color: var(--ag-primary);
+    --bs-breadcrumb-link-hover-color: var(--ag-primary-hover);
+    --bs-breadcrumb-link-hover-bg: transparent;
+    --bs-breadcrumb-link-active-color: var(--ag-primary);
+  }
+  .breadcrumb-link.active { font-weight: 600; }
+}
+
+// --- Subnav secondaria -------------------------------------------------------
+.subnav-agesci {
+  background-color: var(--ag-primary-subtle);
+  border-bottom: 1px solid rgba(0, 0, 0, .08);
+
+  .nav-link {
+    color: var(--ag-primary);
+    border-radius: .375rem;
+
+    &:hover { background-color: color-mix(in srgb, var(--ag-primary) 12%, transparent); color: var(--ag-primary); }
+    &.active { background-color: var(--ag-primary); color: var(--ag-on-primary); }
+  }
+}
+
+// --- Footer ------------------------------------------------------------------
+.footer-agesci {
+  background-color: p.$agesci-grigio-scuro;
+  color: rgba(255, 255, 255, .8);
+  padding: 0.5rem 0;
+  a { color: #fff; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .footer-emblema { height: 56px; width: auto; opacity: .95; }
+}
+
+// --- Utility palette (classi dirette ai colori del manuale) -----------------
+.bg-ag-viola      { background-color: p.$agesci-viola !important;     color: #fff; }
+.bg-ag-azzurro    { background-color: p.$agesci-azzurro !important;   color: #fff; }
+.bg-ag-giallo-lc  { background-color: p.$agesci-giallo-lc !important; color: p.$agesci-nero; }
+.bg-ag-verde-eg   { background-color: p.$agesci-verde-eg !important;  color: #fff; }
+.bg-ag-rosso-rs   { background-color: p.$agesci-rosso-rs !important;  color: #fff; }
+.bg-ag-giallo-oro { background-color: p.$agesci-giallo-oro !important;color: p.$agesci-nero; }
+.bg-ag-generico-2 { background-color: p.$agesci-generico-2 !important; color: #fff; }
+
+.text-ag-viola    { color: p.$agesci-viola !important; }
+.text-ag-azzurro  { color: p.$agesci-azzurro !important; }
+.text-ag-verde-eg { color: p.$agesci-verde-eg !important; }
+.text-ag-rosso-rs { color: p.$agesci-rosso-rs !important; }
+.text-ag-generico-2 { color: p.$agesci-generico-2 !important; }

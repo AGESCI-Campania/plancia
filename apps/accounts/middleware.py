@@ -1,11 +1,10 @@
 # apps/accounts/middleware.py
 """Middleware per l'enforcement della MFA sui ruoli privilegiati (docs sez. 2, 12)."""
-from django.conf import settings
 from django.contrib import messages
 from django.shortcuts import redirect
 from django.urls import reverse
 
-from apps.accounts.adapters import ruolo_richiede_mfa, sessione_da_sestante
+from apps.accounts.adapters import mfa_da_configurare
 
 # URL con prefisso esclusi dall'enforcement: MFA setup, login/logout, assets, API.
 _PERCORSI_ESCLUSI = (
@@ -39,22 +38,6 @@ class MFAEnforcementMiddleware:
         return self.get_response(request)
 
     def _deve_forzare_setup(self, request) -> bool:
-        if settings.DEBUG or getattr(settings, "SKIP_MFA_ENFORCEMENT", False):
-            return False
-        user = request.user
-        if not user.is_authenticated:
-            return False
-        # Durante l'impersonazione (hijack) non forzare: l'operatore reale ha già la MFA.
-        if getattr(user, "is_hijacked", False):
-            return False
-        if not ruolo_richiede_mfa(user):
-            return False
         if any(request.path_info.startswith(p) for p in _PERCORSI_ESCLUSI):
             return False
-        # Sessione aperta via SSO Sestante: la MFA l'ha già chiesta l'IdP. Conta il metodo
-        # di login della sessione, non l'account collegato (chi entra con password resta soggetto).
-        if sessione_da_sestante(request):
-            return False
-
-        from allauth.mfa.utils import is_mfa_enabled
-        return not is_mfa_enabled(user)
+        return mfa_da_configurare(request, request.user)

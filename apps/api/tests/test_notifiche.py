@@ -347,7 +347,7 @@ def test_attiva_crea_nomina_mancante(invito_crp, utenti):
 
 @pytest.fixture
 def senza_mfa(monkeypatch):
-    monkeypatch.setattr("apps.accounts.middleware.ruolo_richiede_mfa", lambda user: False)
+    monkeypatch.setattr("apps.accounts.middleware.mfa_da_configurare", lambda request, user: False)
 
 
 def test_web_attivazione_codice_socio(org, diario, senza_mfa):

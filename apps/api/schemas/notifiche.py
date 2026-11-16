@@ -50,7 +50,7 @@ class RigaInvitiSchema(Schema):
     inviti_reinviabili: list[int]  # id degli inviti in stato "inviato" su questo diario
 
 
-class EdizioneBreveSchema(Schema):
+class EdizioneInvitiSchema(Schema):
     id: int
     anno: int
     nome: str
@@ -70,7 +70,7 @@ class ContatoriInvitiSchema(Schema):
 class RiepilogoInvitiSchema(Schema):
     """Testata della pagina gestione inviti (edizione attiva, contatori, filtri)."""
 
-    edizione: EdizioneBreveSchema | None
+    edizione: EdizioneInvitiSchema | None
     contatori: ContatoriInvitiSchema | None
     zone: list[str]
     gruppi: list[str]
@@ -86,7 +86,7 @@ class InviaInvitiDiarioIn(Schema):
     ruoli: list[Literal["csq", "crp"]] = ["csq", "crp"]
 
 
-class EsitoSchema(Schema):
+class EsitoNotificaSchema(Schema):
     detail: str
 
 
@@ -100,7 +100,7 @@ class RigaInvitiCrpSchema(Schema):
 
 
 class InvitiCrpSchema(Schema):
-    edizione: EdizioneBreveSchema | None
+    edizione: EdizioneInvitiSchema | None
     righe: list[RigaInvitiCrpSchema]
 
 

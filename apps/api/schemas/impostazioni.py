@@ -20,7 +20,7 @@ class IdentitaSchema(Schema):
     sottotitolo: str
 
 
-class FooterLinkSchema(Schema):
+class FooterLinkImpostazioniSchema(Schema):
     id: int
     tipo: str
     tipo_display: str
@@ -29,9 +29,9 @@ class FooterLinkSchema(Schema):
     ordine: int
 
 
-class FooterSchema(Schema):
+class FooterImpostazioniSchema(Schema):
     footer_testo: str
-    links: list[FooterLinkSchema]
+    links: list[FooterLinkImpostazioniSchema]
 
 
 class GmailOAuthSchema(Schema):
@@ -81,7 +81,7 @@ class ScelteSchema(Schema):
 
 class ImpostazioniSchema(Schema):
     identita: IdentitaSchema
-    footer: FooterSchema
+    footer: FooterImpostazioniSchema
     email: EmailSchema
     sicurezza: SicurezzaSchema
     allegati: AllegatiSchema
@@ -135,7 +135,7 @@ class DiagnosticaIn(Schema):
     debug_diagnostico: bool | None = None
 
 
-class ManutenzioneSchema(Schema):
+class ManutenzioneImpostazioniSchema(Schema):
     manutenzione: bool
 
 
@@ -216,7 +216,7 @@ class TestEmailIn(Schema):
     backend: Literal["smtp", "transazionale"] = "smtp"
 
 
-class EsitoSchema(Schema):
+class EsitoImpostazioniSchema(Schema):
     detail: str
 
 

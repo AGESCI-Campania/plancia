@@ -36,10 +36,18 @@ def messaggi_validazione(exc: ValidationError) -> dict[str, list[str]]:
 
 
 def registra_gestori(api: NinjaAPI) -> None:
+    from apps.api.auth import MfaDaConfigurare
     from apps.evaluations.actions import AzioneNonConsentita, PermessoNegato
 
     def _risposta(request, stato: int, corpo: dict[str, Any]):
         return api.create_response(request, corpo, status=stato)
+
+    @api.exception_handler(MfaDaConfigurare)
+    def _mfa_da_configurare(request, exc):
+        return _risposta(request, 403, {
+            "detail": "Il tuo ruolo richiede la verifica in due passaggi: configurala per continuare.",
+            "mfa_da_configurare": True,
+        })
 
     @api.exception_handler(PermessoNegato)
     def _permesso_negato(request, exc):
