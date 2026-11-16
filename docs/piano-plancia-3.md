@@ -55,23 +55,49 @@ generati da OpenAPI (`openapi-typescript`); autocomplete Socio come componente V
   comando `manage.py manutenzione attiva|disattiva|stato`, backup, `docker compose build`/`up -d --wait`,
   rollback) mantenendo `_comune.sh`/`_plancia.sh`, `controlla_var_nuove`, unit systemd. Opzioni
   `--si` (non interattivo) e `--stato-file <path>` (avanzamento in JSON per la pagina web).
+  Il repo sul server resta in **detached HEAD sul tag** (scelta del 2026-11-16): deroga al § 3 di
+  `INTEGRAZIONE.md` del frontend (`git pull --ff-only` + `--dopo-pull`), da far approvare e
+  applicare all'utente in quel repo (testo proposto sotto). Il riavvio resta
+  `docker compose up -d --wait` (niente `sudo systemctl restart`: `agesci` non è sudoer).
 - **Aggiornamento dal web (solo Admin)**:
   - task Celery beat giornaliero: GitHub Releases API (`repos/<org>/plancia/releases/latest`, senza
     token o con token read-only da `.env`) → `Impostazioni.ultima_release_*` (versione, note, data);
   - pagina *Impostazioni → Aggiornamenti*: versione installata, disponibile, note; pulsante
     **Aggiorna a vX.Y.Z** con conferma e **riautenticazione MFA**; audit (chi, quando, esito);
-  - Django scrive **solo** `aggiornamenti/richiesta.json` in una cartella bind-mount
-    (`/opt/plancia/aggiornamenti`); **mai `docker.sock` nel container**;
-  - host: `plancia-aggiorna.path` (utente `agesci`) → `plancia-aggiorna.service` che valida la
-    richiesta (formato tag, tag esistente), la sposta in `in-corso.json` e lancia
-    `scripts/aggiorna.sh --si vX.Y.Z --stato-file …`; log in `aggiornamenti/log/`; una sola
-    esecuzione alla volta (lock); installate da `installa.sh` come le altre unit;
+  - Django scrive **solo** `aggiornamenti/richiesta.json` in una cartella bind-mount dentro il
+    repo (`/opt/plancia/aggiornamenti`, in `.gitignore`; gli script non scrivono fuori dal repo);
+    `installa.sh` la crea scrivibile dall'uid del container `web` (diverso da `agesci`);
+    **mai `docker.sock` nel container**;
+  - host: system unit `plancia-aggiorna.path` → `plancia-aggiorna.service` (`User=agesci`,
+    in `/etc/systemd/system/`) che valida la richiesta (formato tag, tag esistente), la sposta in
+    `in-corso.json` e lancia `scripts/aggiorna.sh --si vX.Y.Z --stato-file …`; log in
+    `aggiornamenti/log/`; una sola esecuzione alla volta (lock). Installate da una funzione di
+    **`_plancia.sh`** (`installa_servizio_systemd` di `_comune.sh` genera solo la unit d'avvio e
+    `_comune.sh` non si modifica qui), con lo stesso schema: senza sudo stampa il comando
+    `sudo bash -c '…'` per l'amministratore e prosegue;
   - la pagina fa polling dello stato (API che legge il file) e regge il riavvio (manutenzione →
     ritorno `healthy` → reload); email all'Admin con esito e log; variabili `.env` mancanti → stop
     con messaggio mostrato nella pagina.
 - **Fasi**: endpoint versione + comando `manutenzione` in Fase 2; footer/modale/SW in Fase 3;
   pagina Aggiornamenti in Fase 4; `aggiorna.sh`, runner e unit in Fase 6; CLAUDE.md § Release
   aggiornato (tag prima del deploy).
+
+### Proposta di modifica a `INTEGRAZIONE.md` § 3 (repo `agesci-campania-web-frontend`)
+
+Da applicare a cura dell'utente (un agente di Plancia non modifica quel repo). Sostituire i punti 1–2
+di `scripts/aggiorna.sh` con:
+
+> 1. Rifiuta di procedere se ci sono modifiche locali non committate (il server rispecchia git).
+> 2. Scarica il codice in uno dei due modi, a scelta del progetto:
+>    - **su branch**: `git pull --ff-only`, poi **ri-esegue se stesso** (`exec "$0" --dopo-pull`);
+>    - **su release**: `git fetch --tags`, versione = argomento o ultimo tag `vX.Y.Z`
+>      (`sort -V`), `git checkout` del tag (detached HEAD) eseguendo lo script **da una copia
+>      temporanea**, perché il checkout lo sostituisce. In questo caso lo script deve anche
+>      mostrare le novità (changelog), mettere la manutenzione e, se dopo l'avvio i servizi non
+>      sono `healthy`, tornare alla versione precedente (indicando il backup se le migrazioni
+>      erano già state applicate).
+>
+> In entrambi i casi il server non ha commit locali: si aggiorna solo da ciò che è su GitHub.
 
 ## Architettura di arrivo
 
