@@ -66,10 +66,10 @@ generati da OpenAPI (`openapi-typescript`); autocomplete Socio come componente V
     **Aggiorna a vX.Y.Z** con conferma e **riautenticazione MFA**; audit (chi, quando, esito);
   - Django scrive **solo** `aggiornamenti/richiesta.json` in una cartella bind-mount dentro il
     repo (`/opt/plancia/aggiornamenti`, in `.gitignore`; gli script non scrivono fuori dal repo);
-    `installa.sh` la crea scrivibile dall'uid del container `web` (diverso da `agesci`);
+    i container girano con l'uid/gid di `agesci` (vedi Fase 1), quindi nessun problema di permessi;
     **mai `docker.sock` nel container**;
   - host: system unit `plancia-aggiorna.path` → `plancia-aggiorna.service` (`User=agesci`,
-    in `/etc/systemd/system/`) che valida la richiesta (formato tag, tag esistente), la sposta in
+    in `/etc/systemd/system/`, sul modello di `installa_backup_systemd` di `_plancia.sh`) che valida la richiesta (formato tag, tag esistente), la sposta in
     `in-corso.json` e lancia `scripts/aggiorna.sh --si vX.Y.Z --stato-file …`; log in
     `aggiornamenti/log/`; una sola esecuzione alla volta (lock). Installate da una funzione di
     **`_plancia.sh`** (`installa_servizio_systemd` di `_comune.sh` genera solo la unit d'avvio e
@@ -145,6 +145,16 @@ Prima di toccare l'interfaccia, così gli aggiornamenti sono verificati dai test
 
 - `selenium`/`webdriver-manager` da `dependencies` al gruppo `dev`.
 - `Dockerfile`: `python:3.14.<patch>-slim-trixie`, uv all'ultima release.
+- **Container non root** (oggi `web`, `worker`, `beat` girano come root e scrivono come root nei
+  bind mount `./logs`, che `agesci` poi non può ruotare né cancellare): utente `plancia` con
+  `APP_UID`/`APP_GID` come build arg, valorizzati dagli script con l'uid/gid del proprietario del
+  repo (`stat -c %u/%g`, cioè `agesci`); stesso uid per i volumi media. Vale anche per
+  `aggiornamenti/` (aggiornamento dal web).
+- Server (da `note/preparazione-server.md` del frontend): Docker dal repo ufficiale o, se la 26.04
+  non è supportata, `docker.io` + `docker-compose-v2` di Ubuntu → richiedere Compose ≥ 2.17
+  (`up --wait`) e niente funzioni solo di Docker CE; rotazione log già in `daemon.json` (niente
+  `logging:` nel compose); porte Docker scavalcano ufw → al più `127.0.0.1`; fuso `Europe/Rome`
+  di sistema, nei container `TZ` da `.env` solo se serve.
 - `docker-compose.yml` (e `.dev.yml`): `postgres:18`, volume montato su **`/var/lib/postgresql`**
   (con la 18 `PGDATA=/var/lib/postgresql/18/docker`); ricontrollare tag nginx/redis/mailpit.
 - `.readthedocs.yaml` → Python 3.14; `.github/workflows/release-manual.yml`: verificare le major attuali
