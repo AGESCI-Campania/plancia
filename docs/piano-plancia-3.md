@@ -20,6 +20,59 @@ vite-plugin-pwa 2, Bootstrap 6 alpha, Vitest 5, Playwright.
 Lavoro su branch `v3` (lungo), merge su `main` e installazione solo a SPA completa e verificata.
 Versione di rilascio: **3.0.0**.
 
+## Decisioni prese (2026-11-16)
+
+Domande chiuse prima di partire, per non fermare lo sviluppo fase per fase:
+
+| # | Tema | Decisione |
+|---|---|---|
+| 1 | `aggiorna.sh` | **Su tag, come qdc**: ultimo `vX.Y.Z` (o quello indicato), novità dal changelog, manutenzione, backup, build, attesa `healthy`, **rollback automatico** (se il DB è già migrato: resta in manutenzione e indica il backup). Release: **prima** tag + GitHub Release, **poi** deploy |
+| 2 | PWA ≠ server | **Modale rimandabile** ("È disponibile la versione X.Y.Z", Aggiorna / Più tardi), ripresentata a ogni avvio; prima sincronizza la coda offline (offline: avvisa e non aggiorna); badge con Aggiorna nel footer |
+| 3 | Aggiornamento da Impostazioni | **Sì, schema completo** (§ Versioni e aggiornamenti) |
+| 4 | Migrazioni | **Rigenerate da zero**: una `0001_initial` per app dopo le modifiche ai modelli; data migration utili → seed/fixture |
+| 5 | Dati offline | **Nessuna cifratura**; cancellazione al logout e a sessione scaduta (con avviso se c'è coda), solo i diari dell'utente |
+| 6 | Editor email/pagine | **Tiptap** (Vue, barra Bootstrap, segnaposto come pulsanti); via TinyMCE |
+| 7 | `django-agesci-campania-theme` | **Rimosso**: pagine d'errore HTML statiche autonome (servite anche da nginx), callback → SPA |
+| 8 | Ambiente di prova | **Docker sul Mac** (rete `agesci-proxy` finta); systemd/`.path` non verificabili in locale → runner provato a mano, unit verificate all'installazione sul server |
+| 9 | Autonomia | Commit a ogni passo verde e **push su `origin/v3`**; stop solo per merge su `main`, tag/release, server/Sestante/Caddy, decisioni nuove |
+
+Scelte di default conseguenti (non chieste): versione unica in `pyproject.toml`, letta da Vite
+(`__VERSIONE_APP__`); changelog spostato da `README.md` a **`CHANGELOG.md`** (sezioni
+`## X.Y.Z — AAAA-MM-GG`, letto da `aggiorna.sh` e dalla pagina di aggiornamento); tipi del client
+generati da OpenAPI (`openapi-typescript`); autocomplete Socio come componente Vue (via Tom Select).
+
+## Versioni e aggiornamenti (requisito aggiunto)
+
+- **Versione server**: `GET /api/v1/sito` (pubblico) restituisce `versione`; `/app-status` invariato
+  per l'app mobile. **Versione PWA**: `__VERSIONE_APP__` iniettata in build.
+- **Footer**: due etichette, *App vX.Y.Z* (installata) e *Server vX.Y.Z*; se diverse, badge +
+  pulsante Aggiorna (`aggiornaOra`: `registration.update()`, attesa del nuovo SW, `skipWaiting`, reload).
+  Service worker in modalità *prompt* (`vite-plugin-pwa`), confronto semver come
+  `versioneInferiore` di qdc; la versione server letta da cache non conta.
+- **Modale** (decisione 2) in `AggiornamentoApp.vue`; non compare offline.
+- **`scripts/aggiorna.sh`** riscritto sul modello qdc (`git checkout` del tag eseguendo una copia
+  dello script, `sort -V`, novità da `CHANGELOG.md`, diff di `.env.template`, manutenzione via
+  comando `manage.py manutenzione attiva|disattiva|stato`, backup, `docker compose build`/`up -d --wait`,
+  rollback) mantenendo `_comune.sh`/`_plancia.sh`, `controlla_var_nuove`, unit systemd. Opzioni
+  `--si` (non interattivo) e `--stato-file <path>` (avanzamento in JSON per la pagina web).
+- **Aggiornamento dal web (solo Admin)**:
+  - task Celery beat giornaliero: GitHub Releases API (`repos/<org>/plancia/releases/latest`, senza
+    token o con token read-only da `.env`) → `Impostazioni.ultima_release_*` (versione, note, data);
+  - pagina *Impostazioni → Aggiornamenti*: versione installata, disponibile, note; pulsante
+    **Aggiorna a vX.Y.Z** con conferma e **riautenticazione MFA**; audit (chi, quando, esito);
+  - Django scrive **solo** `aggiornamenti/richiesta.json` in una cartella bind-mount
+    (`/opt/plancia/aggiornamenti`); **mai `docker.sock` nel container**;
+  - host: `plancia-aggiorna.path` (utente `agesci`) → `plancia-aggiorna.service` che valida la
+    richiesta (formato tag, tag esistente), la sposta in `in-corso.json` e lancia
+    `scripts/aggiorna.sh --si vX.Y.Z --stato-file …`; log in `aggiornamenti/log/`; una sola
+    esecuzione alla volta (lock); installate da `installa.sh` come le altre unit;
+  - la pagina fa polling dello stato (API che legge il file) e regge il riavvio (manutenzione →
+    ritorno `healthy` → reload); email all'Admin con esito e log; variabili `.env` mancanti → stop
+    con messaggio mostrato nella pagina.
+- **Fasi**: endpoint versione + comando `manutenzione` in Fase 2; footer/modale/SW in Fase 3;
+  pagina Aggiornamenti in Fase 4; `aggiorna.sh`, runner e unit in Fase 6; CLAUDE.md § Release
+  aggiornato (tag prima del deploy).
+
 ## Architettura di arrivo
 
 ```
@@ -42,7 +95,7 @@ Caddy ──► plancia-nginx:80 ──┬─ /                → SPA (frontend
   l'app mobile continua con `X-Session-Token` (app-mode) e `/api/v1` invariato.
 - **Tema**: la SPA usa Bootstrap 6 direttamente con la palette AGESCI presa dal tema **3.0.0aX**
   (SCSS copiato in `frontend/src/theme/`, branca EG). Il pacchetto `django-agesci-campania-theme`
-  resta solo se servono le pagine d'errore Django; altrimenti si rimuove.
+  si rimuove (decisione 7).
 
 ---
 
@@ -130,8 +183,8 @@ import, helpdesk, statistiche, profilo e sicurezza. Nessuna abbreviazione CSQ/CR
 Riportare in Dexie + coda di invio (outbox con idempotenza) le funzioni oggi in
 `static/js/plancia-{idb,autosave,moduli-offline,sync,foto,sw}.js`: moduli compilabili offline, coda
 foto, sync alla riconnessione, banner "modifiche in attesa", shell PWA in cache, mai risposte API
-nel service worker. **Da decidere in Fase 5**: cifratura dei dati sul dispositivo (contengono dati
-di minori) — consigliata.
+nel service worker. Dati sul dispositivo non cifrati, cancellati al logout/scadenza
+sessione (decisione 5).
 
 ## Fase 6 — Pulizia backend e deploy
 
