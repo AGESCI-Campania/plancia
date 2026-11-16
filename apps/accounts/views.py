@@ -1,4 +1,8 @@
 # apps/accounts/views.py
+from allauth.account.views import PasswordChangeView as AllauthPasswordChangeView
+from allauth.mfa.base.views import AuthenticateView as MFAAuthenticateView
+from allauth.mfa.models import Authenticator
+from allauth.usersessions.models import UserSession
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
@@ -7,11 +11,6 @@ from django.views import View
 from django.views.generic import DetailView, ListView, TemplateView
 
 from apps.accounts.mixins import StaffPlanciaRequiredMixin
-from allauth.mfa.base.views import AuthenticateView as MFAAuthenticateView
-from allauth.mfa.models import Authenticator
-from allauth.account.views import PasswordChangeView as AllauthPasswordChangeView
-from allauth.usersessions.models import UserSession
-
 from apps.accounts.models import Ruolo, User
 from apps.accounts.roles import ROLE_CREATABLE_BY
 from apps.accounts.roles import nomina as service_nomina

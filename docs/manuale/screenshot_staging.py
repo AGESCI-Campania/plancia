@@ -10,7 +10,6 @@ grigio (Pillow). I PNG vengono salvati in docs/manuale/screenshots/.
 """
 
 import os
-import sys
 import time
 
 from PIL import Image, ImageDraw

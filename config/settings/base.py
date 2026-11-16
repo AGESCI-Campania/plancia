@@ -502,14 +502,22 @@ DEFAULT_FROM_EMAIL = env.str("DEFAULT_FROM_EMAIL", default="plancia@agescicampan
 # noqa: E402 — import posizionato qui per leggibilità vicino all'uso
 MESSAGE_TAGS = {40: "danger"}  # 40 = messages.ERROR
 
-# Backend custom: rispetta Impostazioni.email_mode (reale / simulato / simulato_piu_invio).
-# In dev (vedi dev.py) si usa il backend console.
-EMAIL_BACKEND = "apps.siteconfig.email_backends.PlanciaEmailBackend"
-EMAIL_HOST = env.str("EMAIL_HOST", default="")
-EMAIL_PORT = env.int("EMAIL_PORT", default=587)
-EMAIL_HOST_USER = env.str("EMAIL_HOST_USER", default="")
-EMAIL_HOST_PASSWORD = env.str("EMAIL_HOST_PASSWORD", default="")
-EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
+# Mailer (Django 6.1): tutti passano da PlanciaEmailBackend, che rispetta
+# Impostazioni.email_mode e instrada "standard" e "massivo" ai backend configurati.
+# "default" è usato da allauth, mail_admins e da chi non indica `using`.
+_MAILER_PLANCIA = "apps.siteconfig.email_backends.PlanciaEmailBackend"
+MAILERS = {
+    "default": {"BACKEND": _MAILER_PLANCIA},
+    "standard": {"BACKEND": _MAILER_PLANCIA, "OPTIONS": {"tipo": "standard"}},
+    "massivo": {"BACKEND": _MAILER_PLANCIA, "OPTIONS": {"tipo": "massivo"}},
+}
+# SMTP di riserva quando Impostazioni non ha host/credenziali (prima configurazione).
+SMTP_RISERVA = {
+    "host": env.str("EMAIL_HOST", default=""),
+    "port": env.int("EMAIL_PORT", default=587),
+    "username": env.str("EMAIL_HOST_USER", default=""),
+    "password": env.str("EMAIL_HOST_PASSWORD", default=""),
+}
 
 # Cartella dove la modalita' "simulato" scrive i messaggi (un file per invio).
 LOG_DIR = BASE_DIR / "logs"
@@ -528,8 +536,8 @@ MAILPIT_SMTP_PORT = env.int("MAILPIT_SMTP_PORT", default=1025)
 # Le variabili d'ambiente qui sotto servono come fallback in ambienti senza DB
 # o per il secret webhook (leggi docs/guide/email_provider.md).
 ANYMAIL: dict = {}
-EMAIL_FILE_PATH = LOG_DIR / "email"
-(EMAIL_FILE_PATH).mkdir(parents=True, exist_ok=True)
+EMAIL_SIMULATO_DIR = LOG_DIR / "email"
+EMAIL_SIMULATO_DIR.mkdir(parents=True, exist_ok=True)
 
 # --- Logging ----------------------------------------------------------------
 LOGGING = {

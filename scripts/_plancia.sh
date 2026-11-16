@@ -5,6 +5,12 @@
 # shellcheck disable=SC2034  # usata dagli script che includono questo file
 SERVIZI_SALUTE=(db redis web worker nginx)
 
+# uid/gid dell'utente che lancia gli script (il proprietario del repo, agesci): l'immagine
+# crea l'utente del container con gli stessi, vedi Dockerfile e build.args nel compose.
+APP_UID="$(id -u)"
+APP_GID="$(id -g)"
+export APP_UID APP_GID
+
 # Esegue un comando Django nel container web in esecuzione
 manage() {
 	docker compose exec -T web uv run python manage.py "$@"

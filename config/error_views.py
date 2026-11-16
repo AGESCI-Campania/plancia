@@ -38,7 +38,7 @@ def csrf_failure(request, reason=""):
 
 
 def _notify_404(request):
-    """Invia email agli ADMINS per ogni 404. fail_silently=True per non mascherare l'errore."""
+    """Invia email agli ADMINS per ogni 404; un errore di invio non deve mascherare il 404."""
     try:
         path = request.path
         user = getattr(request, "user", None)
@@ -51,7 +51,6 @@ def _notify_404(request):
                 f"User-Agent: {request.META.get('HTTP_USER_AGENT', '—')}\n"
                 f"Utente: {user_info}\n"
             ),
-            fail_silently=True,
         )
     except Exception:
         logger.exception("Impossibile inviare email di notifica per 404")

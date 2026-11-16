@@ -10,7 +10,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Estrai versione da pyproject.toml
         id: version
@@ -76,7 +76,7 @@ jobs:
             -o manuale_amministrazione_${VERSION}.pdf
 
       - name: Allega PDF alla release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             docs/manuale/plancia_manuale_${{ steps.version.outputs.version }}.pdf

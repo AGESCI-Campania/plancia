@@ -31,7 +31,6 @@ def seed():
         MembroSq,
         Missione,
         PostoAzione,
-        PostoAzioneMissione,
         Presentazione,
         StatoDiario,
         TipoDiario,

@@ -7,7 +7,6 @@ from django.test import Client
 
 from apps.diaries.models import (
     Anagrafica,
-    Diario,
     EsitoSpecialita,
     Impresa,
     MembroSq,
@@ -18,7 +17,6 @@ from apps.diaries.models import (
     TipoDiario,
     TipoEsito,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -67,7 +65,7 @@ def test_status_unauthenticated(diario):
 @pytest.mark.django_db
 def test_status_forbidden(diario, user_crp):
     """Un CRP di un altro reparto non può accedere."""
-    from apps.accounts.models import User, Ruolo
+    from apps.accounts.models import Ruolo, User
     from apps.org.models import Socio
     altro_socio = Socio.objects.create(
         codice_socio="899999", nome="Altro", cognome="CRP",

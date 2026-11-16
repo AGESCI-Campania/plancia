@@ -16,7 +16,7 @@ pubblicano l'esito. Edizioni annuali, generazione di PDF/Excel, upload su Google
 documento prevale su questo file.
 
 ## Stack
-- Python **≥ 3.14**, Django **≥ 6.0**. PostgreSQL **≥ 17**. Redis + **Celery** per job asincroni.
+- Python **≥ 3.14**, Django **≥ 6.1**. PostgreSQL **≥ 18**. Redis + **Celery** per job asincroni.
 - **uv** per dipendenze/venv. **Bootstrap 5** via **`django-agesci-campania-theme` 2.2.1**.
   Icone SVG inline con **`django-bootstrap-icons`**. **WeasyPrint** (PDF), **openpyxl** (Excel),
   **odfpy** (export ODS).
@@ -265,7 +265,14 @@ Ordine in `MIDDLEWARE`: entrambi **dopo** `CorsMiddleware` e **prima** di `Sessi
 
 ### Email
 - **Dual backend**: `email_backend_standard` (sistema/inviti singoli) vs `email_backend_massivo`
-  (inviti bulk). `get_connection_per_tipo(tipo)` in `email_backends.py`. `email_mode` sovrascrive tutto.
+  (inviti bulk). `email_mode` sovrascrive tutto. Django 6.1 **`MAILERS`**: alias `default`,
+  `standard`, `massivo` (tutti `PlanciaEmailBackend`, che chiama `get_connection_per_tipo`).
+  Inviare con `msg.send(using="standard")` o `mailers["massivo"]`; **mai** `connection=`,
+  `fail_silently=` né impostazioni `EMAIL_*` (deprecate; con `MAILERS` definito sono errori).
+  SMTP di riserva in `settings.SMTP_RISERVA`, modalità simulata in `EMAIL_SIMULATO_DIR`.
+  I backend costruiti in `email_backends.py` ricevono sempre `alias=`.
+- **Container non root**: utente `plancia` con uid/gid di `agesci` (`APP_UID`/`APP_GID`,
+  esportati da `scripts/_plancia.sh`, build args nel compose).
 - **Anymail signals** in `notifications/webhooks.py`, registrati in `NotificationsConfig.ready()`.
   Webhook: `/anymail/webhook/`.
 - **Dev**: Mailpit su `localhost:8025`. `ACCOUNT_EMAIL_VERIFICATION = "none"` in `dev.py`.

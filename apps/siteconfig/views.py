@@ -503,9 +503,8 @@ class TestEmailView(RuoloRequiredMixin, View):
                 ),
                 from_email=imp.from_email_completo,
                 to=[request.user.email],
-                connection=conn,
             )
-            msg.send()
+            conn.send_messages([msg])
             messages.success(
                 request,
                 f"Email di test ({label}) inviata a {request.user.email}.",

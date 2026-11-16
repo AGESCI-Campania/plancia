@@ -1,6 +1,5 @@
 # apps/evaluations/tests/test_flussi.py
 """Test dei due flussi di valutazione: diretto (Incaricato) e via Pattuglia GV."""
-import pytest
 from django.utils import timezone
 
 from apps.accounts.models import Ruolo, User

@@ -155,7 +155,9 @@ class TestDilazioneContext:
     @pytest.fixture
     def user_staff(self, db):
         import json
+
         from allauth.mfa.models import Authenticator
+
         from apps.accounts.models import Ruolo, User
         u = User.objects.create_user(
             username="staff_dil", email="staff_dil@test.it", password="x",
@@ -214,7 +216,7 @@ class TestNuoviCampiModello:
         assert es.chi == "Sofia Ferrari"
 
     def test_membro_sq_solo_nome(self, diario):
-        from apps.diaries.models import Presentazione, MembroSq
+        from apps.diaries.models import MembroSq, Presentazione
         pres = Presentazione.objects.create(diario=diario)
         m = MembroSq.objects.create(presentazione=pres, nome="Luca Bianchi", ruolo="csq")
         assert m.nome == "Luca Bianchi"
@@ -280,8 +282,8 @@ class TestDiariVisibili:
         assert list(qs) == [diario]
 
     def test_csq_non_vede_diari_altrui(self, db, diario, user_csq, edizione):
-        from apps.org.models import Gruppo, Reparto, Socio, Squadriglia, Zona
         from apps.diaries.visibility import diari_visibili
+        from apps.org.models import Gruppo, Reparto, Socio, Squadriglia, Zona
         zona2 = Zona.objects.create(nome="Zona Altra TV")
         gruppo2 = Gruppo.objects.create(nome="Gruppo Altro TV", zona=zona2)
         reparto2 = Reparto.objects.create(nome="Reparto Altro TV", gruppo=gruppo2)
@@ -307,8 +309,8 @@ class TestDiariVisibili:
             assert d.crp == user_crp.socio
 
     def test_filtro_edizione(self, db, diario, user_crp, edizione):
-        from apps.editions.models import Edizione
         from apps.diaries.visibility import diari_visibili
+        from apps.editions.models import Edizione
         altra_edizione = Edizione.objects.create(anno=2099)
         qs = diari_visibili(user_crp, edizione=edizione)
         assert diario in qs
@@ -316,8 +318,8 @@ class TestDiariVisibili:
 
     def test_pgv_vede_solo_assegnati(self, db, diario, user_csq, edizione):
         from apps.accounts.models import Ruolo, User
-        from apps.evaluations.models import AssegnazionePGV, Valutazione
         from apps.diaries.visibility import diari_visibili
+        from apps.evaluations.models import AssegnazionePGV, Valutazione
 
         pgv = User.objects.create_user(
             username="pgv_tv", email="pgv_tv@test.it", password="x", ruolo=Ruolo.PGV

@@ -74,8 +74,6 @@ def invia_invito(invito: Invito, backend_tipo: str = "standard") -> bool:
         return False
 
     try:
-        from apps.siteconfig.email_backends import get_connection_per_tipo
-
         msg = _MailMessageClass(
             subject=oggetto,
             body=corpo,
@@ -85,8 +83,7 @@ def invia_invito(invito: Invito, backend_tipo: str = "standard") -> bool:
         msg.content_subtype = "html"
         if hasattr(msg, "metadata"):
             msg.metadata = {"invito_pk": str(invito.pk)}
-        msg.connection = get_connection_per_tipo(backend_tipo)
-        msg.send()
+        msg.send(using=backend_tipo)
         return True
     except Exception:
         logger.exception("Errore invio email invito pk=%s a %s", invito.pk, email_dest)
@@ -307,8 +304,6 @@ def _invia_riepilogo_csq_a_crp(crp, diario_ref, squadriglie: list, backend_tipo:
     })
 
     try:
-        from apps.siteconfig.email_backends import get_connection_per_tipo
-
         msg = _MailMessageClass(
             subject=f"{titolo} — Attivazione account Capi Squadriglia",
             body=corpo,
@@ -316,8 +311,7 @@ def _invia_riepilogo_csq_a_crp(crp, diario_ref, squadriglie: list, backend_tipo:
             to=[crp.email],
         )
         msg.content_subtype = "html"
-        msg.connection = get_connection_per_tipo(backend_tipo)
-        msg.send()
+        msg.send(using=backend_tipo)
         return True
     except Exception:
         logger.exception("Errore invio email riepilogo CSQ a CRP %s", crp.email)

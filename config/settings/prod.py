@@ -47,11 +47,4 @@ AXES_CLIENT_IP_CALLABLE = "apps.siteconfig.axes_helpers.ip_client_dietro_proxy"
 # axes per primo in produzione
 AUTHENTICATION_BACKENDS = ["axes.backends.AxesStandaloneBackend", *AUTHENTICATION_BACKENDS]
 
-# Email: gestita da PlanciaEmailBackend (base.py).
-# Provider e credenziali configurabili da Impostazioni admin.
-# SMTP fallback per ambienti senza DB o prima configurazione:
-EMAIL_HOST = env.str("EMAIL_HOST", default="")
-EMAIL_PORT = env.int("EMAIL_PORT", default=587)
-EMAIL_HOST_USER = env.str("EMAIL_HOST_USER", default="")
-EMAIL_HOST_PASSWORD = env.str("EMAIL_HOST_PASSWORD", default="")
-EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
+# Email: MAILERS e SMTP_RISERVA in base.py; provider e credenziali da Impostazioni.

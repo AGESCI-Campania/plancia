@@ -31,11 +31,9 @@ def task_import_risposte_eg(
     from django.core.management import call_command
 
     from apps.accounts.models import Ruolo, User
-    from apps.siteconfig.email_backends import get_connection_per_tipo
     from apps.siteconfig.models import Impostazioni
 
     imp = Impostazioni.get()
-    conn = get_connection_per_tipo("standard")
     nome_file = os.path.basename(file_path)
 
     admin_emails = list(
@@ -48,8 +46,8 @@ def task_import_risposte_eg(
         with contextlib.suppress(Exception):
             EmailMultiAlternatives(
                 subject=soggetto, body=corpo,
-                from_email=imp.from_email_completo, to=admin_emails, connection=conn,
-            ).send()
+                from_email=imp.from_email_completo, to=admin_emails,
+            ).send(using="standard")
 
     # Email di avvio
     _mail(
