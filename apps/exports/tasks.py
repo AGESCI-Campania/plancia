@@ -96,7 +96,7 @@ def _notifica_errore_pdf(utente_pk: int | None, diario, errore: str, traceback_s
         from apps.siteconfig.models import Impostazioni
 
         imp = Impostazioni.get()
-        base_url = getattr(settings, "BASE_URL", "https://plancia.agescicampania.org").rstrip("/")
+        base_url = getattr(settings, "BASE_URL", "https://plancia.agescicampania.net").rstrip("/")
         conn = get_connection_per_tipo("standard")
 
         if utente_pk:
@@ -167,7 +167,7 @@ def _invia_mail_pdf(chiave: str, utente_pk: int, diario, link_pdf: str = "") -> 
         imp = Impostazioni.get()
 
         if not link_pdf and chiave == "diario_pdf_pronto":
-            base_url = getattr(settings, "BASE_URL", "https://plancia.agescicampania.org").rstrip("/")
+            base_url = getattr(settings, "BASE_URL", "https://plancia.agescicampania.net").rstrip("/")
             link_pdf = f"{base_url}{reverse('diaries:pdf', args=[diario.pk])}"
 
         oggetto, corpo = render_mail(chiave, {
@@ -257,7 +257,7 @@ def task_genera_pdf_massivo(self, edizione_pk: int, utente_pk: int | None = None
     from apps.siteconfig.models import Impostazioni
 
     lock_key = lock_key_massivo(edizione_pk)
-    base_url = getattr(settings, "BASE_URL", "https://plancia.agescicampania.org").rstrip("/")
+    base_url = getattr(settings, "BASE_URL", "https://plancia.agescicampania.net").rstrip("/")
 
     try:
         edizione = Edizione.objects.get(pk=edizione_pk)

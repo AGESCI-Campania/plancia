@@ -52,15 +52,29 @@ L'URL della piattaforma viene comunicato dalla Segreteria regionale.
 | Admin, Segreteria, Incaricato EG, PGV, Capo Reparto | Email di invito con link di attivazione diretto |
 | Capo Squadriglia | Link consegnato dal proprio Capo Reparto + conferma codice socio AGESCI e email |
 
-Dopo l'attivazione si accede con email e password, oppure con i pulsanti
-**Accedi con Google / Microsoft / Apple** se configurati dall'Admin, oppure con una
-**passkey** (Face ID, Touch ID, Windows Hello) se precedentemente registrata.
+Dopo l'attivazione si accede in uno di questi modi:
+
+- **Accedi con SSO AGESCI Campania**: lo stesso account usato per tutte le piattaforme
+  regionali (`https://auth.agescicampania.net`). Al primo accesso Plancia riconosce l'account
+  dall'indirizzo email e lo collega a quello esistente; se non esiste ancora, lo crea senza
+  ruoli (li assegnano la Segreteria o gli Incaricati EG).
+- email e password di Plancia;
+- **Accedi con Google / Microsoft / Apple**, se configurati dall'Admin;
+- una **passkey** (Face ID, Touch ID, Windows Hello) se precedentemente registrata.
 
 ![Pagina di login](screenshots/01_login.png)
 
-Gli utenti con ruolo Admin, Segreteria o Incaricato EG devono configurare
-l'**autenticazione a due fattori (MFA)** al primo accesso tramite un'app
-authenticator (Google Authenticator, Aegis, ecc.).
+Gli utenti con ruolo Admin, Segreteria o Incaricato EG devono usare l'**autenticazione a due
+fattori (MFA)**:
+
+- entrando con **SSO AGESCI Campania** la MFA la chiede l'SSO (configurata una volta sola per
+  tutte le piattaforme): Plancia non la richiede di nuovo;
+- entrando con **email e password** Plancia chiede la propria MFA (app authenticator come
+  Google Authenticator, Aegis, ecc., da configurare al primo accesso), anche se l'account è
+  collegato all'SSO.
+
+I ruoli **Admin** e **Segreteria** assegnati nell'SSO regionale valgono anche in Plancia e
+vengono aggiornati a ogni accesso con SSO: se vengono tolti lì, spariscono anche qui.
 
 ---
 

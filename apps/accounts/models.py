@@ -109,6 +109,11 @@ class Nomina(models.Model):
         blank=True,
         help_text="Scadenza opzionale (PGV, IABR, Segreteria). Null = nessuna scadenza.",
     )
+    da_sso = models.BooleanField(
+        default=False,
+        help_text="Ruolo globale derivato dal claim groups di Sestante: "
+        "creato e revocato solo dal login SSO.",
+    )
     creato_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:

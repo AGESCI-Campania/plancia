@@ -71,107 +71,61 @@ Celery in dev è in modalità *eager* (i task girano in-process). Per provarlo c
 5. Database e Redis: avviali con `docker compose -f docker-compose.dev.yml up -d db redis`.
 
 ## Produzione
-Tutto dockerizzato **tranne il reverse proxy**, che è configurabile. Lo script interattivo prepara
-tutto:
+Plancia gira in Docker sul server delle piattaforme `*.agescicampania.net`, dietro il reverse
+proxy **Caddy** di [`agesci-campania-web-frontend`](https://github.com/AGESCI-Campania/agesci-campania-web-frontend)
+(TLS Let's Encrypt, unico a pubblicare le porte 80/443). Login SSO con
+[**Sestante**](https://github.com/AGESCI-Campania/sestante) (`https://auth.agescicampania.net`),
+accanto al login locale. Regole di integrazione:
+[frontend](https://raw.githubusercontent.com/AGESCI-Campania/agesci-campania-web-frontend/main/docs/INTEGRAZIONE.md) ·
+[SSO](https://raw.githubusercontent.com/AGESCI-Campania/sestante/main/docs/INTEGRAZIONE-SSO.md).
 
+| | |
+|---|---|
+| URL | `https://plancia.agescicampania.net` |
+| Repo sul server | `/opt/plancia`, utente `agesci` (gruppo `docker`, senza sudo) |
+| Ingresso | servizio `nginx` (solo HTTP) su rete esterna `agesci-proxy`, alias `plancia-nginx:80`; nessuna porta pubblicata |
+| Servizi | `web` (gunicorn + WhiteNoise), `worker`, `beat`, `db` (PostgreSQL 17), `redis`; profili facoltativi `mailpit`, `flower` |
+| Variabili | `.env` (da `.env.template`, `chmod 600`, mai nel repo) |
+| Avvio al boot | unit systemd `plancia.service` (`docker compose up -d --wait`, dopo `agesci-campania-web-frontend.service`) + `restart: unless-stopped` |
+| Backup | `scripts/backup.sh` ogni notte (timer `plancia-backup.timer`) in `backups/` |
+
+**Prima installazione** (prerequisito: frontend già installato, rete `agesci-proxy` esistente):
 ```bash
-./deploy/configure-prod.sh
+sudo install -d -o agesci -g agesci /opt/plancia          # come amministratore
+sudo -iu agesci
+git clone https://github.com/AGESCI-Campania/plancia.git /opt/plancia
+cd /opt/plancia && scripts/installa.sh
 ```
+`installa.sh` crea `.env` con segreti nuovi (non tocca un `.env` esistente), costruisce
+l'immagine, avvia lo stack (le migrazioni le applica l'entrypoint del container `web`), attende
+che i servizi siano `healthy`, crea il primo amministratore (password mostrata una sola volta),
+installa le unit systemd e stampa i passi manuali: blocco `caddy/sites/plancia.caddy` da
+aggiungere al frontend, client id/secret di Sestante, `ADMIN_EMAILS`. Senza sudo le unit non
+vengono installate: lo script stampa il comando da far eseguire a un amministratore.
 
-Scegli:
-- **modalità proxy**: `nginx-docker` (nginx nel compose) · `nginx-host` (nginx esistente) ·
-  `apache-host` (Apache 2 esistente);
-- **porta** dell'app (default **8000**);
-- **TLS** e i parametri d'ambiente.
-
-Lo script genera `.env.prod`, le directory `logs/` e `staticfiles/` sull'host,
-il vhost per la modalità scelta (`deploy/plancia.nginx.conf` o `deploy/plancia.apache.conf`)
-e il file systemd `deploy/plancia.service` per l'avvio automatico.
-
-**Prima installazione — sequenza completa:**
+**Aggiornamento a una nuova release:**
 ```bash
-./deploy/configure-prod.sh          # genera .env.prod, vhost, service
-
-# 1. Avvia i container
-docker compose --env-file .env.prod up -d
-
-# 2. Migrazioni e static files
-docker compose --env-file .env.prod exec web uv run python manage.py migrate --noinput
-docker compose --env-file .env.prod exec web uv run python manage.py collectstatic --noinput
-# -> staticfiles/ viene popolata sull'host e servita direttamente da nginx/Apache
-
-# 3. Crea il primo amministratore
-docker compose --env-file .env.prod exec web uv run python manage.py createsuperuser
-# poi accedi a /admin/ e imposta il ruolo Admin da Impostazioni → Utenti
-
-# 4. Installa il service systemd per l'avvio automatico (opzionale)
-sudo cp deploy/plancia.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now plancia
+sudo -iu agesci
+cd /opt/plancia && scripts/aggiorna.sh
 ```
-
-**Deploy aggiornamenti:**
-```bash
-git pull
-sudo systemctl reload plancia   # rebuild immagine + ricrea container + migrate automatico
-```
-
-Oppure senza systemd:
-```bash
-git pull
-docker compose --env-file .env.prod build web
-docker compose --env-file .env.prod up -d web
-```
-
-Le migrazioni vengono applicate automaticamente all'avvio del container (`deploy/entrypoint.sh`).
-`systemctl restart` riavvia i container **senza** rebuild: usare solo per riavvii di emergenza.
-
-**Variabili d'ambiente opzionali** da aggiungere a `.env.prod` per le integrazioni Google:
-```bash
-# Gmail SMTP OAuth2 (se si usa Gmail come backend SMTP)
-GOOGLE_GMAIL_SMTP_REDIRECT_URI=https://tuo-dominio.org/impostazioni/gmail-smtp/oauth/callback/
-```
+Rifiuta di partire con modifiche locali, fa `git pull --ff-only`, segnala le variabili nuove di
+`.env.template`, ricostruisce l'immagine, fa il backup del database (`backups/`, ultimi 10),
+riavvia lo stack, attende `healthy` e aggiorna le unit systemd se cambiate. Mai lanciarlo con
+`sudo` o da root.
 
 **Diagnostica:**
 ```bash
-tail -f logs/plancia.log                        # log Django (errori 500, warning)
-docker compose --env-file .env.prod logs -f web # stdout gunicorn
+cd /opt/plancia
+docker compose ps                         # stato e salute dei servizi
+docker compose logs --tail 100 web worker # stdout gunicorn / celery
+tail -f logs/plancia.log                  # log Django (errori 500, warning)
+systemctl status plancia plancia-backup.timer
 ```
 
-Template vhost: `deploy/nginx.vhost.tpl`, `deploy/apache.vhost.tpl`,
-`deploy/nginx/default.conf` (nginx dockerizzato).
-
-I **static files** (`/static/`) sono serviti direttamente da nginx/Apache dalla directory
-`staticfiles/` sull'host (montata in `/app/staticfiles` nel container via volume bind).
-I **media** (upload foto) usano il volume named `plancia_media`.
-
-## REST API
-
-Plancia espone una REST API versionata per il frontend mobile attualmente in sviluppo.
-
-> **App mobile (in sviluppo)**: [github.com/AGESCI-Campania/diario-di-bordo-app](https://github.com/AGESCI-Campania/diario-di-bordo-app)
-
-- **Base URL**: `/api/v1/`
-- **Schema interattivo (Swagger UI)**: `/api/v1/docs`
-- **Auth**: sessione web (cookie) oppure header `X-Session-Token` (allauth headless app-mode)
-- **Formato**: JSON, OpenAPI 3.0 generato automaticamente da django-ninja
-- **Rate limiting**: fixed-window Redis (60 req/min, 1000 req/ora per token/IP); `429` con `Retry-After`
-- **App version control**: header `X-App-Version` → `426` se versione < minima, `X-App-Upgrade-Warning` se deprecata
-
-**Endpoint principali:**
-
-| Gruppo | Endpoint | Descrizione |
-|---|---|---|
-| System | `GET /api/v1/app-status` | Compatibilità versione app (no auth) |
-| Me | `GET /api/v1/me` | Utente corrente |
-| Edizioni | `GET /api/v1/edizioni[/{pk}]` | Lista/dettaglio edizioni |
-| Org | `GET /api/v1/org/albero` | Albero zone → squadriglie |
-| Diari | `GET /api/v1/diari[/{pk}]` | Lista/dettaglio (filtrata per ruolo) |
-| Diari write | `PUT /api/v1/diari/{pk}/anagrafica\|presentazione\|imprese/{n}\|missione\|relazione-finale` | Salvataggio moduli con optimistic locking |
-| FSM | `POST /api/v1/diari/{pk}/azioni/{csq-invia\|invia\|riapri}` | Transizioni di stato |
-| Valutazione | `GET/POST /api/v1/diari/{pk}/valutazione/…` | Azioni di valutazione |
-
-Documentazione completa: [`docs/api/overview.md`](docs/api/overview.md) · [`docs/api/endpoints.md`](docs/api/endpoints.md) · [`docs/api/export.md`](docs/api/export.md)
+Gli **static files** sono serviti da WhiteNoise e generati nell'immagine (`collectstatic` nel
+`Dockerfile`): non esiste più una cartella `staticfiles/` sull'host. I **media** (upload foto)
+usano il volume `plancia_media`. Dopo ogni modifica a `.env`: `docker compose up -d` (ricrea i
+container; `restart` non rilegge le variabili).
 
 **CORS**: configura `CORS_ALLOWED_ORIGINS` nell'env per abilitare l'accesso da app mobile.
 
@@ -181,7 +135,8 @@ config/      progetto Django (settings split, urls, celery, wsgi/asgi)
 apps/        app di dominio (accounts, org, editions, diaries, evaluations,
              notifications, storage_drive, exports, helpdesk, stats,
              siteconfig, imports, api)
-deploy/      Dockerfile-related, vhost template, configure-prod.sh, conf nginx, backup.sh
+scripts/     installa.sh, aggiorna.sh, backup.sh (+ funzioni condivise _comune.sh, _plancia.sh)
+deploy/      entrypoint del container, conf dell'nginx interno
 fixtures/    CSV sintetici per provare gli import (nessun dato reale)
 logs/        log applicativi + log email simulati (logs/email/)
 docs/        specifica di progetto e documentazione API (docs/api/)
@@ -289,16 +244,14 @@ La radice `/` reindirizza all'edizione attiva più recente (stato `Aperta` o `In
 Se non ci sono edizioni attive viene mostrata una pagina informativa con link per creare un'edizione
 (solo staff) o aprire una richiesta helpdesk.
 
-Il **DEBUG** reale è governato da `DJANGO_DEBUG` in `.env.prod` e **richiede un redeploy/restart**;
+Il **DEBUG** reale è governato da `DJANGO_DEBUG` in `.env` e **richiede `docker compose up -d`**;
 i flag in pagina gestiscono solo debug-toolbar (admin) e verbosità di logging.
 
-## Backup periodico (cron)
-```bash
-# notturno alle 02:30 (vedi deploy/crontab.example)
-30 2 * * *  cd /srv/plancia && ./deploy/backup.sh >> /var/log/plancia_backup.log 2>&1
-```
-Lo script fa `pg_dump` (dal container) + gzip, archivia media/log, applica la retention (30 giorni)
-e può inviare una notifica email.
+## Backup periodico
+Ogni notte alle 02:30 il timer systemd `plancia-backup.timer` esegue `scripts/backup.sh`
+(installato da `installa.sh`/`aggiorna.sh`): un unico archivio con dump del database, `.env` e
+media, in `BACKUP_DIR` (default `backups/`), conservato `BACKUP_GIORNI` giorni (default 14).
+Si può lanciare anche a mano; la procedura di ripristino è in testa allo script.
 
 ## Impersonazione utenti
 Admin e Segreteria possono impersonare altri utenti (assistenza/diagnosi) **solo** verso ruoli con
@@ -392,6 +345,28 @@ pandoc --defaults pandoc-defaults.yaml \
 I PDF sono esclusi dal repository (artefatti generati).
 
 ## Changelog
+
+### Non rilasciato — nuova installazione su `*.agescicampania.net`
+
+- **Deploy**: stack dietro il Caddy di `agesci-campania-web-frontend` (rete `agesci-proxy`, alias
+  `plancia-nginx`, nginx interno solo HTTP, nessuna porta pubblicata), healthcheck e
+  `restart: unless-stopped` su tutti i servizi, `.env` + `.env.template` al posto di `.env.prod`.
+- **Script** `scripts/installa.sh`, `scripts/aggiorna.sh`, `scripts/backup.sh`; avvio al boot con
+  la unit systemd `plancia.service` e backup notturno con `plancia-backup.timer`. Rimossi
+  `deploy/configure-prod.sh`, `configure-staging.sh`, i template vhost Apache/nginx, lo stack di
+  staging e il backup via cron.
+- **Immagine**: statici generati nel `Dockerfile` (WhiteNoise, niente bind mount
+  `staticfiles/`), `.dockerignore` (niente `.env` né `.venv` nell'immagine), uv fissato, migrazioni
+  solo dal container `web`, endpoint `/healthz/`.
+- **SSO Sestante** su `auth.agescicampania.net`, callback `/accounts/oidc/sestante/login/callback/`;
+  ruoli globali come `Nomina` con `da_sso=True` (revocabili senza toccare i ruoli locali); MFA
+  saltata solo per le sessioni aperte via Sestante (non più per chiunque abbia l'account
+  collegato); login rifiutato per utenti senza email o con email duplicata.
+- **Social login**: pulsanti Google/Microsoft/Apple/Sestante mostrati solo se le credenziali
+  sono configurate.
+- **django-axes**: IP del client letto da `X-Forwarded-For` dietro Caddy + nginx (prima tutti
+  gli utenti avevano l'IP del proxy e un blocco li avrebbe colpiti tutti).
+- Dominio `agescicampania.org` → `agescicampania.net` (host, email, documentazione).
 
 ### v2.4.1
 

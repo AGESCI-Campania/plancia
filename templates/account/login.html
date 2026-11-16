@@ -64,7 +64,7 @@
         <hr class="my-3">
         <div class="d-grid gap-2">
           {% for provider in socialaccount_providers %}
-          <form method="post" action="{% provider_login_url provider.id %}">
+          <form method="post" action="{% provider_login_url provider %}">
             {% csrf_token %}
             <input type="hidden" name="next" value="{{ request.GET.next }}">
             <button type="submit" class="btn btn-outline-secondary d-flex align-items-center justify-content-center gap-2 w-100">

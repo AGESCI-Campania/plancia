@@ -82,6 +82,31 @@ Da **Sicurezza (MFA)** → clicca il numero di passkey configurate → apri la l
 
 ---
 
+## Accesso con SSO AGESCI Campania (Sestante)
+
+Il pulsante **Accedi con SSO AGESCI Campania** usa l'account regionale di
+`https://auth.agescicampania.net`. Compare solo quando nel file `.env` del server sono
+valorizzati `SOCIAL_SESTANTE_CLIENT_ID` e `SOCIAL_SESTANTE_CLIENT_SECRET` (si trovano in
+<https://auth.agescicampania.net/if/admin/#/core/providers> → **Plancia AGESCI Campania** →
+modifica; dopo averli inseriti: `docker compose up -d`).
+
+Cosa succede al login con SSO:
+
+- l'account Plancia con la stessa email viene **collegato**; se non esiste viene **creato** senza
+  ruoli locali;
+- i gruppi dell'SSO `admin-multipiattaforma` e `segreteria` danno i ruoli **Admin** e
+  **Segreteria** in Plancia, aggiornati a ogni accesso (tolti nell'SSO → revocati qui). I ruoli
+  assegnati in Plancia (Incaricato EG, Pattuglia GV, Capo Reparto, Capo Squadriglia, e gli
+  Admin/Segreteria nominati qui) non vengono mai toccati;
+- la **MFA** la chiede l'SSO: Plancia non la richiede a chi è entrato con SSO, ma continua a
+  richiederla a chi entra con email e password;
+- account SSO senza email, o email usata da più account Plancia: l'accesso viene rifiutato con
+  un messaggio. In caso di doppioni, unificare gli account prima di riprovare.
+
+Il login con email e password resta disponibile accanto all'SSO.
+
+---
+
 ## Configurazione autenticazione social (Google, Microsoft, Apple)
 
 Per abilitare i pulsanti "Accedi con Google / Microsoft / Apple" nella pagina di login
@@ -90,8 +115,9 @@ segui la guida completa: **[`docs/guide/social_auth.md`](../guide/social_auth.md
 In sintesi:
 
 1. **Ottieni le credenziali OAuth** dal provider (Google Cloud Console, portale Azure,
-   Apple Developer Program) — vedi §4 della guida.
-2. **Imposta le variabili d'ambiente** nel file `.env.prod`:
+   Apple Developer Program) — vedi §4 della guida. Redirect URI:
+   `https://plancia.agescicampania.net/accounts/<google|microsoft|apple>/login/callback/`.
+2. **Imposta le variabili d'ambiente** nel file `.env` sul server:
    ```bash
    SOCIAL_GOOGLE_CLIENT_ID=xxxxx.apps.googleusercontent.com
    SOCIAL_GOOGLE_CLIENT_SECRET=GOCSPX-xxxxx
@@ -99,21 +125,12 @@ In sintesi:
    SOCIAL_MICROSOFT_CLIENT_ID=...
    SOCIAL_MICROSOFT_CLIENT_SECRET=...
    ```
-3. **Aggiorna il record Sites** con il dominio di produzione:
-   ```bash
-   uv run python manage.py shell -c "
-   from django.contrib.sites.models import Site
-   s = Site.objects.get(pk=1)
-   s.domain = 'plancia.agescicampania.org'
-   s.name = 'Plancia'
-   s.save()
-   "
-   ```
-4. Riavvia l'applicazione. I pulsanti social appaiono automaticamente nel login
-   solo se la variabile `CLIENT_ID` del provider è valorizzata.
+3. Applica con `docker compose up -d`. I pulsanti compaiono solo per i provider con
+   `CLIENT_ID` valorizzato. (Il dominio del record *Sites* lo imposta già `scripts/installa.sh`.)
 
-> Il social login **non crea nuovi utenti da solo**: l'email del provider deve corrispondere
-> a un account già esistente in piattaforma (creato tramite invito da Segreteria/Admin).
+> Il social login Google/Microsoft/Apple **non crea nuovi utenti da solo**: l'email del provider
+> deve corrispondere a un account già esistente in piattaforma (creato tramite invito da
+> Segreteria/Admin). Solo l'SSO AGESCI Campania crea gli account mancanti.
 
 ---
 
@@ -143,17 +160,17 @@ separate** perché i permessi (scope) sono diversi.
    - Nome: `Plancia Drive`
    - **URI di reindirizzamento autorizzati**:
      - Dev: `http://localhost:8000/drive/oauth/callback/`
-     - Produzione: `https://plancia.agescicampania.org/drive/oauth/callback/`
+     - Produzione: `https://plancia.agescicampania.net/drive/oauth/callback/`
 4. Copia **ID client** e **Secret client**.
 
 ### Passo 2 — Imposta le variabili d'ambiente
 
-Nel file `.env.prod` (o `.env.dev` per il test locale):
+Nel file `.env` (o `.env.dev` per il test locale):
 
 ```bash
 GOOGLE_OAUTH_CLIENT_ID=xxxxx.apps.googleusercontent.com
 GOOGLE_OAUTH_CLIENT_SECRET=GOCSPX-xxxxx
-GOOGLE_OAUTH_REDIRECT_URI=https://plancia.agescicampania.org/drive/oauth/callback/
+GOOGLE_OAUTH_REDIRECT_URI=https://plancia.agescicampania.net/drive/oauth/callback/
 ```
 
 In dev la redirect URI può essere `http://` — la piattaforma imposta automaticamente
@@ -324,11 +341,11 @@ Il menu **Gestione** (in alto a destra, visibile a tutto lo staff) contiene la s
 ![Menu Gestione con Strumenti](screenshots/39_navbar_gestione.png)
 
 - **Flower** (`/celery/`): dashboard Celery con task attivi, coda, worker e cronologia.
-- **Mailpit** (`/mailadmin/`): web UI per le email di debug in sviluppo/staging.
+- **Mailpit** (`/mailadmin/`): web UI per le email di debug in sviluppo e diagnosi.
 
 Flower deve essere avviato con il profilo opzionale:
 ```bash
-COMPOSE_PROFILES=flower docker compose --env-file .env.prod up -d
+COMPOSE_PROFILES=flower   # in .env, poi: docker compose up -d
 ```
 
 ---
@@ -358,11 +375,11 @@ Se usi Gmail come SMTP, configura l'autenticazione OAuth2 invece di username e p
 
 1. Nelle credenziali OAuth del tuo progetto Google Cloud (stesse usate per il Drive),
    aggiungi il redirect URI:
-   `https://plancia.agescicampania.org/impostazioni/gmail-smtp/oauth/callback/`
+   `https://plancia.agescicampania.net/impostazioni/gmail-smtp/oauth/callback/`
 
-2. In `.env.prod` aggiungi:
+2. In `.env` aggiungi:
    ```bash
-   GOOGLE_GMAIL_SMTP_REDIRECT_URI=https://plancia.agescicampania.org/impostazioni/gmail-smtp/oauth/callback/
+   GOOGLE_GMAIL_SMTP_REDIRECT_URI=https://plancia.agescicampania.net/impostazioni/gmail-smtp/oauth/callback/
    ```
 
 3. In **Impostazioni → Posta elettronica → Backend SMTP** → clicca **Collega Gmail**
@@ -393,13 +410,11 @@ mantenendo i link esterni come testo. I PDF e l'Excel rimangono su Drive.
 
 ## Backup
 
-Il backup notturno è configurato via cron (vedi `deploy/crontab.example`):
-
-```bash
-30 2 * * *  cd /srv/plancia && ./deploy/backup.sh >> /var/log/plancia_backup.log 2>&1
-```
-
-Il backup include dump PostgreSQL + archivio media/log con retention 30 giorni.
+Ogni notte alle 02:30 il server esegue `scripts/backup.sh` (timer systemd
+`plancia-backup.timer`): un unico archivio con dump del database, file `.env` e allegati non
+ancora caricati su Drive, nella cartella `backups/` del server, conservato 14 giorni
+(`BACKUP_DIR` e `BACKUP_GIORNI` in `.env`). Prima di ogni aggiornamento `scripts/aggiorna.sh`
+salva anche un dump del solo database. Stato: `systemctl status plancia-backup.timer`.
 
 ---
 
@@ -461,102 +476,3 @@ il dettaglio del flusso inviti Capi Reparto e Capi Squadriglia.
 L'Admin può impersonare qualsiasi utente compresa la Segreteria.
 Ogni impersonazione viene registrata nel log di audit.
 La Segreteria non può impersonare l'Admin.
-
----
-
-## Ambiente di staging
-
-Lo staging (`https://staging.plancia.agescicampania.org`) è un'istanza separata della
-piattaforma usata per testare le nuove funzionalità prima del deploy in produzione.
-Gira sullo stesso server di produzione in una directory diversa (`/srv/staging.plancia`),
-sul branch `v2-offline`.
-
-> **Regola**: produzione si tocca solo su `main`. Ogni novità va prima su staging.
-
-### Prima configurazione
-
-```bash
-git clone <repo> /srv/staging.plancia
-cd /srv/staging.plancia
-git checkout v2-offline
-./deploy/configure-staging.sh --proxy apache-host --port 8002
-```
-
-Lo script genera `.env.staging`, il vhost Apache e la unit systemd
-`deploy/plancia-staging.service`.
-
-### Deploy su staging
-
-```bash
-cd /srv/staging.plancia
-git pull origin v2-offline
-
-# Se sono cambiate dipendenze o file Python/template:
-docker compose --env-file .env.staging build --no-cache web worker beat
-
-# Doppio collectstatic obbligatorio (Apache serve da staticfiles-staging/)
-docker compose --env-file .env.staging run --rm \
-  -v /srv/staging.plancia/staticfiles-staging:/app/staticfiles \
-  web uv run python manage.py collectstatic --noinput
-docker compose --env-file .env.staging run --rm \
-  web uv run python manage.py collectstatic --noinput
-
-docker compose --env-file .env.staging up -d web worker beat
-```
-
-> Il doppio `collectstatic` è necessario perché Apache legge i file da `staticfiles-staging/`
-> mentre Django legge il manifest da `staticfiles/staticfiles.json`. Se si salta il secondo
-> step Django emette URL con hash vecchi.
-
-### Popolare il DB staging con dati reali anonimizzati
-
-Lo staging usa un dump della produzione con tutti i dati personali sostituiti.
-**Non usare mai un dump grezzo** (contiene dati di minori).
-
-**Passo 1 — Genera il dump in produzione:**
-```bash
-# Sulla macchina di produzione
-cd /srv/plancia
-docker compose --env-file .env.prod exec db \
-  pg_dump -U plancia plancia > prod_dump_$(date +%Y%m%d).sql
-```
-
-**Passo 2 — Trasferisci il dump sullo stesso server (staging è sulla stessa macchina):**
-```bash
-cp /srv/plancia/prod_dump_*.sql /srv/staging.plancia/
-```
-
-**Passo 3 — Ripristina e anonimizza:**
-```bash
-cd /srv/staging.plancia
-./deploy/anonymize_staging.sh prod_dump_20260616.sql
-```
-
-Lo script esegue in sequenza:
-1. Drop e ricreazione dello schema nel DB staging
-2. Restore del dump
-3. Anonimizzazione di tutti i dati sensibili:
-
-| Tabella | Dati sostituiti |
-|---|---|
-| `accounts_user` | email → `utente_<id>@staging.invalid`, password → hash non funzionante |
-| `account_emailaddress` | email → `utente_<id>@staging.invalid` |
-| `socialaccount_socialaccount` | uid e extra_data OAuth svuotati |
-| `org_socio` | nome, cognome, email, cellulare, data nascita |
-| `diaries_anagrafica` | dati CRP e CSQ (nome, cognome, email, cell) |
-| `diaries_membrosq` | nomi dei membri della squadriglia |
-
-**Passo 4 — Crea il superuser staging:**
-```bash
-docker compose --env-file .env.staging run --rm web \
-  uv run python manage.py createsuperuser
-```
-
-> Dopo l'anonimizzazione nessun account originale è accessibile. Il superuser creato al
-> passo 4 è l'unico modo per accedere allo staging.
-
-### Verifica post-deploy
-
-```bash
-docker compose --env-file .env.staging logs web --tail=20
-```

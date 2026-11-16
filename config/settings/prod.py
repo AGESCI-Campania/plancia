@@ -3,15 +3,16 @@ from .base import *  # noqa: F401,F403
 from .base import AUTHENTICATION_BACKENDS, env
 
 # DEBUG REALE governato dall'ambiente: per attivarlo, imposta DJANGO_DEBUG=true in
-# .env.prod e RIAVVIA/REDEPLOY i container (si legge all'avvio). Attivarlo in
+# .env e RICREA i container con docker compose up -d (si legge all'avvio). Attivarlo in
 # produzione e' un rischio di sicurezza: usarlo solo per diagnosi puntuali.
 DEBUG = env.bool("DJANGO_DEBUG", default=False)
 
-# Dietro reverse proxy (nginx/apache, dockerizzato o esistente)
+# Dietro reverse proxy: Caddy (agesci-campania-web-frontend) → nginx interno, solo HTTP
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = True
 
 # Hardening (vedi docs sez. 12)
+# Il redirect HTTP→HTTPS lo fa Caddy; tenerlo attivo funziona grazie a SECURE_PROXY_SSL_HEADER
 SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=True)
 SESSION_COOKIE_SECURE = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # cookie di sessione eliminato alla chiusura del browser
@@ -39,6 +40,9 @@ CACHES = {
         "TIMEOUT": 300,
     }
 }
+
+# Dietro due proxy l'IP del client va letto da X-Forwarded-For, non da REMOTE_ADDR
+AXES_CLIENT_IP_CALLABLE = "apps.siteconfig.axes_helpers.ip_client_dietro_proxy"
 
 # axes per primo in produzione
 AUTHENTICATION_BACKENDS = ["axes.backends.AxesStandaloneBackend", *AUTHENTICATION_BACKENDS]

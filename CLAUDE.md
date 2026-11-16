@@ -24,7 +24,9 @@ documento prevale su questo file.
   (CORS per app mobile), **allauth headless** (auth app-mode con `X-Session-Token`).
 - Auth: **django-allauth** (email + social Google/Microsoft/Apple + **SSO Sestante**, **MFA**), **django-guardian**
   (object-level), **django-axes** (brute-force).
-- Social login (guida: `docs/guide/social_auth.md`). SSO OIDC con Sestante (guida: `docs/guide/sso_sestante.md`). Drive OAuth (guida: `docs/guide/google_drive_oauth.md`).
+- Social login (guida: `docs/guide/social_auth.md`). SSO OIDC con Sestante (guida: `docs/guide/sso_sestante.md`,
+  contratto: `docs/INTEGRAZIONE-SSO.md` del repo `sestante`). Drive OAuth (guida: `docs/guide/google_drive_oauth.md`).
+  Un provider social senza client id non viene configurato (pulsante nascosto, app avviabile).
   **Apple Sign In**: `key`=TEAM_ID, `secret`=KEY_ID — la versione precedente aveva i campi scambiati
   causando 401 al callback; non invertire.
 
@@ -34,7 +36,8 @@ config/         # settings/base|dev|prod, urls, celery
 apps/           # accounts org editions diaries evaluations notifications
                 # storage_drive exports helpdesk stats siteconfig imports
                 # api (REST: auth, permissions, schemas/, routers/)
-deploy/         # Dockerfile, nginx, entrypoint.sh, backup.sh
+scripts/        # installa.sh, aggiorna.sh, backup.sh, _comune.sh (copia dal frontend), _plancia.sh
+deploy/         # entrypoint.sh, nginx/default.conf.template (nginx interno, solo HTTP)
 fixtures/       # CSV sintetici (NIENTE dati reali)
 docs/           # specifica di progetto; docs/api/ (REST API)
 ```
@@ -251,6 +254,15 @@ Ordine in `MIDDLEWARE`: entrambi **dopo** `CorsMiddleware` e **prima** di `Sessi
   `django.utils.timezone` espone `UTC` come alias). Nei view che costruiscono epoch sentinel usare
   `timezone.datetime.min.replace(tzinfo=timezone.UTC)`.
 
+### SSO Sestante
+- Provider `openid_connect` con id `sestante`, callback `/accounts/oidc/sestante/login/callback/`
+  (registrata nel blueprint `provider-plancia.yaml` del repo `sestante`: non cambiarla da sola).
+- Ruoli globali (`admin-multipiattaforma` → Admin, `segreteria` → Segreteria) = `Nomina` con
+  `da_sso=True`, create/revocate a ogni login SSO da `_sync_ruoli_globali`. Le Nomine locali non si toccano.
+- MFA: si salta solo se `sessione_da_sestante(request)` (metodo di login della sessione), **mai**
+  in base all'esistenza di un `SocialAccount` collegato.
+- Il login locale resta attivo: non disattivarlo senza conferma esplicita dell'utente.
+
 ### Email
 - **Dual backend**: `email_backend_standard` (sistema/inviti singoli) vs `email_backend_massivo`
   (inviti bulk). `get_connection_per_tipo(tipo)` in `email_backends.py`. `email_mode` sovrascrive tutto.
@@ -292,35 +304,61 @@ In `apps.accounts.roles`: `ROLE_REQUIRES_CATEGORY`, `ROLE_CREATABLE_BY`, `ROLE_R
 
 ## Deploy e backup
 
-### Deploy in produzione
-**Accesso SSH**: `ssh admin.agescicampania.org` — cartella di lavoro `/srv/plancia`.
-Claude Code ha accesso diretto via SSH e può eseguire il deploy autonomamente.
+### Server
+Server dedicato alle piattaforme `*.agescicampania.net` (Ubuntu 26.04, niente Virtualmin/Apache).
+Repo clonato in **`/opt/plancia`**, proprietario l'utente **`agesci`** (gruppo `docker`, senza sudo
+né SSH: ci si entra con `sudo -iu agesci` da un utente amministratore). URL
+`https://plancia.agescicampania.net`. Il vecchio server `admin.agescicampania.org` (`/srv/plancia`)
+non è più la produzione.
 
-`sudo systemctl reload plancia` non è utilizzabile da SSH non interattivo (richiede password
-interattiva). Usare sempre **docker compose** direttamente:
+Regole vincolanti (leggerle prima di toccare compose, nginx, impostazioni HTTP o script):
+- frontend/reverse proxy: <https://raw.githubusercontent.com/AGESCI-Campania/agesci-campania-web-frontend/main/docs/INTEGRAZIONE.md>
+- SSO: <https://raw.githubusercontent.com/AGESCI-Campania/sestante/main/docs/INTEGRAZIONE-SSO.md>
 
+In sintesi:
+- **Caddy** (repo `agesci-campania-web-frontend`) termina TLS e inoltra a `plancia-nginx:80`
+  sulla rete esterna `agesci-proxy`. Il blocco `caddy/sites/plancia.caddy` sta in **quel** repo:
+  non modificarlo da qui, proporlo all'utente.
+- Solo il servizio `nginx` è su `agesci-proxy`; **nessuna porta pubblicata**; niente TLS/certbot
+  nel progetto; l'nginx interno inoltra `X-Forwarded-Proto $http_x_forwarded_proto` (non `$scheme`).
+- Ogni servizio ha `restart: unless-stopped`; tutti tranne `beat` hanno un `healthcheck`
+  (il web su `/healthz/`, con `Host` di `ALLOWED_HOSTS` e `X-Forwarded-Proto: https`).
+- Variabili in **`.env`** (creato da `.env.template`; letto da compose per interpolazione ed
+  `env_file`). Nuova variabile → aggiungerla a `.env.template` (vuota + commento): `aggiorna.sh`
+  la segnala e si ferma finché non è in `.env`. `DATABASE_URL` è composta nel compose.
+- Statici: WhiteNoise + `collectstatic` nel `Dockerfile` (manifest nell'immagine). Niente bind
+  mount `staticfiles/`, niente `collectstatic` nei comandi di deploy.
+- Migrazioni: solo il container `web` le applica all'avvio (`ESEGUI_MIGRAZIONI=1`, `deploy/entrypoint.sh`).
+- IP del client: in produzione `AXES_CLIENT_IP_CALLABLE` legge il penultimo `X-Forwarded-For`
+  (Caddy → nginx); non tornare a `REMOTE_ADDR`, sarebbe l'nginx interno per tutti.
+
+### Script (`scripts/`, eseguiti da `/opt/plancia` come `agesci`)
+- `installa.sh` — prima installazione: `.env` con segreti (`openssl rand`, mai sovrascritto),
+  build, `up -d`, attesa `healthy`, primo superutente (`PLANCIA_ADMIN_EMAIL=… scripts/installa.sh`
+  per non rispondere alla domanda; password mostrata una volta), unit systemd, passi manuali.
+- `aggiorna.sh` — nuova release: albero pulito, `git pull --ff-only` + ri-esecuzione
+  (`--dopo-pull`), controllo variabili nuove, build, **backup DB** in `backups/`, `up -d`,
+  attesa `healthy`, unit systemd aggiornate.
+- `backup.sh` — DB + `.env` + media in un archivio; timer `plancia-backup.timer` alle 02:30.
+- `_comune.sh` è una **copia identica** di quello di `agesci-campania-web-frontend` (e di
+  Sestante): non modificarlo qui, riallinearlo copiandolo. Funzioni Plancia in `_plancia.sh`.
+- Bash `set -euo pipefail`, `shellcheck -x scripts/*.sh` senza errori, bit eseguibile committato.
+
+### Avvio al boot
+Unit `plancia.service` generata da `installa_servizio_systemd plancia "$UNIT_PROXY"` (oneshot,
+`docker compose up -d --wait`, dopo `agesci-campania-web-frontend.service`; niente `ExecStop`,
+niente dipendenza da Sestante). Senza sudo gli script stampano il comando che un
+amministratore deve eseguire. Per fermare in manutenzione: `docker compose stop`.
+
+### Deploy di una nuova versione
+Commit e push su `main` dal Mac, poi sul server:
 ```bash
-# 1. Aggiorna il codice
-git pull
-
-# 2. Ricostruisce le immagini (--no-cache garantisce che il nuovo codice sia incluso)
-docker compose --env-file .env.prod build --no-cache web worker beat
-
-# 3. Aggiorna i file statici sull'host (PRIMA di avviare i container — il bind mount
-#    ./staticfiles sovrascrive il collectstatic baked nell'immagine)
-docker compose --env-file .env.prod run --rm web uv run python manage.py collectstatic --noinput
-
-# 4. Ricrea i container con le nuove immagini (l'entrypoint applica le migrate automaticamente)
-docker compose --env-file .env.prod up -d web worker beat
+ssh <admin>@<server>
+sudo -iu agesci
+cd /opt/plancia && scripts/aggiorna.sh
 ```
-
-**Importante:**
-- Usare sempre `up -d` (non `restart`): `restart` riavvia i container con la vecchia immagine senza ricrearli.
-- `build` senza `--no-cache` può usare layer in cache e non includere nuovi file (es. migrazioni).
-- Le migrate vengono applicate automaticamente dall'entrypoint al primo avvio del container.
-- **`collectstatic` va eseguito al passo 3**, prima di `up -d`: `./staticfiles` è un bind mount
-  sull'host che persiste tra i deploy. Se eseguito dopo `up -d`, il container web carica il
-  vecchio manifest e serve i vecchi hash degli asset anche se i file sono stati aggiornati.
+Mai `sudo`/root dentro `/opt/plancia` (git: "dubious ownership"). Verifica:
+`docker compose ps`, `docker compose logs --tail 50 web`, `curl -I https://plancia.agescicampania.net`.
 
 ### Release
 
@@ -338,59 +376,6 @@ gh release create vX.Y.Z --title "vX.Y.Z" --notes "..."
 
 Le note della release si estraggono dalla sezione corrispondente del changelog in `README.md`.
 **Tag e `gh release create` vanno sempre eseguiti insieme** nello stesso deploy.
-
-### Deploy in staging
-**Cartella**: `/srv/staging.plancia`. Branch `v2-offline`.
-
-Apache su staging serve `/static/` da `staticfiles-staging/` (non `staticfiles/`). Il bind mount
-del compose scrive sempre in `staticfiles/`, quindi il collectstatic va eseguito due volte:
-1. con volume override → aggiorna `staticfiles-staging/` (file che Apache serve)
-2. senza override → aggiorna `staticfiles/staticfiles.json` (manifest che Django legge in memory)
-
-Se manca il secondo step, Django emette URL con hash vecchi e il browser carica CSS sbagliati
-(es. versione del tema priva delle classi sidebar) pur avendo i file corretti su disco.
-
-```bash
-git pull
-docker compose --env-file .env.staging build --no-cache web worker beat
-# 1. Aggiorna staticfiles-staging/ (Apache)
-docker compose --env-file .env.staging run --rm \
-  -v /srv/staging.plancia/staticfiles-staging:/app/staticfiles \
-  web uv run python manage.py collectstatic --noinput
-# 2. Aggiorna staticfiles/ (manifest Django — OBBLIGATORIO dopo ogni cambio tema)
-docker compose --env-file .env.staging run --rm \
-  web uv run python manage.py collectstatic --noinput
-docker compose --env-file .env.staging up -d web worker beat
-```
-
-Il symlink `.env.prod → .env.staging` è necessario perché `docker-compose.yml` referenzia
-`env_file: [.env.prod]` nei servizi — è già presente su staging.
-
-**Volume DB staging**: il `docker-compose.yml` definisce il volume `plancia_db`, che Docker Compose
-prefissa col nome progetto → `stagingplancia_plancia_db`. Esiste anche `stagingplancia_plancia_staging_db`
-(vecchio nome, da una versione precedente del compose) che contiene il dump anonimizzato della
-produzione. Se staging appare vuoto dopo un `up -d`, il container DB sta usando `plancia_db` (vuoto)
-invece di `plancia_staging_db` (con i dati). Recovery:
-```bash
-# Verifica quale volume è montato
-docker inspect stagingplancia-db-1 --format '{{range .Mounts}}{{.Name}}{{end}}'
-
-# Se è plancia_db (vuoto): ferma lo stack, avvia pg_old sull'altro volume, dump e restore
-docker compose --env-file .env.staging stop web worker beat
-docker run -d --name pg_old -v stagingplancia_plancia_staging_db:/var/lib/postgresql/data -p 127.0.0.1:5434:5432 postgres:17
-sleep 4
-docker exec stagingplancia-db-1 psql -U plancia_staging -d postgres -c 'DROP DATABASE plancia_staging;' -c 'CREATE DATABASE plancia_staging OWNER plancia_staging;'
-docker exec pg_old pg_dump -U plancia_staging plancia_staging | docker exec -i stagingplancia-db-1 psql -U plancia_staging plancia_staging
-docker rm -f pg_old
-docker compose --env-file .env.staging up -d web worker beat
-```
-
-### Verifica post-deploy
-```bash
-docker compose --env-file .env.prod logs web --tail=30
-```
-
-Backup: `deploy/backup.sh` via cron (`deploy/crontab.example`).
 
 ## PDF diari
 

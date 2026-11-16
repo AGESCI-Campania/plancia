@@ -63,14 +63,14 @@ Nelle stesse credenziali OAuth usate per il Drive (`GOOGLE_OAUTH_CLIENT_ID`):
 1. **API e servizi → Credenziali** → clicca sull'ID client OAuth esistente.
 2. Aggiungi in **URI di reindirizzamento autorizzati**:
    - Dev: `http://localhost:8000/impostazioni/gmail-smtp/oauth/callback/`
-   - Produzione: `https://plancia.agescicampania.org/impostazioni/gmail-smtp/oauth/callback/`
+   - Produzione: `https://plancia.agescicampania.net/impostazioni/gmail-smtp/oauth/callback/`
 3. Salva.
 
 #### Passo 3 — Aggiungi la variabile d'ambiente
 
-In `.env.prod` aggiungi:
+In `.env` aggiungi:
 ```bash
-GOOGLE_GMAIL_SMTP_REDIRECT_URI=https://plancia.agescicampania.org/impostazioni/gmail-smtp/oauth/callback/
+GOOGLE_GMAIL_SMTP_REDIRECT_URI=https://plancia.agescicampania.net/impostazioni/gmail-smtp/oauth/callback/
 ```
 
 In `.env.dev`:
@@ -82,7 +82,7 @@ GOOGLE_GMAIL_SMTP_REDIRECT_URI=http://localhost:8000/impostazioni/gmail-smtp/oau
 
 1. Vai su **Impostazioni → Posta elettronica → Backend SMTP**.
 2. Clicca **Collega Gmail**.
-3. Accedi con l'account Gmail da cui vuoi inviare le email (es. `noreply@agescicampania.org`).
+3. Accedi con l'account Gmail da cui vuoi inviare le email (es. `noreply@agescicampania.net`).
 4. Autorizza l'accesso — Plancia salva il refresh token e non richiede più la password.
 5. Il badge **Attivo: nome@gmail.com** conferma il collegamento.
 
@@ -111,7 +111,7 @@ Con i provider transazionali Plancia registra lo stato di consegna di ogni email
 2. In **Impostazioni → Posta elettronica**: seleziona il provider e incolla l'API key.
 3. **Webhook**: configura l'URL di tracking nel pannello del provider:
    ```
-   https://plancia.agescicampania.org/anymail/webhook/
+   https://plancia.agescicampania.net/anymail/webhook/
    ```
 4. Copia il **webhook secret** (fornito dal provider) nel campo apposito in Impostazioni.
 5. Salva e verifica con un invito di prova.

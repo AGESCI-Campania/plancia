@@ -54,7 +54,8 @@ APP_COMMIT = _read_app_commit()
 env = environ.Env(
     DJANGO_DEBUG=(bool, False),
 )
-# Carica un eventuale file .env (dev: .env.dev ; prod: .env.prod) se presente.
+# Carica un eventuale file .env (dev: .env.dev). In produzione le variabili arrivano
+# dal .env del compose (env_file), il file non è nell'immagine.
 _env_file = env.str("DJANGO_ENV_FILE", default=str(BASE_DIR / ".env.dev"))
 if Path(_env_file).exists():
     environ.Env.read_env(_env_file)
@@ -210,8 +211,16 @@ _APPLE_PRIVATE_KEY    = env.str("SOCIAL_APPLE_PRIVATE_KEY", default="").replace(
 _SESTANTE_CLIENT_ID     = env.str("SOCIAL_SESTANTE_CLIENT_ID", default="")
 _SESTANTE_CLIENT_SECRET = env.str("SOCIAL_SESTANTE_CLIENT_SECRET", default="")
 
-SOCIALACCOUNT_PROVIDERS = {
-    "google": {
+_SESTANTE_SERVER_URL    = env.str(
+    "SOCIAL_SESTANTE_SERVER_URL",
+    default="https://auth.agescicampania.net/application/o/plancia/",
+)
+
+# Un provider senza client id non va configurato: allauth mostrerebbe comunque il
+# pulsante nella pagina di login, che poi fallirebbe. L'app parte anche senza credenziali.
+SOCIALACCOUNT_PROVIDERS: dict = {}
+if _GOOGLE_CLIENT_ID:
+    SOCIALACCOUNT_PROVIDERS["google"] = {
         "APP": {
             "client_id": _GOOGLE_CLIENT_ID,
             "secret": _GOOGLE_CLIENT_SECRET,
@@ -220,16 +229,18 @@ SOCIALACCOUNT_PROVIDERS = {
         "SCOPE": ["profile", "email"],
         "AUTH_PARAMS": {"access_type": "online"},
         "FETCH_USERINFO": True,
-    },
-    "microsoft": {
+    }
+if _MS_CLIENT_ID:
+    SOCIALACCOUNT_PROVIDERS["microsoft"] = {
         "APP": {
             "client_id": _MS_CLIENT_ID,
             "secret": _MS_CLIENT_SECRET,
         },
         "TENANT": "common",
         "SCOPE": ["User.Read"],
-    },
-    "apple": {
+    }
+if _APPLE_CLIENT_ID:
+    SOCIALACCOUNT_PROVIDERS["apple"] = {
         "APP": {
             "client_id": _APPLE_CLIENT_ID,
             "secret": _APPLE_KEY_ID,       # KEY_ID — usato come `kid` nell'header JWT
@@ -238,13 +249,16 @@ SOCIALACCOUNT_PROVIDERS = {
                 "certificate_key": _APPLE_PRIVATE_KEY,  # chiave privata PEM
             },
         },
-    },
-    "openid_connect": {
+    }
+if _SESTANTE_CLIENT_ID:
+    # SSO AGESCI Campania (Sestante). Callback: /accounts/oidc/sestante/login/callback/
+    # Vedi docs/guide/sso_sestante.md.
+    SOCIALACCOUNT_PROVIDERS["openid_connect"] = {
         "SERVERS": [
             {
                 "id": "sestante",
                 "name": "SSO AGESCI Campania",
-                "server_url": "https://auth.agescicampania.org/application/o/plancia/",
+                "server_url": _SESTANTE_SERVER_URL,
                 "APP": {
                     "client_id": _SESTANTE_CLIENT_ID,
                     "secret":    _SESTANTE_CLIENT_SECRET,
@@ -252,8 +266,7 @@ SOCIALACCOUNT_PROVIDERS = {
                 "SCOPE": ["openid", "profile", "email"],
             }
         ]
-    },
-}
+    }
 
 SOCIALACCOUNT_AUTO_SIGNUP = False
 SOCIALACCOUNT_EMAIL_REQUIRED = True
@@ -475,14 +488,14 @@ BASE_URL = env.str("BASE_URL", default="http://localhost:8000")
 # Se vuota, le notifiche di errore via email sono disabilitate.
 _admin_emails = env.list("ADMIN_EMAILS", default=[])
 ADMINS = [("Plancia Admin", e) for e in _admin_emails]
-SERVER_EMAIL = env.str("SERVER_EMAIL", default="plancia@agescicampania.org")
+SERVER_EMAIL = env.str("SERVER_EMAIL", default="plancia@agescicampania.net")
 EMAIL_SUBJECT_PREFIX = "[Plancia] "
 
 # Vista CSRF failure: mostra un template brandizzato invece della pagina Django.
 CSRF_FAILURE_VIEW = "config.error_views.csrf_failure"
 
 # --- Email ------------------------------------------------------------------
-DEFAULT_FROM_EMAIL = env.str("DEFAULT_FROM_EMAIL", default="plancia@agescicampania.org")
+DEFAULT_FROM_EMAIL = env.str("DEFAULT_FROM_EMAIL", default="plancia@agescicampania.net")
 
 # Il tema usa alert-{{ message.tags }}: "error" non è una classe Bootstrap valida,
 # serve "danger". MESSAGE_TAGS mappa i livelli Django ai tag Bootstrap corretti.

@@ -20,10 +20,6 @@ logs/
 # Artefatti generati (non versionati)
 docs/manuale/*.pdf
 /staticfiles/
-# File generati da configure-prod.sh (specifici dell'installazione)
-deploy/plancia.service
-deploy/plancia.nginx.conf
-deploy/plancia.apache.conf
 # Cache SVG icone (django-bootstrap-icons)
 .icon_cache/
 # IDE
@@ -45,3 +41,6 @@ memory/
 # File Excel dati sensibili (import JotForm, ecc.)
 *.xlsx
 *.xls
+
+# Backup del database e archivi creati da scripts/aggiorna.sh e scripts/backup.sh
+backups/

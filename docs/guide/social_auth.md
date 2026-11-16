@@ -69,7 +69,7 @@ Lasciare una variabile vuota disattiva il relativo provider (nessun pulsante in 
    - **URI di reindirizzamento autorizzati** — aggiungi tutti gli ambienti attivi:
      - Dev locale: `http://localhost:8000/accounts/google/login/callback/`
      - Dev con ngrok: `https://xxxx.ngrok.io/accounts/google/login/callback/`
-     - Produzione: `https://plancia.agescicampania.org/accounts/google/login/callback/`
+     - Produzione: `https://plancia.agescicampania.net/accounts/google/login/callback/`
 5. Clicca **Crea**. Si apre un popup con:
    - **ID client** → `SOCIAL_GOOGLE_CLIENT_ID`
    - **Secret client** → `SOCIAL_GOOGLE_CLIENT_SECRET`
@@ -88,7 +88,7 @@ Lasciare una variabile vuota disattiva il relativo provider (nessun pulsante in 
    - Tipo account supportato:
      - **"Account in qualsiasi directory organizzativa e account Microsoft personali"** → lascia `"TENANT": "common"` nel settings (accetta tutti).
      - **"Solo questo tenant"** → usa il proprio Tenant ID → metti `"TENANT": "<tenant-id>"`.
-   - URI di reindirizzamento: tipo **Web**, valore `https://plancia.agescicampania.org/accounts/microsoft/login/callback/`
+   - URI di reindirizzamento: tipo **Web**, valore `https://plancia.agescicampania.net/accounts/microsoft/login/callback/`
      (aggiungi anche `http://localhost:8000/accounts/microsoft/login/callback/` per il dev).
 3. Clicca **Registra**. Nella pagina dell'app appena creata:
    - **ID applicazione (client)** → `SOCIAL_MICROSOFT_CLIENT_ID`
@@ -119,8 +119,8 @@ Prerequisito: account [Apple Developer Program](https://developer.apple.com/prog
    - Description: `Plancia Sign In`, Identifier: `com.agescicampania.plancia` → `SOCIAL_APPLE_CLIENT_ID`.
    - Abilita **Sign In with Apple** → **Configure**:
      - Primary App ID: seleziona l'App ID del punto 2.
-     - Domains: `plancia.agescicampania.org`
-     - Return URLs: `https://plancia.agescicampania.org/accounts/apple/login/callback/`
+     - Domains: `plancia.agescicampania.net`
+     - Return URLs: `https://plancia.agescicampania.net/accounts/apple/login/callback/`
    - Salva.
 
 4. **Crea la chiave di firma**
@@ -194,7 +194,7 @@ s = Site.objects.get(pk=1); s.domain = 'localhost:8000'; s.name = 'Plancia (dev)
 # Produzione
 uv run python manage.py shell -c "
 from django.contrib.sites.models import Site
-s = Site.objects.get(pk=1); s.domain = 'plancia.agescicampania.org'; s.name = 'Plancia'; s.save()
+s = Site.objects.get(pk=1); s.domain = 'plancia.agescicampania.net'; s.name = 'Plancia'; s.save()
 "
 ```
 

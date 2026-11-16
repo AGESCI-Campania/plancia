@@ -9,12 +9,14 @@ from apps.editions.views import HomeView
 from apps.notifications.webhooks import AnymailWebhookDispatchView
 from apps.siteconfig.views import FlowerProxyView, MailpitProxyView, PaginaStaticaPublicView
 from config.error_views import page_not_found, server_error
+from config.health import healthz
 
 handler404 = page_not_found
 handler500 = server_error
 
 urlpatterns = [
     path("", HomeView.as_view(), name="home"),
+    path("healthz/", healthz, name="healthz"),
     path("admin/", admin.site.urls),
     # Override prima di allauth.urls: mfa_authenticate evita begin_authentication() inutile
     # (fix CSRF iOS Safari); password/change/ redirect al profilo invece della home.

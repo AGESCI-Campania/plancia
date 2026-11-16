@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.shortcuts import redirect
 from django.urls import reverse
 
-from apps.accounts.adapters import ruolo_richiede_mfa
+from apps.accounts.adapters import ruolo_richiede_mfa, sessione_da_sestante
 
 # URL con prefisso esclusi dall'enforcement: MFA setup, login/logout, assets, API.
 _PERCORSI_ESCLUSI = (
@@ -51,9 +51,9 @@ class MFAEnforcementMiddleware:
             return False
         if any(request.path_info.startswith(p) for p in _PERCORSI_ESCLUSI):
             return False
-        # SSO Sestante: la MFA è garantita dall'IdP, non va richiesta di nuovo qui.
-        from allauth.socialaccount.models import SocialAccount
-        if SocialAccount.objects.filter(user=user, provider="sestante").exists():
+        # Sessione aperta via SSO Sestante: la MFA l'ha già chiesta l'IdP. Conta il metodo
+        # di login della sessione, non l'account collegato (chi entra con password resta soggetto).
+        if sessione_da_sestante(request):
             return False
 
         from allauth.mfa.utils import is_mfa_enabled

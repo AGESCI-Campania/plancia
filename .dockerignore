@@ -1,0 +1,33 @@
+# Contesto di build dell'immagine Docker: niente segreti, dati o artefatti locali
+# Di .git servono solo HEAD e refs (commit mostrato nel footer, vedi _read_app_commit)
+.git/objects
+.git/logs
+.git/hooks
+.git/lfs
+.git/index
+.env
+.env.*
+!.env.template
+!.env.dev.example
+.venv
+.idea
+.vscode
+.DS_Store
+**/__pycache__
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.icon_cache
+htmlcov
+backups
+logs
+media
+staticfiles
+site
+tmp
+memory
+note
+fixtures/real_*.csv
+fixtures/prod_*.csv
+*.xlsx
+*.xls

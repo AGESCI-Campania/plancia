@@ -19,7 +19,7 @@ Il token viene usato da `apps.storage_drive.service` per:
 - caricare l'Excel riepilogativo,
 - creare sottocartelle per le foto degli allegati.
 
-L'accesso a Drive è **per account Google** (il token appartiene all'account che ha completato il flusso OAuth). Conviene usare un account tecnico di territorio (es. `tecnico@agescicampania.org`) per centralizzare i permessi.
+L'accesso a Drive è **per account Google** (il token appartiene all'account che ha completato il flusso OAuth). Conviene usare un account tecnico di territorio (es. `tecnico@agescicampania.net`) per centralizzare i permessi.
 
 ---
 
@@ -55,7 +55,7 @@ Vai in **API e servizi** → **Schermata consenso OAuth**.
 | **Interno** | Solo se il territorio ha **Google Workspace** con dominio proprio. Solo gli utenti del dominio possono autorizzare. Non richiede verifica Google. |
 | **Esterno** | Account Google personali o di altri domini. Richiede **verifica** se gli scope sono sensibili (vedi §5). |
 
-Per le istanze AGESCI Campania con Google Workspace (`@agescicampania.org`) scegli **Interno** — è il percorso più semplice.
+Per le istanze AGESCI Campania con Google Workspace (`@agescicampania.net`) scegli **Interno** — è il percorso più semplice.
 
 ### Scope da aggiungere
 
@@ -102,7 +102,7 @@ Aggiungi **tutti** gli ambienti che useranno il flusso Drive:
 |----------|-----|
 | Dev locale | `http://localhost:8000/drive/oauth/callback/` |
 | Dev con ngrok | `https://xxxx.ngrok.io/drive/oauth/callback/` |
-| Produzione | `https://plancia.agescicampania.org/drive/oauth/callback/` |
+| Produzione | `https://plancia.agescicampania.net/drive/oauth/callback/` |
 
 > Nota: gli URI per il **social login** (allauth) e per **Drive** sono diversi.  
 > Se usi le stesse credenziali devi avere entrambi i set di URI nella stessa voce.
@@ -126,12 +126,12 @@ GOOGLE_OAUTH_CLIENT_SECRET=GOCSPX-xxxxx
 GOOGLE_OAUTH_REDIRECT_URI=http://localhost:8000/drive/oauth/callback/
 ```
 
-In `.env.prod`:
+In `.env`:
 
 ```bash
 GOOGLE_OAUTH_CLIENT_ID=xxxxx.apps.googleusercontent.com
 GOOGLE_OAUTH_CLIENT_SECRET=GOCSPX-xxxxx
-GOOGLE_OAUTH_REDIRECT_URI=https://plancia.agescicampania.org/drive/oauth/callback/
+GOOGLE_OAUTH_REDIRECT_URI=https://plancia.agescicampania.net/drive/oauth/callback/
 ```
 
 Il default `GOOGLE_OAUTH_REDIRECT_URI` in `config/settings/base.py` è già `http://localhost:8000/drive/oauth/callback/` — in dev puoi ometterla se usi la porta 8000.
@@ -200,6 +200,6 @@ Possono condividere lo stesso **client OAuth** (stesse credenziali GCP) o avere 
 | URI `http://localhost:8000/drive/oauth/callback/` nelle credenziali | ✓ | — |
 | URI produzione nelle credenziali | — | ✓ |
 | `GOOGLE_OAUTH_CLIENT_ID` e `SECRET` nel `.env` | ✓ | ✓ |
-| `GOOGLE_OAUTH_REDIRECT_URI` produzione nel `.env.prod` | — | ✓ |
+| `GOOGLE_OAUTH_REDIRECT_URI` produzione nel `.env` | — | ✓ |
 | Token autorizzato via UI (edizione) | per ogni edizione | per ogni edizione |
 | `OAUTHLIB_INSECURE_TRANSPORT` assente in prod | — | ✓ verifica |

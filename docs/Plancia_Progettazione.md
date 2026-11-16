@@ -11,8 +11,7 @@
 
 Nome scelto: **Plancia**. La plancia di comando è il luogo da cui si governa la rotta e dove si
 custodiscono il *Diario di Bordo* e la *bussola* — si affianca naturalmente a
-`bussola.agescicampania.org` come strumento "sorella". Dominio suggerito:
-`plancia.agescicampania.org` (o sottosezione di `bussola`).
+`bussola.agescicampania.net` come strumento "sorella". Dominio: `plancia.agescicampania.net`.
 
 *(Alternative valutate e scartate: Verdiario, Rotta Verde, Sentiero.)*
 
@@ -562,18 +561,21 @@ modello della *Dashboard Zona*. Permette di configurare:
   verbosità di logging). Mostra inoltre, in sola lettura, lo stato corrente del `DEBUG` d'ambiente.
 
 **`DEBUG` reale (scelta confermata).** Il `DEBUG` di Django è governato dalla **variabile d'ambiente**
-`DJANGO_DEBUG` in `.env.prod` e **richiede un redeploy/restart** per avere effetto (si legge
-all'avvio). La pagina Impostazioni lo **mostra** ma non lo ribalta a runtime: per attivarlo si
-modifica `.env.prod` e si riavviano i container. I flag in pagina restano per debug-toolbar e logging.
+`DJANGO_DEBUG` in `.env` e **richiede di ricreare i container** (`docker compose up -d`) per avere
+effetto (si legge all'avvio). La pagina Impostazioni lo **mostra** ma non lo ribalta a runtime: per
+attivarlo si modifica `.env` e si ricreano i container. I flag in pagina restano per debug-toolbar e logging.
 
 ---
 
 ## 16. Deployment e DevOps
 
 ### Principio
-Tutto dockerizzato **tranne il reverse proxy**, che è configurabile. Uno **script di configurazione
-di produzione** genera l'ambiente, sceglie la **modalità di proxying** e la **porta** dell'app
-(default **8000**) e rende il template vhost corretto.
+Tutto dockerizzato, dietro il **reverse proxy unico Caddy** del server `*.agescicampania.net`
+(repo `AGESCI-Campania/agesci-campania-web-frontend`), che termina TLS con Let's Encrypt.
+Plancia non pubblica porte e non gestisce certificati: segue le regole di
+<https://raw.githubusercontent.com/AGESCI-Campania/agesci-campania-web-frontend/main/docs/INTEGRAZIONE.md>.
+Il login SSO con Sestante segue
+<https://raw.githubusercontent.com/AGESCI-Campania/sestante/main/docs/INTEGRAZIONE-SSO.md>.
 
 ### Ambiente di sviluppo
 - Dipendenze gestite con **uv** (`pyproject.toml` + `uv.lock`).
@@ -589,70 +591,46 @@ di produzione** genera l'ambiente, sceglie la **modalità di proxying** e la **p
 - `.env.dev` con `DATABASE_URL` verso `localhost:5432` (porta del container pubblicata in dev).
 
 ### Ambiente di produzione (Docker Compose)
-Servizi containerizzati:
+Repo in `/opt/plancia` sul server, proprietario l'utente `agesci` (gruppo `docker`, senza sudo).
+Servizi (tutti con `restart: unless-stopped`, tutti tranne `beat` con `healthcheck`):
 
-- **`web`** — Django servito da **gunicorn** (worker uvicorn/sync). Porta interna 8000.
-- **`worker`** — Celery worker.
-- **`beat`** — Celery beat (schedulazioni: promemoria scadenze, generazioni periodiche…).
-- **`db`** — PostgreSQL 17 (volume persistente).
-- **`redis`** — broker/result backend Celery + cache.
-- **`nginx`** — **opzionale**, presente solo nella modalità "proxy dockerizzato"
-  (compose profile `proxy-nginx`).
+- **`web`** — Django servito da **gunicorn**, porta interna 8000; applica le migrazioni all'avvio.
+  Statici serviti da **WhiteNoise**, generati nell'immagine (`collectstatic` nel `Dockerfile`).
+- **`worker`** — Celery worker. **`beat`** — Celery beat.
+- **`db`** — PostgreSQL 17 (volume `plancia_db`). **`redis`** — broker/result backend + cache.
+- **`nginx`** — unico ingresso, **solo HTTP**, sulla rete esterna `agesci-proxy` con alias
+  `plancia-nginx`; Caddy lo raggiunge come `plancia-nginx:80`. Inoltra gli header ricevuti da
+  Caddy (`X-Forwarded-Proto $http_x_forwarded_proto`, non `$scheme`).
+- Profili facoltativi: `mailpit` (debug email), `flower` (dashboard Celery), via `COMPOSE_PROFILES`.
 
-**Static & media.** **WhiteNoise** serve gli static dall'app stessa: così un proxy *esterno* può
-limitarsi al reverse proxy puro, senza accedere al filesystem dei container. Nella modalità nginx
-dockerizzato, nginx può opzionalmente servire gli static da un volume condiviso per performance. I
-media sono transitori (staging locale prima dell'upload su Drive).
+Il blocco `caddy/sites/plancia.caddy` vive nel repo del frontend, non qui.
 
-**Settings Django per il proxy.** In tutte le modalità: `SECURE_PROXY_SSL_HEADER =
-('HTTP_X_FORWARDED_PROTO', 'https')`, `USE_X_FORWARDED_HOST = True`, `ALLOWED_HOSTS` e
-`CSRF_TRUSTED_ORIGINS` valorizzati dallo script di configurazione.
+**Settings Django per il proxy.** `SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')`,
+`USE_X_FORWARDED_HOST = True`, `ALLOWED_HOSTS` e `CSRF_TRUSTED_ORIGINS` da `.env`. L'IP del client
+(django-axes) si legge da `X-Forwarded-For` (penultimo elemento: Caddy → nginx), non da
+`REMOTE_ADDR`.
 
-### Modalità di proxying (selezionabili dallo script)
-1. **`nginx-docker`** — un container nginx nello stesso compose fa da reverse proxy verso `web:8000`
-   e pubblica 80/443. TLS gestita qui (certificati montati o companion ACME).
-2. **`nginx-host`** — nessun proxy in compose; l'app pubblica `${APP_PORT:-8000}` sull'host e un
-   **nginx già installato** fa da reverse proxy. Si fornisce il **template vhost nginx** (Appendice A).
-3. **`apache-host`** — come sopra ma con **Apache 2 esistente** (`mod_proxy`, `mod_proxy_http`,
-   `mod_ssl`, `mod_headers`); si fornisce il **template vhost Apache** (Appendice B).
+**Variabili.** `.env` creato da `.env.template` (segreti generati con `openssl rand`, `chmod 600`,
+mai nel repo).
 
-HTTPS è obbligatorio in ogni modalità (la PWA lo richiede); nelle modalità `*-host` la TLS termina
-sul server esistente.
+### Script di installazione e aggiornamento
+In `scripts/`, eseguiti come `agesci` dalla root del repo, con funzioni condivise in
+`scripts/_comune.sh` (copia identica di quello del frontend):
 
-### Porta
-Default **8000**, sovrascrivibile via `APP_PORT`. In `nginx-docker` la 8000 resta interna alla rete
-del compose; nelle modalità `*-host` viene pubblicata sull'host e referenziata dal vhost.
+- **`installa.sh`** — prima installazione: verifica prerequisiti e rete `agesci-proxy`, crea `.env`
+  (mai sovrascritto), build, avvio, attesa `healthy`, dominio del *Site*, primo superutente, unit
+  systemd, elenco dei passi manuali (blocco Caddy, credenziali Sestante).
+- **`aggiorna.sh`** — nuova release: rifiuta modifiche locali, `git pull --ff-only` e
+  ri-esecuzione, controllo delle variabili nuove, build, backup del database, riavvio, attesa
+  `healthy`, aggiornamento delle unit systemd.
 
-### Script di configurazione di produzione — `configure-prod.sh`
-Bash interattivo (con possibilità di flag), idempotente e ri-eseguibile. Tra le altre cose:
+**Avvio al boot**: unit `plancia.service` (oneshot, `docker compose up -d --wait`, dopo
+`agesci-campania-web-frontend.service`; Sestante non è una dipendenza d'avvio).
 
-- raccoglie/accetta: `SERVER_NAME`, **modalità proxy** (`nginx-docker|nginx-host|apache-host`),
-  **porta** (default 8000), opzione **TLS** (`letsencrypt|self-signed|external`), credenziali DB,
-  `SECRET_KEY`, `ALLOWED_HOSTS`/`CSRF_TRUSTED_ORIGINS`, SMTP, client OAuth Google/Drive e social;
-- genera **`.env.prod`** (creando i secret mancanti);
-- imposta **`COMPOSE_PROFILES`** in base alla modalità (include/esclude il servizio `nginx`);
-- **rende il template vhost** corretto sostituendo `SERVER_NAME` e `APP_PORT`; nelle modalità host lo
-  scrive nella posizione attesa (`/etc/nginx/sites-available/…` o `/etc/apache2/sites-available/…`)
-  lasciando l'abilitazione all'operatore;
-- opzionalmente esegue `docker compose … up -d`, `migrate`, `collectstatic`.
-
-*(Lo script può essere anche in Python via `uv run configure.py`; in bash resta privo di dipendenze
-sul server.)*
-
-### Backup periodico (cron)
-Ripreso dalla *Dashboard Zona*: uno script `deploy/backup.sh` invocato da **cron** che esegue il
-**dump del database** (`pg_dump` via `docker compose exec`), lo **comprime** (gzip), archivia i
-**media e i log** (tar), copia l'`.env.prod`, applica una **retention** configurabile (default 30
-giorni) e scrive tutto su un **file di log** con timestamp; al termine può inviare una **notifica
-email** di esito. Esempio di pianificazione in `deploy/crontab.example` (Appendice E):
-
-```cron
-# Backup Plancia ogni notte alle 02:30
-30 2 * * *  /srv/plancia/deploy/backup.sh >> /var/log/plancia_backup.log 2>&1
-```
-
-In alternativa, la stessa logica è schedulabile via **Celery beat**; il cron resta la via
-consigliata perché indipendente dallo stato dei container applicativi.
+### Backup periodico
+`scripts/backup.sh` ogni notte alle 02:30 tramite il timer systemd `plancia-backup.timer`: un
+archivio con dump del database, `.env` e media, retention configurabile (`BACKUP_GIORNI`, default
+14 giorni). `aggiorna.sh` salva inoltre il database prima di ogni aggiornamento.
 
 ---
 
@@ -660,8 +638,8 @@ consigliata perché indipendente dallo stato dei container applicativi.
 
 1. **Fase 0 — fondamenta**: progetto Django 6 + Python 3.14 con **uv**; `org` + `accounts` (utente
    custom, ruoli); allauth con email/password e MFA per ruoli privilegiati; hardening sicurezza di
-   base; **compose dev** (db + redis dockerizzati, Django via `uv run`) e **compose prod** con le tre
-   modalità di proxying e lo **script `configure-prod.sh`** (§14).
+   base; **compose dev** (db + redis dockerizzati, Django via `uv run`) e **compose prod** dietro il Caddy
+   del frontend e gli script `scripts/installa.sh` / `aggiorna.sh` (§16).
 2. **Fase 1 — edizioni & anagrafiche**: `editions`, import anagrafiche, generazione Diari, matrice
    permessi, scoping object-level (guardian).
 3. **Fase 2 — compilazione Diario**: moduli 1–6 con editing collaborativo CSQ↔CRP, regole
@@ -700,129 +678,10 @@ consigliata perché indipendente dallo stato dei container applicativi.
 
 ---
 
-## Appendice A — Template vhost nginx (modalità `nginx-host`)
+## Appendici A, B, C — rimosse
 
-> Placeholder resi dallo script: `${SERVER_NAME}`, `${APP_PORT}` (default 8000).
-
-```nginx
-# Plancia — reverse proxy su nginx esistente
-server {
-    listen 80;
-    server_name ${SERVER_NAME};
-    return 301 https://$host$request_uri;
-}
-
-server {
-    listen 443 ssl;
-    http2 on;
-    server_name ${SERVER_NAME};
-
-    ssl_certificate     /etc/letsencrypt/live/${SERVER_NAME}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/${SERVER_NAME}/privkey.pem;
-
-    client_max_body_size 25m;          # upload foto
-
-    location / {
-        proxy_pass http://127.0.0.1:${APP_PORT};
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_redirect off;
-    }
-
-    # Opzionale: static serviti dal proxy se il volume è condiviso
-    # location /static/ { alias /srv/plancia/static/; access_log off; expires 30d; }
-}
-```
-
----
-
-## Appendice B — Template vhost Apache 2 (modalità `apache-host`)
-
-> Richiede: `a2enmod proxy proxy_http headers ssl`.
-
-```apache
-# Plancia — reverse proxy su Apache 2 esistente
-<VirtualHost *:80>
-    ServerName ${SERVER_NAME}
-    Redirect permanent / https://${SERVER_NAME}/
-</VirtualHost>
-
-<VirtualHost *:443>
-    ServerName ${SERVER_NAME}
-
-    SSLEngine on
-    SSLCertificateFile    /etc/letsencrypt/live/${SERVER_NAME}/fullchain.pem
-    SSLCertificateKeyFile /etc/letsencrypt/live/${SERVER_NAME}/privkey.pem
-
-    LimitRequestBody 26214400          # ~25 MB, upload foto
-
-    ProxyPreserveHost On
-    RequestHeader set X-Forwarded-Proto "https"
-    ProxyPass        / http://127.0.0.1:${APP_PORT}/
-    ProxyPassReverse / http://127.0.0.1:${APP_PORT}/
-
-    # Opzionale: static serviti da Apache se il volume è condiviso
-    # Alias /static/ /srv/plancia/static/
-    # <Directory /srv/plancia/static/> Require all granted </Directory>
-</VirtualHost>
-```
-
----
-
-## Appendice C — Scheletro di `configure-prod.sh`
-
-> Sketch (non implementazione finale): mostra la struttura e i punti decisionali.
-
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-# 1) Parametri (flag o prompt interattivo)
-SERVER_NAME="${SERVER_NAME:-}"
-PROXY_MODE="${PROXY_MODE:-}"          # nginx-docker | nginx-host | apache-host
-APP_PORT="${APP_PORT:-8000}"
-TLS_MODE="${TLS_MODE:-external}"      # letsencrypt | self-signed | external
-# … prompt per i valori mancanti …
-
-# 2) Genera .env.prod (crea i secret se assenti)
-gen_secret() { python -c 'import secrets;print(secrets.token_urlsafe(64))'; }
-[ -f .env.prod ] || {
-  cat > .env.prod <<EOF
-DJANGO_SECRET_KEY=$(gen_secret)
-APP_PORT=${APP_PORT}
-ALLOWED_HOSTS=${SERVER_NAME}
-CSRF_TRUSTED_ORIGINS=https://${SERVER_NAME}
-POSTGRES_PASSWORD=$(gen_secret)
-# … SMTP, OAuth Google/Drive, provider social …
-EOF
-}
-
-# 3) Profili compose secondo la modalità
-case "$PROXY_MODE" in
-  nginx-docker) export COMPOSE_PROFILES="proxy-nginx" ;;
-  nginx-host|apache-host) export COMPOSE_PROFILES="" ;;   # l'app pubblica APP_PORT
-  *) echo "PROXY_MODE non valido"; exit 1 ;;
-esac
-
-# 4) Rende il template vhost per le modalità host
-render_vhost() {
-  local tpl="$1" out="$2"
-  sed -e "s/\${SERVER_NAME}/${SERVER_NAME}/g" \
-      -e "s/\${APP_PORT}/${APP_PORT}/g" "$tpl" > "$out"
-  echo "vhost generato: $out (abilitalo e ricarica il servizio)"
-}
-case "$PROXY_MODE" in
-  nginx-host)  render_vhost deploy/nginx.vhost.tpl  "/etc/nginx/sites-available/plancia.conf" ;;
-  apache-host) render_vhost deploy/apache.vhost.tpl "/etc/apache2/sites-available/plancia.conf" ;;
-esac
-
-# 5) Avvio (opzionale)
-docker compose --env-file .env.prod up -d
-docker compose exec web python manage.py migrate --noinput
-docker compose exec web python manage.py collectstatic --noinput
-```
+I template vhost nginx/Apache e lo script `configure-prod.sh` non esistono più: il reverse proxy è
+Caddy (§ 16) e l'installazione è affidata a `scripts/installa.sh`.
 
 ---
 
@@ -866,38 +725,6 @@ dall'import Evento). Da qui si selezionano **solo** i CSQ.
 
 ---
 
-## Appendice E — Backup periodico (cron)
+## Appendice E — Backup periodico
 
-`deploy/backup.sh` (estratto della logica; versione completa nello scaffold):
-
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-BACKUP_DIR="${BACKUP_DIR:-/srv/plancia/backups}"
-RETENTION_DAYS="${RETENTION_DAYS:-30}"
-TS="$(date +%Y%m%d_%H%M%S)"
-mkdir -p "$BACKUP_DIR"
-
-# 1) Dump DB dal container, compresso
-docker compose --env-file .env.prod exec -T db \
-    pg_dump -U "${POSTGRES_USER:-plancia}" "${POSTGRES_DB:-plancia}" \
-    | gzip > "$BACKUP_DIR/db_${TS}.sql.gz"
-
-# 2) Media + log + .env
-tar -czf "$BACKUP_DIR/media_${TS}.tar.gz" -C /srv/plancia media logs 2>/dev/null || true
-cp /srv/plancia/.env.prod "$BACKUP_DIR/env_${TS}.bak" 2>/dev/null || true
-
-# 3) Retention
-find "$BACKUP_DIR" -name 'db_*.sql.gz'  -mtime +"$RETENTION_DAYS" -delete
-find "$BACKUP_DIR" -name 'media_*.tar.gz' -mtime +"$RETENTION_DAYS" -delete
-find "$BACKUP_DIR" -name 'env_*.bak'     -mtime +"$RETENTION_DAYS" -delete
-
-# 4) Notifica (opzionale, se 'mail' disponibile)
-command -v mail >/dev/null && echo "Backup Plancia OK $TS" | mail -s "Plancia backup OK" "${BACKUP_NOTIFY:-}" || true
-```
-
-`deploy/crontab.example`:
-```cron
-# Backup Plancia ogni notte alle 02:30
-30 2 * * *  cd /srv/plancia && ./deploy/backup.sh >> /var/log/plancia_backup.log 2>&1
-```
+Vedi § 16 e `scripts/backup.sh` (la procedura di ripristino è in testa allo script).

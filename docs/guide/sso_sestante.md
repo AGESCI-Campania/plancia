@@ -1,92 +1,92 @@
 # Integrazione SSO Sestante — Istruzioni per Claude Code
 
 Leggi questo documento PRIMA di toccare codice relativo ad autenticazione, social login,
-MFA o ruoli in Plancia.
+MFA o ruoli in Plancia. Il contratto completo, valido per tutte le piattaforme, è
+`docs/INTEGRAZIONE-SSO.md` del repo `AGESCI-Campania/sestante`:
+<https://raw.githubusercontent.com/AGESCI-Campania/sestante/main/docs/INTEGRAZIONE-SSO.md>.
+In caso di dubbio prevale quello.
 
 ## Contesto
 
-Sestante (`auth.agescicampania.org`) è l'Identity Provider SSO basato su Authentik per
-tutte le piattaforme AGESCI Campania. Plancia è la prima piattaforma client collegata (Fase 1).
+Sestante (`https://auth.agescicampania.net`) è l'Identity Provider SSO (Authentik) delle
+piattaforme AGESCI Campania. Plancia è la piattaforma pilota, slug `plancia`.
 
-Il login locale (email/password/MFA) rimane attivo in parallelo per 60 giorni dal rollout.
-Solo dopo la verifica che tutti gli utenti attivi abbiano fatto almeno un login SSO riuscito
-si valuterà la disattivazione del login locale. Non disattivarlo autonomamente.
+Il login locale (email/password/MFA) resta attivo accanto all'SSO durante la transizione. Si
+disattiva solo su conferma esplicita dell'utente, verificato che tutti gli utenti attivi
+abbiano fatto almeno un login SSO riuscito. Non disattivarlo autonomamente.
 
-## Stato dell'implementazione
+## Configurazione
 
-Le modifiche Fase 1 sono **già presenti nel codice** (commit Fase 1):
-
-| File | Cosa è stato fatto |
+| Cosa | Valore |
 |---|---|
-| `config/settings/base.py` | Aggiunto `openid_connect` a INSTALLED_APPS e SOCIALACCOUNT_PROVIDERS |
-| `apps/accounts/adapters.py` | Estesa `PlanciaSocialAccountAdapter` con auto-signup e sync ruoli |
-| `apps/accounts/middleware.py` | Bypass MFA enforcement per sessioni SSO Sestante |
+| Provider allauth | `openid_connect`, server id **`sestante`**, nome "SSO AGESCI Campania" |
+| Issuer / discovery | `https://auth.agescicampania.net/application/o/plancia/` (`SOCIAL_SESTANTE_SERVER_URL` per sovrascriverlo) |
+| Credenziali | `SOCIAL_SESTANTE_CLIENT_ID`, `SOCIAL_SESTANTE_CLIENT_SECRET` in `.env` (mai nel repo) |
+| Callback (blueprint) | `https://plancia.agescicampania.net/accounts/oidc/sestante/login/callback/` |
+| Launch URL | `https://plancia.agescicampania.net/accounts/oidc/sestante/login/?next=/` |
+| Blueprint | `blueprints/provider-plancia.yaml` nel repo `sestante` (lo gestisce l'utente) |
 
-## Architettura SSO
+- La callback è quella di allauth 65.x (prefisso `oidc`, `SOCIALACCOUNT_OPENID_CONNECT_URL_PREFIX`
+  di default). Se si aggiorna allauth verificarla con
+  `reverse("openid_connect_callback", kwargs={"provider_id": "sestante"})` prima di toccare il
+  blueprint.
+- Senza `SOCIAL_SESTANTE_CLIENT_ID` il provider non viene configurato (`config/settings/base.py`)
+  e il pulsante non compare: l'app parte comunque. Stessa regola per Google/Microsoft/Apple.
+- Client id e secret si trovano in
+  <https://auth.agescicampania.net/if/admin/#/core/providers> → `Plancia AGESCI Campania` → modifica.
+- Il backend usa sempre l'URL pubblico di Sestante, mai l'alias Docker `sestante-server`
+  (issuer diverso → token rifiutati). Plancia non va collegata alla rete di Sestante e
+  Sestante non è una dipendenza d'avvio della unit systemd.
 
-### Provider OIDC
+## Comportamento (`apps/accounts/adapters.py`)
 
-Il provider è configurato in `SOCIALACCOUNT_PROVIDERS["openid_connect"]` con `id="sestante"`.
-La discovery URL è `https://auth.agescicampania.org/application/o/plancia/`.
+**Primo login SSO** (`PlanciaSocialAccountAdapter.pre_social_login` / `save_user`):
+- senza email nel claim → login rifiutato con messaggio, nessun account creato;
+- più utenti Plancia con la stessa email (confronto case-insensitive) → rifiutato;
+- un utente con quella email → collegato (non duplicato);
+- nessuno → creato (auto-signup solo per `sestante`, `is_auto_signup_allowed`), ruolo CSQ
+  salvo ruoli globali;
+- le email arrivate da Sestante sono marcate verificate (altrimenti `ACCOUNT_EMAIL_VERIFICATION
+  = "mandatory"` chiederebbe una conferma via email ai nuovi utenti).
 
-Le credenziali (`client_id`, `client_secret`) stanno in `.env.prod` come:
-```
-SOCIAL_SESTANTE_CLIENT_ID=...
-SOCIAL_SESTANTE_CLIENT_SECRET=...
-```
-Non committarle mai. Vengono copiate dall'UI Authentik dopo l'applicazione del blueprint
-`blueprints/provider-plancia.yaml` nel repo Sestante.
+**Ruoli globali** (`_sync_ruoli_globali`, a ogni login SSO):
 
-### URL di callback
-
-```
-https://plancia.agescicampania.org/accounts/openid_connect/sestante/login/callback/
-```
-(configurato nel blueprint Authentik, non modificarlo senza aggiornare anche il blueprint)
-
-### Auto-provisioning
-
-Gli utenti Authentik che non hanno ancora un account Plancia vengono creati automaticamente
-al primo login SSO, **senza ruolo locale** (default `Ruolo.CSQ`), salvo abbiano già un ruolo
-globale nel claim `groups` (→ ricevono `ADMIN` o `SEGRETERIA`).
-
-### Sincronizzazione ruoli globali
-
-Ad ogni login SSO, `PlanciaSocialAccountAdapter` legge il claim `groups` dall'`extra_data`
-del social account e aggiorna `user.ruolo` secondo questa logica:
-
-| Claim Sestante | user.ruolo Plancia |
+| Gruppo nel claim `groups` | Ruolo Plancia |
 |---|---|
 | `admin-multipiattaforma` | `Ruolo.ADMIN` |
 | `segreteria` | `Ruolo.SEGRETERIA` |
-| nessuno dei due (se ruolo era globale) | reset a `Ruolo.CSQ` |
-| nessuno dei due (se ruolo era locale) | invariato |
 
-I ruoli locali (PGV, CRP, CSQ, INCARICATO_EG) **non vengono mai toccati** dal flusso SSO.
-La fonte del claim è `extra_data["userinfo"]["groups"]`. In allauth ≥65.11, `extra_data` ha
-struttura `{"userinfo": {...}, "id_token": {...}}`; non usare `extra_data.get("groups")` direttamente.
-Usare l'helper `_sestante_groups(extra_data)` definito in `adapters.py`.
+- Sono `Nomina` con **`da_sso=True`**: create quando il gruppo compare, revocate
+  (`attiva=False`, record conservato per l'audit) quando sparisce. Gli altri gruppi
+  Authentik sono ignorati.
+- Le Nomine locali (`da_sso=False`), comprese quelle di Admin/Segreteria create in Plancia, e
+  i ruoli PGV/CRP/CSQ/Incaricato EG non vengono mai toccati.
+- Ruolo attivo: passa al nuovo ruolo globale se di rango maggiore; se era un ruolo globale
+  revocato torna al ruolo attivo di rango più alto, altrimenti CSQ. Un superutente resta Admin.
+- Claim letti da `extra_data["userinfo"]` (fallback `id_token`) con `_sestante_groups()`: in
+  allauth ≥ 65.11 `extra_data` è `{"userinfo": {...}, "id_token": {...}}`.
 
-### MFA
+**MFA**: la verifica Sestante. Plancia non la richiede a chi è entrato via SSO **in questa
+sessione**: il criterio è `sessione_da_sestante(request)`, cioè
+`{"method": "socialaccount", "provider": "sestante"}` in
+`request.session["account_authentication_methods"]`. Lo usano sia `PlanciaMFAAdapter.is_mfa_enabled`
+(durante il login) sia `MFAEnforcementMiddleware` (attivazione TOTP forzata). **Non** usare
+l'esistenza di un `SocialAccount` collegato: un utente collegato che entra con la password
+locale deve restare soggetto alla MFA di Plancia.
 
-Gli utenti che accedono tramite Sestante bypassano il `MFAEnforcementMiddleware` di Plancia:
-la MFA è già stata completata su Sestante prima del redirect. Il bypass è attivo finché esiste
-un record `SocialAccount` con `provider="sestante"` per l'utente.
+**Logout**: chiude solo la sessione di Plancia (quella su Sestante resta). Un logout globale via
+`end-session` si implementa solo se l'utente lo chiede.
+
+Test: `apps/accounts/tests/test_sso_sestante.py`.
 
 ## Cosa NON fare
 
-- Non disattivare il login locale (è Fase 1, transizione in corso)
-- Non committare `SOCIAL_SESTANTE_CLIENT_ID` o `SOCIAL_SESTANTE_CLIENT_SECRET`
-- Non modificare la `redirect_uri` senza aggiornare il blueprint Sestante
-- Non forzare MFA su Plancia per utenti con `SocialAccount.provider="sestante"`
-- Non far toccare al flusso SSO ruoli locali (PGV, CRP, CSQ, INCARICATO_EG)
-- Non impostare `SOCIALACCOUNT_AUTO_SIGNUP = True` globalmente (l'override per Sestante
-  è già nel metodo `is_auto_signup_allowed` dell'adapter)
-
-## Riferimenti
-
-- Blueprint Sestante: `blueprints/provider-plancia.yaml` nel repo `/opt/sestante`
-- Adapter: `apps/accounts/adapters.py` — `PlanciaSocialAccountAdapter`
-- Middleware MFA: `apps/accounts/middleware.py` — `MFAEnforcementMiddleware._deve_forzare_setup`
-- Settings OIDC: `config/settings/base.py` — `SOCIALACCOUNT_PROVIDERS["openid_connect"]`
-- Guida social login generale: `docs/guide/social_auth.md`
+- Non disattivare il login locale.
+- Non committare `SOCIAL_SESTANTE_CLIENT_ID` / `SOCIAL_SESTANTE_CLIENT_SECRET`.
+- Non modificare il repo `sestante` né creare Provider/Application a mano: preparare il
+  blueprint e consegnarlo all'utente (contratto § 4).
+- Non cambiare la callback senza aggiornare il blueprint.
+- Non far toccare al flusso SSO ruoli locali o Nomine con `da_sso=False`.
+- Non impostare `SOCIALACCOUNT_AUTO_SIGNUP = True` globalmente.
+- Non aggiungere redirect URI `localhost` al provider di produzione: per provare l'SSO in
+  locale chiedere all'utente un provider di sviluppo separato.

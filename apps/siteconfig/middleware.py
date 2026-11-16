@@ -189,8 +189,13 @@ class MaintenanceModeMiddleware:
         is_admin = bool(user and user.is_authenticated and user.is_superuser)
         path = request.path_info
         is_api = any(path.startswith(p) for p in _API_PREFIXES)
-        # admin e login bypassano in silenzio; API ricevono 503 JSON invece di HTML
-        bypass = is_admin or path.startswith("/admin") or path.startswith("/accounts")
+        # admin, login e healthcheck bypassano in silenzio; API ricevono 503 JSON invece di HTML
+        bypass = (
+            is_admin
+            or path.startswith("/admin")
+            or path.startswith("/accounts")
+            or path == "/healthz/"
+        )
         if imp.manutenzione and not bypass:
             if is_api:
                 return HttpResponse(

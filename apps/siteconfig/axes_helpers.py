@@ -20,3 +20,17 @@ def axes_cooloff_time(request: HttpRequest | None = None) -> timedelta | None:
     if minutes:
         return timedelta(minutes=minutes)
     return None
+
+
+def ip_client_dietro_proxy(request: HttpRequest) -> str | None:
+    """IP del client in produzione (Caddy → nginx interno → gunicorn).
+
+    REMOTE_ADDR è l'nginx interno, uguale per tutti: bloccare per IP su quello
+    bloccherebbe chiunque. Caddy imposta X-Forwarded-For con l'IP del client
+    (ignora quello ricevuto da fuori) e nginx vi aggiunge l'IP di Caddy, quindi il
+    client è il penultimo elemento. Senza intestazione (accesso diretto) si usa REMOTE_ADDR.
+    """
+    voci = [v.strip() for v in request.META.get("HTTP_X_FORWARDED_FOR", "").split(",") if v.strip()]
+    if len(voci) >= 2:
+        return voci[-2]
+    return request.META.get("REMOTE_ADDR")

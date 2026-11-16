@@ -10,12 +10,31 @@ RUOLI_MFA_SEMPRE = {"admin"}
 # Ruoli soggetti a MFA solo se l'impostazione mfa_obbligatoria_ruoli_estesi è True.
 RUOLI_MFA_ESTESI = {"segreteria", "incaricato_eg"}
 
+# Provider id di Sestante (SSO AGESCI Campania), uguale su tutte le piattaforme.
+PROVIDER_SESTANTE = "sestante"
+
 # Mappa dal claim Sestante al ruolo Plancia (solo ruoli globali).
 _SESTANTE_CLAIM_TO_RUOLO: dict[str, str] = {
     "admin-multipiattaforma": "admin",
     "segreteria": "segreteria",
 }
 _RUOLI_GLOBALI: set[str] = set(_SESTANTE_CLAIM_TO_RUOLO.values())
+
+
+def sessione_da_sestante(request) -> bool:
+    """True se nella sessione corrente l'utente si è autenticato tramite Sestante.
+
+    Il criterio è il metodo di autenticazione della sessione, non l'esistenza di un
+    account Sestante collegato: chi ha l'account collegato ma entra con la password
+    locale resta soggetto alla MFA di Plancia.
+    """
+    session = getattr(request, "session", None)
+    if session is None:
+        return False
+    return any(
+        m.get("method") == "socialaccount" and m.get("provider") == PROVIDER_SESTANTE
+        for m in session.get("account_authentication_methods", [])
+    )
 
 
 def _sestante_groups(extra_data: dict) -> list[str]:
@@ -26,25 +45,48 @@ def _sestante_groups(extra_data: dict) -> list[str]:
 
 
 def _sync_ruoli_globali(user, groups: list[str]) -> None:
-    """Aggiorna user.ruolo in base al claim groups di Sestante.
+    """Allinea i ruoli globali dell'utente al claim groups di Sestante.
 
-    Gestisce solo i ruoli globali (ADMIN, SEGRETERIA). Se il claim non include
-    più un ruolo globale che l'utente aveva, resetta a CSQ. I ruoli locali
-    (PGV, CRP, CSQ, INCARICATO_EG) non vengono mai toccati.
+    I ruoli globali (ADMIN, SEGRETERIA) arrivati da Sestante sono Nomine con
+    `da_sso=True`: create se il gruppo compare nel claim, revocate (attiva=False) se
+    non c'è più. Le Nomine locali, anche di Admin/Segreteria, non vengono mai toccate.
+    Il ruolo attivo passa al nuovo ruolo globale se di rango maggiore; se il ruolo
+    attivo era un ruolo globale revocato, torna al ruolo attivo di rango più alto
+    (o a CSQ, il default della piattaforma).
     """
-    from apps.accounts.models import Ruolo
+    from apps.accounts.models import Nomina, Ruolo
+    from apps.accounts.roles import ROLE_RANK
 
-    nuovo_ruolo: str | None = next(
-        (_SESTANTE_CLAIM_TO_RUOLO[c] for c in _SESTANTE_CLAIM_TO_RUOLO if c in groups),
-        None,
-    )
-    if nuovo_ruolo is not None and user.ruolo != nuovo_ruolo:
-        User.objects.filter(pk=user.pk).update(ruolo=nuovo_ruolo)
-        user.ruolo = nuovo_ruolo
-    elif nuovo_ruolo is None and user.ruolo in _RUOLI_GLOBALI:
-        # Ruolo globale revocato in Sestante → reset a CSQ
-        User.objects.filter(pk=user.pk).update(ruolo=Ruolo.CSQ)
-        user.ruolo = Ruolo.CSQ
+    attesi = {_SESTANTE_CLAIM_TO_RUOLO[g] for g in groups if g in _SESTANTE_CLAIM_TO_RUOLO}
+    nomine_sso = Nomina.objects.filter(utente=user, da_sso=True, attiva=True)
+    nomine_sso.exclude(ruolo__in=attesi).update(attiva=False)
+    gia_attivi = set(nomine_sso.values_list("ruolo", flat=True))
+    nuovi = attesi - gia_attivi
+    for ruolo in nuovi:
+        Nomina.objects.create(utente=user, socio=user.socio, ruolo=ruolo, da_sso=True)
+
+    # Un superutente è Admin anche senza Nomina (signal ensure_superuser_ruolo)
+    disponibili = set(user.ruoli_attivi) | ({Ruolo.ADMIN} if user.is_superuser else set())
+    ruolo = user.ruolo
+    if nuovi:
+        migliore = max(nuovi, key=lambda r: ROLE_RANK.get(r, 0))
+        if ROLE_RANK.get(migliore, 0) > ROLE_RANK.get(ruolo, 0):
+            ruolo = migliore
+    if ruolo in _RUOLI_GLOBALI and ruolo not in disponibili:
+        ruolo = max(disponibili, key=lambda r: ROLE_RANK.get(r, 0), default=Ruolo.CSQ)
+    if ruolo != user.ruolo:
+        User.objects.filter(pk=user.pk).update(ruolo=ruolo)
+        user.ruolo = ruolo
+
+
+def _rifiuta_login(request, messaggio: str):
+    """Interrompe il social login con un messaggio, senza creare account parziali."""
+    from allauth.core.exceptions import ImmediateHttpResponse
+    from django.contrib import messages
+    from django.shortcuts import redirect
+
+    messages.error(request, messaggio)
+    raise ImmediateHttpResponse(redirect("account_login"))
 
 
 def ruolo_richiede_mfa(user) -> bool:
@@ -144,13 +186,12 @@ class PlanciaMFAAdapter(DefaultMFAAdapter):
         # autentichi l'utente nella sessione), non nelle view MFA post-login.
         from allauth.core import context as allauth_context
         request = allauth_context.request
-        if request is not None and not request.user.is_authenticated:
-            methods = request.session.get("account_authentication_methods", [])
-            if any(
-                m.get("method") == "socialaccount" and m.get("provider") == "sestante"
-                for m in methods
-            ):
-                return False
+        if (
+            request is not None
+            and not request.user.is_authenticated
+            and sessione_da_sestante(request)
+        ):
+            return False
         return super().is_mfa_enabled(user, types=types)
 
 
@@ -159,35 +200,46 @@ class PlanciaSocialAccountAdapter(DefaultSocialAccountAdapter):
 
     - Google/Microsoft/Apple: solo collegamento a utenti esistenti per email (nessun auto-signup).
     - Sestante (SSO AGESCI Campania): auto-provisioning consentito; sincronizzazione ruoli globali
-      dal claim `groups` ad ogni login.
+      dal claim `groups` ad ogni login. Vedi docs/guide/sso_sestante.md.
     """
 
     def is_auto_signup_allowed(self, request, sociallogin):
-        return sociallogin.account.provider == "sestante"
+        return sociallogin.account.provider == PROVIDER_SESTANTE
 
     def pre_social_login(self, request, sociallogin):
         """Collega per email gli utenti esistenti; sincronizza ruoli globali per Sestante."""
-        if not sociallogin.is_existing:
-            email = sociallogin.email_addresses[0].email if sociallogin.email_addresses else None
-            if email:
-                try:
-                    user = User.objects.get(email__iexact=email)
-                    sociallogin.connect(request, user)
-                except User.DoesNotExist:
-                    pass
+        da_sestante = sociallogin.account.provider == PROVIDER_SESTANTE
+        email = sociallogin.email_addresses[0].email if sociallogin.email_addresses else None
+        if da_sestante:
+            if not email:
+                _rifiuta_login(
+                    request,
+                    "Il tuo account SSO AGESCI Campania non ha un indirizzo email: "
+                    "chiedi alla Segreteria regionale di aggiungerlo.",
+                )
+            # Sestante verifica le email dei propri utenti: senza questo allauth
+            # chiederebbe una nuova conferma via email ai nuovi utenti.
+            for indirizzo in sociallogin.email_addresses:
+                indirizzo.verified = True
 
-        if sociallogin.account.provider == "sestante" and sociallogin.is_existing:
+        if not sociallogin.is_existing and email:
+            utenti = list(User.objects.filter(email__iexact=email)[:2])
+            if len(utenti) > 1 and da_sestante:
+                _rifiuta_login(
+                    request,
+                    f"Più account Plancia usano l'indirizzo {email}: "
+                    "contatta la Segreteria regionale per unificarli.",
+                )
+            if len(utenti) == 1:
+                sociallogin.connect(request, utenti[0])
+
+        if da_sestante and sociallogin.is_existing:
             groups = _sestante_groups(sociallogin.account.extra_data)
             _sync_ruoli_globali(sociallogin.user, groups)
 
-    def populate_user(self, request, sociallogin, data):
-        """Per i nuovi utenti da Sestante, assegna subito il ruolo dal claim groups."""
-        user = super().populate_user(request, sociallogin, data)
-        if sociallogin.account.provider == "sestante":
-            from apps.accounts.models import Ruolo
-            groups = _sestante_groups(sociallogin.account.extra_data)
-            user.ruolo = next(
-                (_SESTANTE_CLAIM_TO_RUOLO[c] for c in _SESTANTE_CLAIM_TO_RUOLO if c in groups),
-                Ruolo.CSQ,
-            )
+    def save_user(self, request, sociallogin, form=None):
+        """Nuovi utenti da Sestante: ruoli globali dal claim groups appena creati."""
+        user = super().save_user(request, sociallogin, form=form)
+        if sociallogin.account.provider == PROVIDER_SESTANTE:
+            _sync_ruoli_globali(user, _sestante_groups(sociallogin.account.extra_data))
         return user

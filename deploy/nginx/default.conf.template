@@ -1,0 +1,35 @@
+# Plancia - nginx interno, solo HTTP. TLS, certificati e redirect HTTPS li gestisce Caddy
+# (agesci-campania-web-frontend), che raggiunge questo container come plancia-nginx:80.
+# Header inoltrati: si passano quelli ricevuti da Caddy, non $scheme (qui varrebbe http).
+#
+# Template dell'immagine ufficiale nginx (envsubst solo sulle variabili d'ambiente definite):
+# NGINX_LOCAL_RESOLVERS è il DNS del runtime container, preso da /etc/resolv.conf
+# (NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1 nel compose). Con il resolver e proxy_pass su variabile
+# nginx ri-risolve "web" ogni 10 s: quando aggiorna.sh ricrea il container web (nuovo IP)
+# non resta un indirizzo vecchio in cache (502).
+resolver ${NGINX_LOCAL_RESOLVERS} valid=10s ipv6=off;
+
+server {
+    listen 80;
+    server_name _;
+
+    # Limite effettivo degli upload (Caddy non ne impone)
+    client_max_body_size 25m;
+
+    location = /nginx-health {
+        access_log off;
+        return 200 "ok\n";
+    }
+
+    location / {
+        set $app http://web:8000;
+        proxy_pass $app;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+        proxy_set_header X-Forwarded-Host  $http_x_forwarded_host;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_redirect off;
+        proxy_read_timeout 130s;   # > timeout di gunicorn (120s)
+    }
+}

@@ -751,7 +751,7 @@ class FlowerProxyView(View):
     """Proxy verso Flower (dashboard Celery) accessibile su /celery/.
 
     Solo Admin. Flower deve essere avviato con il profilo 'flower':
-      COMPOSE_PROFILES=flower docker compose --env-file .env.prod up -d
+      COMPOSE_PROFILES=flower in .env, poi docker compose up -d
     """
 
     def dispatch(self, request, *args, **kwargs):
@@ -805,7 +805,7 @@ class FlowerProxyView(View):
                 "<h1>Flower non raggiungibile</h1>"
                 f"<pre>{e}</pre>"
                 "<p>Avvia Flower con il profilo <code>flower</code>:<br>"
-                "<code>COMPOSE_PROFILES=flower docker compose --env-file .env.prod up -d</code></p>",
+                "<code>COMPOSE_PROFILES=flower in .env, poi docker compose up -d</code></p>",
                 status=503,
                 content_type="text/html",
             )
@@ -877,8 +877,8 @@ class MailpitProxyView(View):
             return HttpResponse(
                 f"<h1>Mailpit non raggiungibile</h1><pre>{e}</pre>"
                 "<p>Avvia Mailpit con il profilo <code>mailpit</code>:<br>"
-                "Produzione: <code>COMPOSE_PROFILES=mailpit docker compose --env-file .env.prod up -d mailpit</code><br>"
-                "Staging: <code>COMPOSE_PROFILES=mailpit docker compose -f docker-compose.staging.yml --env-file .env.staging up -d mailpit</code></p>",
+                "<code>COMPOSE_PROFILES=mailpit</code> in <code>.env</code>, poi "
+                "<code>docker compose up -d</code></p>",
                 status=503,
                 content_type="text/html",
             )
