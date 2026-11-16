@@ -2,18 +2,21 @@
 from allauth.account.views import PasswordChangeView as AllauthPasswordChangeView
 from allauth.mfa.base.views import AuthenticateView as MFAAuthenticateView
 from allauth.mfa.models import Authenticator
-from allauth.usersessions.models import UserSession
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 from django.views.generic import DetailView, ListView, TemplateView
 
+from apps.accounts import services
 from apps.accounts.mixins import StaffPlanciaRequiredMixin
 from apps.accounts.models import Ruolo, User
-from apps.accounts.roles import ROLE_CREATABLE_BY
 from apps.accounts.roles import nomina as service_nomina
+
+
+def _primo_messaggio(exc: ValidationError) -> str:
+    return next(iter(exc.messages), "Dati non validi.")
 
 
 class PlanciaAuthenticateView(MFAAuthenticateView):
@@ -46,29 +49,18 @@ class ProfiloView(LoginRequiredMixin, TemplateView):
         u = self.request.user
         ctx["nomine"] = u.nomine.select_related("nominato_da", "edizione").order_by("-creato_at")
         ctx["login_events"] = u.login_events.all()[:10]
-        ctx["puo_modificare_email"] = (
-            u.ruolo == Ruolo.CSQ and u.socio and u.socio.email_modificabile_dall_interessato
-        )
+        ctx["puo_modificare_email"] = services.puo_modificare_email(u)
         from allauth.socialaccount.models import SocialAccount
         ctx["social_accounts"] = SocialAccount.objects.filter(user=u)
         return ctx
 
     def post(self, request):
         """Aggiornamento email per i CSQ."""
-        if not (request.user.ruolo == Ruolo.CSQ and request.user.socio):
-            raise PermissionDenied
-        email = request.POST.get("email", "").strip()
-        if not email:
-            messages.error(request, "L'indirizzo email non può essere vuoto.")
+        try:
+            services.aggiorna_email(request.user, request.POST.get("email", ""))
+        except ValidationError as exc:
+            messages.error(request, _primo_messaggio(exc))
             return redirect("accounts:profilo")
-        if User.objects.exclude(pk=request.user.pk).filter(email=email).exists():
-            messages.error(request, "Questo indirizzo email è già in uso.")
-            return redirect("accounts:profilo")
-        request.user.email = email
-        if request.user.socio:
-            request.user.socio.email = email
-            request.user.socio.save(update_fields=["email"])
-        request.user.save(update_fields=["email"])
         messages.success(request, "Email aggiornata.")
         return redirect("accounts:profilo")
 
@@ -82,18 +74,7 @@ class UtenteListView(StaffPlanciaRequiredMixin, ListView):
     paginate_by = 50
 
     def get_queryset(self):
-        qs = User.objects.select_related("socio", "socio__gruppo", "socio__zona").order_by(
-            "ruolo", "email"
-        )
-        ruolo = self.request.GET.get("ruolo")
-        if ruolo in Ruolo.values:
-            qs = qs.filter(ruolo=ruolo)
-        q = self.request.GET.get("q", "").strip()
-        if q:
-            qs = qs.filter(email__icontains=q) | qs.filter(
-                socio__cognome__icontains=q
-            ) | qs.filter(socio__nome__icontains=q)
-        return qs
+        return services.utenti_filtrati(self.request.GET.get("ruolo"), self.request.GET.get("q"))
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -101,14 +82,7 @@ class UtenteListView(StaffPlanciaRequiredMixin, ListView):
         ctx["ruoli"] = Ruolo.choices
         ctx["ruolo_sel"] = self.request.GET.get("ruolo", "")
         ctx["q"] = self.request.GET.get("q", "")
-        attore = self.request.user
-        from apps.accounts.roles import ROLE_REQUIRES_CATEGORY
-        ctx["ruoli_nominabili"] = [
-            (r, label)
-            for r, label in Ruolo.choices
-            if (attore.ruolo in ROLE_CREATABLE_BY.get(r, set()) or attore.is_superuser)
-            and ROLE_REQUIRES_CATEGORY.get(r) != "ragazzo"
-        ]
+        ctx["ruoli_nominabili"] = services.ruoli_nominabili(self.request.user, solo_capi=True)
         return ctx
 
 
@@ -125,11 +99,7 @@ class UtenteDetailView(StaffPlanciaRequiredMixin, DetailView):
         ctx["nomine"] = u.nomine.select_related("nominato_da", "edizione").order_by("-creato_at")
         ctx["login_events"] = u.login_events.all()[:20]
         attore = self.request.user
-        ctx["ruoli_nominabili"] = [
-            (r, label)
-            for r, label in Ruolo.choices
-            if attore.ruolo in ROLE_CREATABLE_BY.get(r, set()) or attore.is_superuser
-        ]
+        ctx["ruoli_nominabili"] = services.ruoli_nominabili(attore)
         ctx["puo_impersonare"] = (
             attore.ruolo in {"admin", "segreteria"} or attore.is_superuser
         )
@@ -175,38 +145,31 @@ class CreaUtenteDaSocioView(StaffPlanciaRequiredMixin, View):
     """
 
     def post(self, request):
-        from apps.org.models import Categoria, Socio
-
         socio_pk = request.POST.get("socio_pk")
         ruolo_target = request.POST.get("ruolo")
 
         if not socio_pk or not ruolo_target or ruolo_target not in Ruolo.values:
             messages.error(request, "Dati non validi.")
             return redirect("accounts:utente_list")
-
-        socio = get_object_or_404(Socio, pk=socio_pk, categoria=Categoria.CAPO)
-
-        # Verifica che l'attore possa creare quel ruolo
-        if ruolo_target not in {
-            r for r, creators in ROLE_CREATABLE_BY.items()
-            if request.user.ruolo in creators or request.user.is_superuser
-        }:
-            messages.error(request, f"Non sei autorizzato ad assegnare il ruolo {Ruolo(ruolo_target).label}.")
-            return redirect("accounts:utente_list")
-
-        from apps.notifications.service import crea_o_ottieni_utente_per_socio
-
-        utente = crea_o_ottieni_utente_per_socio(socio, ruolo_target)
-
         try:
-            service_nomina(request.user, utente, ruolo_target)
-            messages.success(
-                request,
-                f"Account creato e ruolo {Ruolo(ruolo_target).label} assegnato a {socio}.",
-            )
+            utente, _ = services.crea_utente_da_socio(request.user, socio_pk, ruolo_target)
+        except PermissionDenied as e:
+            messages.error(request, str(e))
+            return redirect("accounts:utente_list")
+        except ValidationError as e:
+            messages.error(request, _primo_messaggio(e))
+            return redirect("accounts:utente_list")
         except (PermissionError, ValueError) as e:
             messages.error(request, str(e))
-
+            # l'account può essere stato creato anche se la nomina è fallita
+            utente = User.objects.filter(socio__pk=socio_pk).first()
+            if utente is None:
+                return redirect("accounts:utente_list")
+            return redirect("accounts:utente_detail", pk=utente.pk)
+        messages.success(
+            request,
+            f"Account creato e ruolo {Ruolo(ruolo_target).label} assegnato a {utente.socio}.",
+        )
         return redirect("accounts:utente_detail", pk=utente.pk)
 
 
@@ -215,19 +178,8 @@ class CreaUtenteStaffView(StaffPlanciaRequiredMixin, View):
 
     template_name = "accounts/crea_utente_staff.html"
 
-    # Ruoli che possono essere creati con questo flusso (senza Socio)
-    RUOLI_STAFF = {
-        Ruolo.ADMIN: {Ruolo.ADMIN},
-        Ruolo.SEGRETERIA: {Ruolo.ADMIN},
-        Ruolo.INCARICATO_EG: {Ruolo.ADMIN, Ruolo.SEGRETERIA},
-    }
-
     def _ruoli_creabili(self, attore) -> list[tuple[str, str]]:
-        return [
-            (r, Ruolo(r).label)
-            for r, creatori in self.RUOLI_STAFF.items()
-            if attore.ruolo in creatori or attore.is_superuser
-        ]
+        return services.ruoli_staff_creabili(attore)
 
     def get(self, request):
         return render(request, self.template_name, {
@@ -236,47 +188,26 @@ class CreaUtenteStaffView(StaffPlanciaRequiredMixin, View):
 
     def post(self, request):
         email = request.POST.get("email", "").strip().lower()
-        first_name = request.POST.get("first_name", "").strip()
-        last_name = request.POST.get("last_name", "").strip()
         ruolo = request.POST.get("ruolo", "")
-
-        ruoli_ok = dict(self._ruoli_creabili(request.user))
-        if ruolo not in ruoli_ok:
-            messages.error(request, "Ruolo non consentito.")
-            return render(request, self.template_name, {
-                "ruoli_creabili": self._ruoli_creabili(request.user)
-            })
-        if not email:
-            messages.error(request, "L'indirizzo email è obbligatorio.")
-            return render(request, self.template_name, {
-                "ruoli_creabili": self._ruoli_creabili(request.user)
-            })
-
-        from apps.accounts.roles import nomina_staff_diretto
         try:
-            utente, nomina_obj, creato = nomina_staff_diretto(
-                request.user, email, first_name, last_name, ruolo
+            utente, _, creato = services.crea_utente_staff(
+                request.user,
+                email,
+                request.POST.get("first_name", ""),
+                request.POST.get("last_name", ""),
+                ruolo,
+                request=request,
             )
+        except ValidationError as exc:
+            messages.error(request, _primo_messaggio(exc))
+            return render(request, self.template_name, {
+                "ruoli_creabili": self._ruoli_creabili(request.user)
+            })
         except (PermissionError, ValueError) as exc:
             messages.error(request, str(exc))
             return render(request, self.template_name, {
                 "ruoli_creabili": self._ruoli_creabili(request.user)
             })
-
-        # Invia email di reset password (l'utente non ha password — deve impostarla)
-        try:
-            from django.contrib.auth.forms import PasswordResetForm
-            form = PasswordResetForm({"email": utente.email})
-            if form.is_valid():
-                form.save(
-                    request=request,
-                    use_https=request.is_secure(),
-                    from_email=None,
-                    subject_template_name="registration/password_reset_subject.txt",
-                    email_template_name="registration/password_reset_email.html",
-                )
-        except Exception:
-            pass  # la mail non è bloccante
 
         azione = "creato" if creato else "già esistente — nomina aggiunta"
         messages.success(
@@ -298,15 +229,13 @@ class CambiaRuoloView(LoginRequiredMixin, View):
         ruolo_target = request.POST.get("ruolo", "")
         next_url = request.POST.get("next") or "/"
 
-        if ruolo_target not in request.user.ruoli_attivi:
-            messages.error(request, "Non hai questo ruolo attivo.")
+        try:
+            cambiato = services.cambia_ruolo_attivo(request.user, ruolo_target)
+        except ValidationError as exc:
+            messages.error(request, _primo_messaggio(exc))
             return redirect(next_url)
-
-        if ruolo_target == request.user.ruolo:
+        if not cambiato:
             return redirect(next_url)
-
-        request.user.ruolo = ruolo_target
-        request.user.save(update_fields=["ruolo"])
         messages.success(
             request,
             f"Stai operando come {Ruolo(ruolo_target).label}.",
@@ -323,14 +252,7 @@ class TerminaSessioniView(LoginRequiredMixin, View):
     """
 
     def post(self, request):
-        sessioni = list(
-            UserSession.objects.filter(user=request.user).exclude(
-                session_key=request.session.session_key
-            )
-        )
-        for s in sessioni:
-            s.end()
-        count = len(sessioni)
+        count = services.termina_altre_sessioni(request.user, request.session.session_key)
         if count:
             messages.success(request, f"Terminate {count} sessione/i attiva/e.")
         else:

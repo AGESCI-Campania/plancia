@@ -28,4 +28,5 @@ def test_api_v1_dettaglio_diario_posti_azione_missione(missione, user_admin):
     c.force_login(user_admin)
     r = c.get(f"/api/v1/diari/{missione.diario_id}")
     assert r.status_code == 200
-    assert r.json()["missione"]["posti_azione"] == [{"descrizione": "Cartografia del sentiero"}]
+    posti = r.json()["missione"]["posti_azione"]
+    assert [p["descrizione"] for p in posti] == ["Cartografia del sentiero"]

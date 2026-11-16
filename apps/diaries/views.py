@@ -7,6 +7,8 @@ from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import DetailView, ListView, View
 
 from apps.accounts.models import Ruolo
+from apps.diaries import permessi
+from apps.diaries import service as diari_service
 from apps.diaries.forms import (
     AnagraficaForm,
     BrevettoFormSet,
@@ -19,7 +21,6 @@ from apps.diaries.forms import (
     SpecialitaFormSet,
 )
 from apps.diaries.models import (
-    MODULI_FOTO,
     Allegato,
     Anagrafica,
     Diario,
@@ -28,19 +29,13 @@ from apps.diaries.models import (
     Presentazione,
     RelazioneFinale,
     StatoDiario,
-    StatoSync,
     TipoDiario,
     TipoEsito,
 )
 
-# Stati in cui il diario non è ancora stato inviato allo staff
-_STATI_PRIMA_INVIO = (StatoDiario.NON_INIZIATO, StatoDiario.IN_COMPILAZIONE, StatoDiario.RELAZIONE_FINALE)
-
-# Stati in cui ha senso generare il PDF (CSQ ha inviato la propria parte)
-_STATI_PDF = (
-    StatoDiario.INVIATO, StatoDiario.IN_VALUTAZIONE, StatoDiario.IN_REVISIONE,
-    StatoDiario.APPROVATO, StatoDiario.NON_APPROVATO, StatoDiario.MAGGIORI_INFO,
-)
+# Regole e costanti condivise con l'API: apps/diaries/permessi.py e apps/diaries/service.py
+_STATI_PRIMA_INVIO = permessi.STATI_PRIMA_INVIO
+_STATI_PDF = permessi.STATI_PDF
 
 
 # ---------------------------------------------------------------------------
@@ -56,36 +51,24 @@ class DiarioAccessMixin(LoginRequiredMixin):
             Diario.objects.select_related("edizione", "squadriglia", "csq", "crp"),
             pk=pk,
         )
-        user = self.request.user
-        if user.is_superuser or user.is_staff_plancia:
-            return diario
-        if user.ruolo == Ruolo.CSQ and user.socio and diario.csq == user.socio:
-            return diario
-        if user.ruolo == Ruolo.CRP and user.socio and diario.crp == user.socio:
-            return diario
-        if user.ruolo == Ruolo.PGV:
-            # La verifica delle assegnazioni avviene nel modulo evaluations (futuro)
-            return diario
-        raise PermissionDenied
+        from apps.diaries.visibility import diari_visibili
+
+        # Visibilità: unica fonte di verità (Pattuglia GV solo sui diari assegnati)
+        if not diari_visibili(self.request.user).filter(pk=diario.pk).exists():
+            raise PermissionDenied
+        return diario
 
     def _puo_editare(self, diario: Diario) -> bool:
         """True se l'utente può editare i moduli CSQ (1-5) del diario."""
-        user = self.request.user
-        if user.is_superuser or user.is_staff_plancia:
-            return True
-        return diario.stato in (StatoDiario.NON_INIZIATO, StatoDiario.IN_COMPILAZIONE) and user.ruolo == Ruolo.CSQ
+        return permessi.puo_modificare_moduli(self.request.user, diario)
 
     def _inizia_se_necessario(self, diario: Diario) -> None:
         """Transita NON_INIZIATO → IN_COMPILAZIONE al primo salvataggio del CSQ."""
-        if diario.stato == StatoDiario.NON_INIZIATO:
-            diario.inizia()
+        diari_service.inizia_se_necessario(diario)
 
     def _puo_editare_relazione(self, diario: Diario) -> bool:
         """True se il Capo Reparto può compilare la relazione finale (modulo 6)."""
-        user = self.request.user
-        if user.is_superuser or user.is_staff_plancia:
-            return True
-        return diario.stato == StatoDiario.RELAZIONE_FINALE and user.ruolo == Ruolo.CRP
+        return permessi.puo_modificare_relazione(self.request.user, diario)
 
 
 # ---------------------------------------------------------------------------
@@ -146,7 +129,7 @@ class DiarioDetailView(DiarioAccessMixin, DetailView):
         ctx["puo_editare"] = self._puo_editare(diario)
         ctx["is_csq"] = is_csq
         # Relazione finale: mai visibile al CSQ (docs sez. 5)
-        ctx["mostra_relazione"] = not is_csq
+        ctx["mostra_relazione"] = permessi.puo_vedere_relazione(user)
         # Completezza moduli CSQ
         ctx["moduli_csq_completi"] = diario.moduli_csq_completi
         # Moduli esistenti
@@ -157,32 +140,19 @@ class DiarioDetailView(DiarioAccessMixin, DetailView):
         ctx["has_missione"] = hasattr(diario, "missione")
         ctx["has_relazione"] = hasattr(diario, "relazione_finale")
         # Capo Squadriglia può inviare la propria parte (→ Relazione finale)
-        ctx["puo_inviare_csq"] = (
-            diario.stato == StatoDiario.IN_COMPILAZIONE
-            and diario.moduli_csq_completi
-            and (user.ruolo == Ruolo.CSQ or user.is_superuser or user.is_staff_plancia)
-        )
+        ctx["puo_inviare_csq"] = permessi.puo_inviare_csq(user, diario)
         # Capo Reparto può inviare il diario allo staff (→ Inviato)
-        ctx["puo_inviare"] = diario.stato == StatoDiario.RELAZIONE_FINALE and (
-            user.ruolo == Ruolo.CRP or user.is_superuser or user.is_staff_plancia
-        )
-        ctx["puo_riapire"] = diario.puo_essere_riaperto() and user.is_staff_plancia
+        ctx["puo_inviare"] = permessi.puo_inviare(user, diario)
+        ctx["puo_riapire"] = permessi.puo_riaprire(user, diario)
         # Cambio CSQ: CRP quando NON_INIZIATO/IN_COMPILAZIONE; admin/seg/iabr prima dell'invio
-        ctx["puo_cambiare_csq"] = (
-            diario.stato in (StatoDiario.NON_INIZIATO, StatoDiario.IN_COMPILAZIONE)
-            and user.ruolo == Ruolo.CRP
-            and user.socio is not None
-            and diario.crp == user.socio
-        ) or ((user.is_superuser or user.is_staff_plancia) and diario.stato in _STATI_PRIMA_INVIO)
+        ctx["puo_cambiare_csq"] = permessi.puo_cambiare_csq(user, diario)
         # Cambio CRP: solo admin/seg/iabr prima dell'invio
-        ctx["puo_cambiare_crp"] = (
-            user.is_superuser or user.is_staff_plancia
-        ) and diario.stato in _STATI_PRIMA_INVIO
+        ctx["puo_cambiare_crp"] = permessi.puo_cambiare_crp(user, diario)
         # Dilazione (solo staff, solo prima dell'invio allo staff)
-        if (user.is_staff_plancia or user.is_superuser) and diario.stato in _STATI_PRIMA_INVIO:
+        if permessi.puo_concedere_dilazione(user, diario):
             from apps.editions.forms import DilazioneForm
             ctx["dilazione_form"] = DilazioneForm()
-        ctx["puo_pdf"] = diario.stato in _STATI_PDF
+        ctx["puo_pdf"] = permessi.pdf_disponibile_nello_stato(diario)
         # Allegati per modulo (conteggio + anteprime foto nel detail)
         allegati_all = list(diario.allegati.all())
         ctx["allegati_impresa_1"] = [a for a in allegati_all if a.modulo == "impresa_1"]
@@ -190,15 +160,7 @@ class DiarioDetailView(DiarioAccessMixin, DetailView):
         ctx["allegati_missione"] = [a for a in allegati_all if a.modulo == "missione"]
         ctx["puo_editare_relazione"] = self._puo_editare_relazione(diario)
         # Eliminazione allegati: ammessa fino all'invio del diario allo staff
-        stato = diario.stato
-        if user.is_superuser or user.is_staff_plancia:
-            ctx["puo_eliminare_allegati"] = True
-        elif stato in (StatoDiario.NON_INIZIATO, StatoDiario.IN_COMPILAZIONE):
-            ctx["puo_eliminare_allegati"] = user.ruolo == Ruolo.CSQ
-        elif stato == StatoDiario.RELAZIONE_FINALE:
-            ctx["puo_eliminare_allegati"] = user.ruolo in (Ruolo.CSQ, Ruolo.CRP)
-        else:
-            ctx["puo_eliminare_allegati"] = False
+        ctx["puo_eliminare_allegati"] = permessi.puo_eliminare_allegati(user, diario)
         return ctx
 
 
@@ -244,6 +206,7 @@ class AnagraficaUpdateView(DiarioAccessMixin, View):
         )
         if form.is_valid():
             form.save()
+            diari_service.incrementa_versione(anagrafica)
 
             # Salva tipo diario
             diario.tipo = form.cleaned_data["tipo_diario"]
@@ -260,36 +223,8 @@ class AnagraficaUpdateView(DiarioAccessMixin, View):
 
     @staticmethod
     def _rinomina_squadriglia(diario, nuovo_nome: str) -> None:
-        """Rinomina la squadriglia nel DB e le cartelle Drive di tutti i suoi diari."""
-        import contextlib
-
-        squadriglia = diario.squadriglia
-        squadriglia.nome = nuovo_nome
-        squadriglia.save(update_fields=["nome"])
-
-        if not diario.edizione.drive_oauth_account:
-            return
-
-        try:
-            from apps.diaries.service import calcola_nome_cartella_diario
-            from apps.storage_drive.service import _build_drive_service, _get_credenziali
-
-            credenziali = _get_credenziali(diario.edizione)
-            service = _build_drive_service(credenziali)
-            nuovo_nome_cartella = calcola_nome_cartella_diario(diario)
-
-            for folder_id in filter(None, [
-                diario.drive_folder_allegati_id,
-                diario.drive_folder_output_id,
-            ]):
-                with contextlib.suppress(Exception):
-                    service.files().update(
-                        fileId=folder_id,
-                        body={"name": nuovo_nome_cartella},
-                        fields="id",
-                    ).execute()
-        except Exception:
-            pass  # Drive non critico: il rename DB è già avvenuto
+        """Rinomina la squadriglia nel DB e le cartelle Drive del diario (servizio condiviso)."""
+        diari_service.rinomina_squadriglia(diario, nuovo_nome)
 
 
 # ---------------------------------------------------------------------------
@@ -327,6 +262,7 @@ class PresentazioneUpdateView(DiarioAccessMixin, View):
         if form.is_valid() and formset.is_valid():
             form.save()
             formset.save()
+            diari_service.incrementa_versione(presentazione)
             messages.success(request, "Presentazione salvata.")
             return redirect("diaries:detail", pk=pk)
         return render(
@@ -415,6 +351,7 @@ class ImpresaUpdateView(DiarioAccessMixin, View):
             posti_fs.save()
             specialita_fs.save()
             brevetti_fs.save()
+            diari_service.incrementa_versione(impresa)
             messages.success(request, f"{numero}ª impresa salvata.")
             return redirect("diaries:detail", pk=pk)
         return render(request, self.template_name,
@@ -463,6 +400,7 @@ class MissioneUpdateView(DiarioAccessMixin, View):
         form = MissioneForm(request.POST, instance=missione)
         if form.is_valid():
             form.save()
+            diari_service.incrementa_versione(missione)
             messages.success(request, "Missione salvata.")
             return redirect("diaries:detail", pk=pk)
         return render(request, self.template_name, self._ctx(diario, form))
@@ -478,7 +416,7 @@ class RelazioneFinaleUpdateView(DiarioAccessMixin, View):
 
     def _check_permessi(self, diario, user):
         """Verifica accesso e precondizioni; lancia PermissionDenied o redirect se non ok."""
-        if user.ruolo == Ruolo.CSQ and not user.is_superuser:
+        if not permessi.puo_vedere_relazione(user):
             raise PermissionDenied
         if not self._puo_editare_relazione(diario):
             messages.warning(
@@ -510,6 +448,7 @@ class RelazioneFinaleUpdateView(DiarioAccessMixin, View):
         form = RelazioneFinaleForm(request.POST, instance=relazione)
         if form.is_valid():
             form.save()
+            diari_service.incrementa_versione(relazione)
             messages.success(request, "Relazione finale salvata.")
             return redirect("diaries:detail", pk=pk)
         return render(request, self.template_name, {"form": form, "diario": diario})
@@ -575,43 +514,11 @@ class DiarioRiapriView(DiarioAccessMixin, View):
 # Allegati (foto)
 # ---------------------------------------------------------------------------
 
-_MIME_CONSENTITI = {"image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"}
-_MAX_BYTES = 20 * 1024 * 1024  # 20 MB
-
-
-def _resize_immagine(file_obj, max_px: int) -> tuple[bytes, str, str]:
-    """Ridimensiona l'immagine al lato maggiore max_px usando Pillow.
-
-    Restituisce (bytes_resized, new_mime, new_nome).
-    Se Pillow non riesce ad aprire il file (es. HEIC senza plugin), restituisce l'originale.
-    """
-    import io
-    import os
-
-    from PIL import Image, UnidentifiedImageError
-
-    nome_orig = getattr(file_obj, "name", "foto.jpg")
-
-    try:
-        file_obj.seek(0)
-        img = Image.open(file_obj)
-        img.load()
-    except (UnidentifiedImageError, Exception):
-        file_obj.seek(0)
-        return file_obj.read(), getattr(file_obj, "content_type", "image/jpeg"), nome_orig
-
-    if img.mode not in ("RGB", "L"):
-        img = img.convert("RGB")
-
-    w, h = img.size
-    if max(w, h) > max_px:
-        ratio = max_px / max(w, h)
-        img = img.resize((int(w * ratio), int(h * ratio)), Image.LANCZOS)
-
-    buf = io.BytesIO()
-    img.save(buf, format="JPEG", quality=85, optimize=True)
-    nome_base = os.path.splitext(nome_orig)[0]
-    return buf.getvalue(), "image/jpeg", f"{nome_base}.jpg"
+# Regole e resize in apps/diaries/service.py (condivisi con l'API). `_resize_immagine` resta
+# come alias perché importato da `apps/imports/management/commands/import_risposte_eg.py`.
+_MIME_CONSENTITI = diari_service.MIME_ALLEGATI_CONSENTITI
+_MAX_BYTES = diari_service.MAX_BYTES_ALLEGATO
+_resize_immagine = diari_service.ridimensiona_immagine
 
 
 def _allegato_json(a: Allegato) -> dict:
@@ -625,95 +532,49 @@ def _allegato_json(a: Allegato) -> dict:
     }
 
 
+def _primo_errore(exc) -> str:
+    """Primo messaggio di una ValidationError (per le risposte JSON della PWA)."""
+    for messaggi in getattr(exc, "message_dict", {}).values():
+        if messaggi:
+            return str(messaggi[0])
+    return " ".join(str(m) for m in exc.messages)
+
+
 class DiarioPdfView(DiarioAccessMixin, View):
     """GET /diari/<pk>/pdf/ — serve il PDF dalla cache Drive o avvia la generazione async.
 
     Il PDF include moduli 1–5 (CSQ) e la Relazione finale CRP (modulo 6).
     Non accessibile ai Capi Squadriglia: il PDF è destinato a CRP, Incaricati e Admin.
+    Logica (lock, cache, task) in `apps.diaries.service`, condivisa con l'API.
     """
 
     def get(self, request, pk):
-        import io
-
         diario = self._get_diario(pk)
 
         # CSQ non ha accesso al PDF (il diario è valutato dai capi, non da chi lo compila)
-        if request.user.ruolo == Ruolo.CSQ:
+        if not permessi.puo_scaricare_pdf(request.user):
             messages.error(request, "Il PDF del diario non è disponibile per il Capo Squadriglia.")
             return redirect("diaries:detail", pk=pk)
 
-        # 1. Controlla se esiste già un PDF in cache (DriveFile tipo=PDF)
-        from apps.storage_drive.models import DriveFile, TipoFile
-        cache = DriveFile.objects.filter(diario=diario, tipo=TipoFile.PDF).first()
-        if cache and cache.drive_file_id:
-            try:
-                from googleapiclient.http import MediaIoBaseDownload
-
-                from apps.storage_drive.service import _build_drive_service, _get_credenziali
-                cred = _get_credenziali(diario.edizione)
-                service = _build_drive_service(cred)
-                req = service.files().get_media(fileId=cache.drive_file_id)
-                buf = io.BytesIO()
-                dl = MediaIoBaseDownload(buf, req, chunksize=4 * 1024 * 1024)
-                done = False
-                while not done:
-                    _, done = dl.next_chunk()
-                buf.seek(0)
-                content = buf.read()
-                nome = cache.nome or f"Diario_{diario.squadriglia.nome}_{diario.edizione.anno}.pdf"
-                response = HttpResponse(content, content_type="application/pdf")
-                response["Content-Disposition"] = f'attachment; filename="{nome}"'
-                response["Content-Length"] = len(content)
-                return response
-            except Exception:
-                # Cache corrotta o file rimosso da Drive: rigenera
-                cache.delete()
-
-        # 2. Se Drive non configurato: genera sincrono (senza foto, veloce)
-        if not diario.edizione.drive_oauth_account:
-            try:
-                from apps.exports.service import genera_pdf_diario
-                pdf = genera_pdf_diario(diario, include_relazione=True)
-                nome = f"Diario_{diario.squadriglia.nome}_{diario.edizione.anno}.pdf"
-                response = HttpResponse(pdf, content_type="application/pdf")
-                response["Content-Disposition"] = f'attachment; filename="{nome}"'
-                response["Content-Length"] = len(pdf)
-                return response
-            except Exception as exc:
-                messages.error(request, f"Errore nella generazione del PDF: {exc}")
-                return redirect("diaries:detail", pk=pk)
-
-        # 3. Drive configurato ma nessuna cache: avvia task Celery asincrono
-        from django.core.cache import cache
-
-        # Blocca se è in corso una generazione massiva per questa edizione
-        from apps.exports.tasks import _invia_mail_pdf, lock_key_massivo, task_genera_pdf_diario
-        if cache.get(lock_key_massivo(diario.edizione.pk)):
-            messages.warning(
-                request,
-                "Generazione massiva PDF in corso per questa edizione. "
-                "Attendi il completamento prima di generare singoli PDF.",
-            )
+        # 1. PDF pronto (cache Drive) o, senza Drive, generato al volo
+        try:
+            pronto = diari_service.contenuto_pdf_pronto(diario)
+        except Exception as exc:
+            messages.error(request, f"Errore nella generazione del PDF: {exc}")
             return redirect("diaries:detail", pk=pk)
+        if pronto is not None:
+            content, nome = pronto
+            response = HttpResponse(content, content_type="application/pdf")
+            response["Content-Disposition"] = f'attachment; filename="{nome}"'
+            response["Content-Length"] = len(content)
+            return response
 
-        lock_key = f"pdf_task_lock:{diario.pk}"
-        if cache.get(lock_key):
-            messages.warning(
-                request,
-                "Il PDF è già in fase di generazione per questa squadriglia. "
-                "Riceverai una mail quando sarà pronto — non serve riavviare.",
-            )
-            return redirect("diaries:detail", pk=pk)
-
-        # Imposta il lock prima di avviare il task (TTL 30 min come sicurezza)
-        cache.set(lock_key, True, 1800)
-        _invia_mail_pdf("diario_pdf_in_generazione", request.user.pk, diario)
-        task_genera_pdf_diario.delay(diario.pk, request.user.pk)
-        messages.info(
-            request,
-            "Il PDF è in fase di generazione. "
-            f"Riceverai una mail all'indirizzo {request.user.email} quando sarà pronto.",
-        )
+        # 2. Drive configurato ma nessuna cache: avvia il task (rispetta i lock)
+        stato, avviato = diari_service.avvia_generazione_pdf(diario, request.user)
+        if avviato:
+            messages.info(request, stato["messaggio"])
+        else:
+            messages.warning(request, stato["messaggio"])
         return redirect("diaries:detail", pk=pk)
 
 
@@ -727,11 +588,11 @@ class DiarioPdfViewerView(DiarioAccessMixin, View):
         from django.urls import reverse
 
         diario = self._get_diario(pk)
-        if request.user.ruolo == Ruolo.CSQ:
+        if not permessi.puo_scaricare_pdf(request.user):
             messages.error(request, "Il PDF del diario non è disponibile per il Capo Squadriglia.")
             return redirect("diaries:detail", pk=pk)
 
-        nome = f"Diario_{diario.squadriglia.nome}_{diario.edizione.anno}.pdf"
+        nome = diari_service.nome_pdf(diario)
         referer = request.META.get("HTTP_REFERER", "")
         back_url = reverse("diaries:detail", args=[pk])
         if referer:
@@ -758,41 +619,18 @@ class AllegatoPreviewView(DiarioAccessMixin, View):
     """GET /diari/<pk>/allegati/<allegato_pk>/preview/ → immagine (Drive o file locale)."""
 
     def get(self, request, pk, allegato_pk):
-        import io
-
         diario = self._get_diario(pk)
         allegato = get_object_or_404(Allegato, pk=allegato_pk, diario=diario)
 
         if not allegato.mime.startswith("image/"):
             raise Http404
-
-        # Fallback al file locale se Drive non è configurato o il file non è ancora su Drive
-        if not allegato.drive_file_id:
-            if not allegato.file:
-                raise Http404
-            response = HttpResponse(allegato.file.read(), content_type=allegato.mime)
-            response["Cache-Control"] = "private, max-age=86400"
-            return response
-
         try:
-            from googleapiclient.http import MediaIoBaseDownload
-
-            from apps.storage_drive.service import _build_drive_service, _get_credenziali
-
-            cred = _get_credenziali(diario.edizione)
-            service = _build_drive_service(cred)
-            req = service.files().get_media(fileId=allegato.drive_file_id)
-            buf = io.BytesIO()
-            dl = MediaIoBaseDownload(buf, req, chunksize=4 * 1024 * 1024)
-            done = False
-            while not done:
-                _, done = dl.next_chunk()
-            buf.seek(0)
-            response = HttpResponse(buf.read(), content_type=allegato.mime)
-            response["Cache-Control"] = "private, max-age=86400"
-            return response
-        except Exception:
+            contenuto = diari_service.contenuto_allegato(diario, allegato)
+        except diari_service.FileNonDisponibile:
             raise Http404 from None
+        response = HttpResponse(contenuto, content_type=allegato.mime)
+        response["Cache-Control"] = "private, max-age=86400"
+        return response
 
 
 class AllegatoListView(DiarioAccessMixin, View):
@@ -811,46 +649,17 @@ class AllegatoUploadView(DiarioAccessMixin, View):
     """POST /diari/<pk>/allegati/upload/  →  {id, nome, ...} (201)"""
 
     def post(self, request, pk):
+        from django.core.exceptions import ValidationError
+
         diario = self._get_diario(pk)
-        if not self._puo_editare(diario):
+        try:
+            allegato = diari_service.carica_allegato(
+                diario, request.user, request.POST.get("modulo", ""), request.FILES.get("file"),
+            )
+        except PermissionDenied:
             return JsonResponse({"error": "Non autorizzato"}, status=403)
-        self._inizia_se_necessario(diario)
-
-        modulo = request.POST.get("modulo", "")
-        if modulo not in MODULI_FOTO:
-            return JsonResponse({"error": "Modulo non valido"}, status=400)
-
-        file = request.FILES.get("file")
-        if not file:
-            return JsonResponse({"error": "Nessun file"}, status=400)
-
-        if file.content_type not in _MIME_CONSENTITI:
-            return JsonResponse({"error": f"Tipo non consentito: {file.content_type}"}, status=400)
-        if file.size > _MAX_BYTES:
-            return JsonResponse({"error": "File troppo grande (max 20 MB)"}, status=400)
-
-        # Ridimensiona l'immagine alla dimensione configurata in Impostazioni
-        from django.core.files.base import ContentFile
-
-        from apps.siteconfig.models import Impostazioni
-        max_px = Impostazioni.get().allegati_max_px or 1024
-        img_bytes, img_mime, img_nome = _resize_immagine(file, max_px)
-        resized = ContentFile(img_bytes, name=img_nome)
-
-        drive_configurato = bool(diario.edizione.drive_oauth_account)
-        allegato = Allegato.objects.create(
-            diario=diario,
-            modulo=modulo,
-            nome=img_nome,
-            mime=img_mime,
-            dimensione=len(img_bytes),
-            file=resized,
-            caricato_da=request.user,
-            stato_sync=StatoSync.IN_CODA if drive_configurato else StatoSync.LOCALE,
-        )
-        if drive_configurato:
-            from apps.storage_drive.tasks import task_carica_allegato_drive
-            task_carica_allegato_drive.delay(allegato.pk)
+        except ValidationError as exc:
+            return JsonResponse({"error": _primo_errore(exc)}, status=400)
         return JsonResponse(_allegato_json(allegato), status=201)
 
 
@@ -858,25 +667,14 @@ class AllegatoDeleteView(DiarioAccessMixin, View):
     """POST /diari/<pk>/allegati/<allegato_pk>/elimina/  →  {ok: true}"""
 
     def _puo_eliminare(self, diario) -> bool:
-        user = self.request.user
-        if user.is_superuser or user.is_staff_plancia:
-            return True
-        stato = diario.stato
-        if stato in (StatoDiario.NON_INIZIATO, StatoDiario.IN_COMPILAZIONE):
-            return user.ruolo == Ruolo.CSQ
-        # Fino a quando il CRP non ha ancora inviato il diario completo
-        if stato == StatoDiario.RELAZIONE_FINALE:
-            return user.ruolo in (Ruolo.CSQ, Ruolo.CRP)
-        return False
+        return permessi.puo_eliminare_allegati(self.request.user, diario)
 
     def post(self, request, pk, allegato_pk):
         diario = self._get_diario(pk)
         if not self._puo_eliminare(diario):
             return JsonResponse({"error": "Non autorizzato"}, status=403)
         allegato = get_object_or_404(Allegato, pk=allegato_pk, diario=diario)
-        if allegato.file:
-            allegato.file.delete(save=False)
-        allegato.delete()
+        diari_service.elimina_allegato(diario, allegato, request.user)
         return JsonResponse({"ok": True})
 
 
@@ -888,25 +686,16 @@ class AllegatoDeleteView(DiarioAccessMixin, View):
 class CambiaCsqView(DiarioAccessMixin, View):
     """Cambia il Capo Squadriglia di un diario.
 
-    - Capo Reparto: solo quando IN_COMPILAZIONE e per i diari di cui è referente.
-    - Admin/Segreteria/IABR: quando IN_COMPILAZIONE o RELAZIONE_FINALE.
+    - Capo Reparto del diario: quando NON_INIZIATO o IN_COMPILAZIONE.
+    - Admin/Segreteria/IABR: prima dell'invio allo staff.
+    Regole in `apps.diaries.permessi.puo_cambiare_csq`, modifica in `service.cambia_csq`.
     """
 
     template_name = "diaries/cambia_csq.html"
 
     def _verifica_permessi(self, diario, user) -> None:
-        if user.is_superuser or user.is_staff_plancia:
-            if diario.stato not in _STATI_PRIMA_INVIO:
-                raise PermissionDenied
-            return
-        if (
-            user.ruolo == Ruolo.CRP
-            and user.socio is not None
-            and diario.crp == user.socio
-            and diario.stato == StatoDiario.IN_COMPILAZIONE
-        ):
-            return
-        raise PermissionDenied
+        if not permessi.puo_cambiare_csq(user, diario):
+            raise PermissionDenied
 
     def get(self, request, pk):
         from django.shortcuts import render
@@ -916,24 +705,18 @@ class CambiaCsqView(DiarioAccessMixin, View):
         return render(request, self.template_name, {"diario": diario})
 
     def post(self, request, pk):
+        from django.core.exceptions import ValidationError
         from django.shortcuts import render
 
         diario = self._get_diario(pk)
         self._verifica_permessi(diario, request.user)
-        socio_pk = request.POST.get("socio_pk", "").strip()
-        if not socio_pk:
-            messages.error(request, "Seleziona un Capo Squadriglia.")
-            return render(request, self.template_name, {"diario": diario})
-        from apps.org.models import Socio
-
         try:
-            nuovo_csq = Socio.objects.get(pk=socio_pk, categoria="ragazzo", provvisorio=False)
-        except Socio.DoesNotExist, ValueError:
-            messages.error(request, "Capo Squadriglia non valido.")
+            nuovo_csq, vecchio = diari_service.cambia_csq(
+                diario, request.POST.get("socio_pk", "").strip(), request.user,
+            )
+        except ValidationError as exc:
+            messages.error(request, _primo_errore(exc))
             return render(request, self.template_name, {"diario": diario})
-        vecchio = diario.csq
-        diario.csq = nuovo_csq
-        diario.save(update_fields=["csq"])
         nota = f" (sostituisce {vecchio.cognome} {vecchio.nome})" if vecchio else ""
         messages.success(
             request, f"Capo Squadriglia aggiornato: {nuovo_csq.cognome} {nuovo_csq.nome}{nota}."
@@ -952,9 +735,7 @@ class CambiaCrpView(DiarioAccessMixin, View):
     template_name = "diaries/cambia_crp.html"
 
     def _verifica_permessi(self, diario, user) -> None:
-        if not (user.is_superuser or user.is_staff_plancia):
-            raise PermissionDenied
-        if diario.stato not in _STATI_PRIMA_INVIO:
+        if not permessi.puo_cambiare_crp(user, diario):
             raise PermissionDenied
 
     def get(self, request, pk):
@@ -965,24 +746,18 @@ class CambiaCrpView(DiarioAccessMixin, View):
         return render(request, self.template_name, {"diario": diario})
 
     def post(self, request, pk):
+        from django.core.exceptions import ValidationError
         from django.shortcuts import render
 
         diario = self._get_diario(pk)
         self._verifica_permessi(diario, request.user)
-        socio_pk = request.POST.get("socio_pk", "").strip()
-        if not socio_pk:
-            messages.error(request, "Seleziona un Capo Reparto.")
-            return render(request, self.template_name, {"diario": diario})
-        from apps.org.models import Socio
-
         try:
-            nuovo_crp = Socio.objects.get(pk=socio_pk, categoria="capo", provvisorio=False)
-        except Socio.DoesNotExist, ValueError:
-            messages.error(request, "Capo Reparto non valido.")
+            nuovo_crp, vecchio = diari_service.cambia_crp(
+                diario, request.POST.get("socio_pk", "").strip(), request.user,
+            )
+        except ValidationError as exc:
+            messages.error(request, _primo_errore(exc))
             return render(request, self.template_name, {"diario": diario})
-        vecchio = diario.crp
-        diario.crp = nuovo_crp
-        diario.save(update_fields=["crp"])
         nota = f" (sostituisce {vecchio.cognome} {vecchio.nome})" if vecchio else ""
         messages.success(
             request, f"Capo Reparto aggiornato: {nuovo_crp.cognome} {nuovo_crp.nome}{nota}."
@@ -997,25 +772,20 @@ class CambiaCrpView(DiarioAccessMixin, View):
 
 class CambiaCrpRepartoView(LoginRequiredMixin, View):
     """Admin/Segreteria/IABR: sostituisce il Capo Reparto per tutti i diari non ancora
-    inviati di un reparto (stato IN_COMPILAZIONE o RELAZIONE_FINALE).
+    inviati di un reparto (stati prima dell'invio allo staff).
     """
 
     template_name = "diaries/cambia_crp_reparto.html"
 
     def _verifica_permessi(self, user) -> None:
-        if not (user.is_superuser or user.is_staff_plancia):
+        if not permessi.puo_cambiare_crp_reparto(user):
             raise PermissionDenied
 
     def _get_reparto_e_diari(self, reparto_pk):
         from apps.org.models import Reparto
 
         reparto = get_object_or_404(Reparto, pk=reparto_pk)
-        diari = (
-            Diario.objects.filter(squadriglia__reparto=reparto, stato__in=_STATI_PRIMA_INVIO)
-            .select_related("squadriglia", "csq", "crp", "edizione")
-            .order_by("edizione__anno", "squadriglia__nome")
-        )
-        return reparto, diari
+        return reparto, diari_service.diari_cambio_crp_reparto(reparto)
 
     def get(self, request, reparto_pk):
         from django.shortcuts import render
@@ -1025,22 +795,18 @@ class CambiaCrpRepartoView(LoginRequiredMixin, View):
         return render(request, self.template_name, {"reparto": reparto, "diari": diari})
 
     def post(self, request, reparto_pk):
+        from django.core.exceptions import ValidationError
         from django.shortcuts import render
 
         self._verifica_permessi(request.user)
         reparto, diari = self._get_reparto_e_diari(reparto_pk)
-        socio_pk = request.POST.get("socio_pk", "").strip()
-        if not socio_pk:
-            messages.error(request, "Seleziona un Capo Reparto.")
-            return render(request, self.template_name, {"reparto": reparto, "diari": diari})
-        from apps.org.models import Socio
-
         try:
-            nuovo_crp = Socio.objects.get(pk=socio_pk, categoria="capo", provvisorio=False)
-        except Socio.DoesNotExist, ValueError:
-            messages.error(request, "Capo Reparto non valido.")
+            nuovo_crp, n = diari_service.cambia_crp_reparto(
+                reparto, request.POST.get("socio_pk", "").strip(), request.user,
+            )
+        except ValidationError as exc:
+            messages.error(request, _primo_errore(exc))
             return render(request, self.template_name, {"reparto": reparto, "diari": diari})
-        n = diari.update(crp=nuovo_crp)
         messages.success(
             request,
             f"Capo Reparto aggiornato a {nuovo_crp.cognome} {nuovo_crp.nome} per {n} "

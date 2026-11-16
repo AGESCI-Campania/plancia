@@ -73,15 +73,30 @@ Autocomplete Socio: `GET /api/soci/?q=&categoria=` (Tom Select 2). URL montati i
 Context processor `impostazioni` inietta `Impostazioni` (singleton) in ogni template — usare
 `{{ impostazioni.titolo }}` senza passarlo esplicitamente nelle viste.
 
-**REST API** (`apps/api/`):
-- `api.py` — istanza `NinjaAPI`, montaggi router
+**REST API** (`apps/api/`, Plancia 3: l'API copre TUTTE le funzioni, la SPA usa solo `/api/v1`):
+- `api.py` — istanza `NinjaAPI`, montaggi router, `registra_gestori(api)`
+- `errors.py` — `ErroreSchema`/`ErroreValidazioneSchema` e gestori globali: nei router basta
+  **sollevare** `PermessoNegato`/`PermissionDenied` (403), `StatoNonValido`/`AzioneNonConsentita`
+  (422), `ObjectDoesNotExist` (404), `ValidationError` (422 con `errori` per campo)
 - `auth.py` — `PlanciaAuth`: legge `X-Session-Token` (allauth headless app-mode) o cookie sessione
-- `permissions.py` — `is_staff_plancia`, `puo_vedere_diario`, `puo_editare_diario`, `puo_editare_relazione_finale`, `puo_vedere_valutazione`
-- `schemas/` — Pydantic schemas per ogni dominio (`diaries.py`, `evaluations.py`, …)
-- `routers/` — un modulo per gruppo (`system`, `me`, `editions`, `org`, `diaries`, `evaluations`)
-  - `system.py` — `GET /app-status` (no auth): compatibilità versione app mobile
+- `permissions.py` — `is_staff_plancia`, `richiedi_ruolo/staff/admin`, `puo_vedere_diario`
+  (delega a `diari_visibili`), `puo_vedere_valutazione`. Le regole sui diari stanno in
+  `apps/diaries/permessi.py` (`puo_modificare_moduli`, `puo_scaricare_pdf`, …)
+- `schemas/`, `routers/` — un modulo per dominio: `system`, `me`, `utenti`, `org`, `edizioni`,
+  `diari`, `valutazioni` (su `/diari`), `drive`, `notifiche`, `impostazioni`, `importazioni`,
+  `helpdesk`, `statistiche`, `sito` (pubblico), `aggiornamenti` (solo Admin)
+- La logica delle viste è nei **servizi** di dominio, usati da viste web e API:
+  `apps/<app>/services.py` (accounts, org, editions, imports, helpdesk, stats, siteconfig),
+  `apps/diaries/service.py`, `apps/notifications/service.py`, `apps/storage_drive/{oauth,service}.py`.
+  Nuove funzioni: nel servizio, non nella vista né nel router.
+- Test API: `apps/api/tests/conftest.py` (`utenti` per ruolo, `client_di(ruolo)`, `edizione`,
+  `diario`, `json_body`); il rate limit API è disattivato in tutti i test da `conftest.py`
+  (marker `rate_limit` per riattivarlo).
+- `apps/aggiornamenti` — ultima release GitHub (task beat `controlla_ultima_release`) e storico
+  delle richieste di aggiornamento dal web; contratto dei file con lo script host in
+  `docs/api/fase2-aggiornamenti.md` (`AGGIORNAMENTI_DIR`). `manage.py manutenzione attiva|disattiva|stato`.
 
-Documentazione API: `docs/api/overview.md` (auth, ruoli, rate limiting, errori) · `docs/api/endpoints.md` (riferimento completo) · `docs/api/export.md` (export riassuntivo diari).
+Documentazione API: `docs/api/overview.md` (auth, ruoli, rate limiting, errori) · `docs/api/endpoints.md` (riferimento 2.x) · `docs/api/fase2-*.md` (endpoint 3.0 per dominio) · `docs/api/export.md` (export riassuntivo diari).
 
 ## Gotchas e trappole
 
@@ -211,7 +226,7 @@ Funzioni esposte: `csq_invia`, `invia`, `riapri`, `assegna_pgv`, `valuta_diretta
 `pubblica_tutti`.
 
 **Non** replicare controlli di permesso nelle view web per queste azioni — `RuoloRequiredMixin`
-fa il check grossolano (ruolo ammesso?), `actions.py` fa il check fine-grained (es. "è il CSQ
+fa il check grossolano (ruolo ammesso?, **prima** di eseguire la vista), `actions.py` fa il check fine-grained (es. "è il CSQ
 *di questo* diario?").
 
 ### Visibilità diari — `apps/diaries/visibility.py`
@@ -396,7 +411,7 @@ Accessibile solo a CRP, Incaricati EG e Admin — non al Capo Squadriglia.
 - **Compressione immagini**: `_compress_image_for_pdf()` riduce a 480px prima dell'embedding.
 - **Errori**: notifica email al richiedente e agli Admin con traceback.
 - **Generazione massiva**: `task_genera_pdf_massivo` in `apps/exports/tasks.py`; lock Redis
-  `pdf_task_lock_massivo:{edizione_pk}` (TTL 2h). Blocca i PDF singoli durante la generazione.
+  `pdf_massivo_lock:{edizione_pk}` (TTL 2h, preso con `cache.add`). Blocca i PDF singoli durante la generazione.
   UI in `/impostazioni/cache-pdf/`.
 - **Progress bar**: il task chiama `self.update_state(state="PROGRESS", meta={progresso, completati, totale})`
   ad ogni diario; il task_id è salvato in Redis `pdf_massivo_task_id:{edizione_pk}`. Endpoint polling:

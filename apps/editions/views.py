@@ -1,7 +1,7 @@
 # apps/editions/views.py
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Count
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
@@ -9,7 +9,16 @@ from django.views.generic import CreateView, DetailView, ListView, TemplateView,
 
 from apps.accounts.mixins import StaffPlanciaRequiredMixin
 from apps.editions.forms import DilazioneForm, EdizioneForm
-from apps.editions.models import Edizione, StatoEdizione
+from apps.editions.models import Edizione
+from apps.editions.services import (
+    cambia_stato_edizione,
+    concedi_dilazione,
+    edizione_attiva,
+    esporta_diari,
+    nome_excel_esiti,
+    stats_diari,
+)
+from apps.evaluations.actions import AzioneNonConsentita, PermessoNegato
 
 _STATO_COLORE = {
     "non_iniziato": "secondary",
@@ -30,11 +39,7 @@ class HomeView(LoginRequiredMixin, TemplateView):
     template_name = "home_no_edizione.html"
 
     def get(self, request, *args, **kwargs):
-        edizione = (
-            Edizione.objects.filter(stato__in=[StatoEdizione.APERTA, StatoEdizione.IN_VALUTAZIONE])
-            .order_by("-anno")
-            .first()
-        )
+        edizione = edizione_attiva()
         if edizione:
             return redirect("editions:detail", pk=edizione.pk)
         return super().get(request, *args, **kwargs)
@@ -89,20 +94,10 @@ class EdizioneDetailView(LoginRequiredMixin, DetailView):
         return ctx
 
     def _stats_diari(self, edizione):
-        from apps.diaries.models import StatoDiario
-        counts = dict(edizione.diari.values_list("stato").annotate(n=Count("pk")))
-        totale = sum(counts.values())
-        per_stato = [
-            {
-                "stato": stato,
-                "label": label,
-                "totale": counts.get(stato, 0),
-                "colore": _STATO_COLORE.get(stato, "secondary"),
-                "percentuale": round(counts.get(stato, 0) / totale * 100) if totale else 0,
-            }
-            for stato, label in StatoDiario.choices
-        ]
-        return {"per_stato": per_stato, "totale": totale}
+        stats = stats_diari(edizione)
+        for s in stats["per_stato"]:
+            s["colore"] = _STATO_COLORE.get(s["stato"], "secondary")
+        return stats
 
     def _diari_visibili(self, edizione, user):
         from apps.diaries.visibility import diari_visibili
@@ -141,16 +136,11 @@ class EdizioneCambioStatoView(StaffPlanciaRequiredMixin, View):
     def post(self, request, pk, azione):
         edizione = get_object_or_404(Edizione, pk=pk)
         try:
-            if azione == "apri":
-                edizione.apri()
-            elif azione == "avvia_valutazione":
-                edizione.avvia_valutazione()
-            elif azione == "chiudi":
-                edizione.chiudi()
-            else:
-                raise ValueError(f"Azione non riconosciuta: {azione}")
+            cambia_stato_edizione(edizione, azione, request.user)
             messages.success(request, f"Edizione {edizione}: stato aggiornato.")
-        except ValueError as exc:
+        except PermessoNegato:
+            raise PermissionDenied from None
+        except AzioneNonConsentita as exc:
             messages.error(request, str(exc))
         return redirect("editions:detail", pk=pk)
 
@@ -163,7 +153,7 @@ class EsitiExcelView(StaffPlanciaRequiredMixin, View):
 
         edizione = get_object_or_404(Edizione, pk=pk)
         excel = genera_excel_edizione(edizione)
-        nome = f"Esiti_GV_{edizione.anno}.xlsx"
+        nome = nome_excel_esiti(edizione)
         response = HttpResponse(
             excel,
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -205,41 +195,20 @@ class EsitiExcelViewerView(StaffPlanciaRequiredMixin, View):
 class ExportDiariView(StaffPlanciaRequiredMixin, View):
     """GET /edizioni/<pk>/export-diari/?formato=xlsx|ods|csv — export riassuntivo diari."""
 
-    FORMATI_VALIDI = {"xlsx", "ods", "csv"}
-
     def get(self, request, pk):
-        from django.conf import settings
-
-        from apps.diaries.models import Diario
-        from apps.exports.service import genera_export_diari
-
         edizione = get_object_or_404(Edizione, pk=pk)
-        formato = request.GET.get("formato", "xlsx").lower()
-        if formato not in self.FORMATI_VALIDI:
-            formato = "xlsx"
-
-        qs = Diario.objects.filter(edizione=edizione)
-        n_diari = qs.count()
-
-        soglia = getattr(settings, "EXPORT_DIARI_SOGLIA_ASYNC", 50)
-        csv_sempre_sync = getattr(settings, "EXPORT_DIARI_CSV_SEMPRE_SYNC", True)
-        usa_async = n_diari > soglia and not (csv_sempre_sync and formato == "csv")
-
-        if usa_async:
-            from apps.exports.tasks import task_export_diari
-            task_export_diari.delay(edizione.pk, request.user.pk, formato)
+        esito = esporta_diari(edizione, request.user, request.GET.get("formato", "xlsx"))
+        if esito.asincrono:
             messages.success(
                 request,
-                f"L'export ({formato.upper()}) di {n_diari} diari è in preparazione. "
+                f"L'export ({esito.formato.upper()}) di {esito.n_diari} diari è in preparazione. "
                 f"Riceverai il file via email appena pronto."
             )
             return redirect("editions:detail", pk=pk)
 
-        contenuto, content_type, filename = genera_export_diari(qs, request.user, formato)
-        filename = f"Export_diari_{edizione.anno}.{formato}"
-        response = HttpResponse(contenuto, content_type=content_type)
-        response["Content-Disposition"] = f'attachment; filename="{filename}"'
-        response["Content-Length"] = len(contenuto)
+        response = HttpResponse(esito.contenuto, content_type=esito.content_type)
+        response["Content-Disposition"] = f'attachment; filename="{esito.filename}"'
+        response["Content-Length"] = len(esito.contenuto)
         return response
 
 
@@ -249,13 +218,11 @@ class DilazioneCreateView(StaffPlanciaRequiredMixin, View):
     def post(self, request, pk):
         from apps.diaries.models import Diario
         diario = get_object_or_404(Diario, pk=pk)
-        form = DilazioneForm(request.POST)
-        if form.is_valid():
-            dilazione = form.save(commit=False)
-            dilazione.diario = diario
-            dilazione.concessa_da = request.user
-            dilazione.save()
+        try:
+            concedi_dilazione(diario, request.user, request.POST)
             messages.success(request, "Dilazione concessa.")
-        else:
+        except ValidationError:
             messages.error(request, "Dati non validi per la dilazione.")
+        except AzioneNonConsentita as exc:
+            messages.error(request, str(exc))
         return redirect("editions:detail", pk=diario.edizione_id)

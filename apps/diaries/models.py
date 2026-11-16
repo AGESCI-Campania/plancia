@@ -492,6 +492,7 @@ class RelazioneFinale(models.Model):
         null=True, blank=True, verbose_name="specialità conquistata"
     )
     aggiornato_at = models.DateTimeField(auto_now=True)
+    version = models.PositiveIntegerField(default=0)
 
     class Meta:
         verbose_name = "relazione finale"

@@ -9,6 +9,7 @@ from django.shortcuts import render
 
 _API_PREFIXES = ("/api/v1/", "/_allauth/")
 _API_V1 = "/api/v1/"
+_BYPASS_MANUTENZIONE_API = ("/api/v1/sito", "/api/v1/aggiornamenti")
 
 
 def _versione_tuple(v: str) -> tuple[int, ...]:
@@ -190,16 +191,22 @@ class MaintenanceModeMiddleware:
         path = request.path_info
         is_api = any(path.startswith(p) for p in _API_PREFIXES)
         # admin, login e healthcheck bypassano in silenzio; API ricevono 503 JSON invece di HTML
+        # /api/v1/sito (pubblico: dice alla SPA che c'è manutenzione e con quale messaggio) e
+        # /api/v1/aggiornamenti/ (solo Admin, controllato dal router: la pagina di aggiornamento
+        # fa polling dello stato mentre aggiorna.sh tiene attiva la manutenzione) restano raggiungibili.
         bypass = (
             is_admin
             or path.startswith("/admin")
             or path.startswith("/accounts")
             or path == "/healthz/"
+            or any(path.startswith(p) for p in _BYPASS_MANUTENZIONE_API)
         )
         if imp.manutenzione and not bypass:
             if is_api:
+                from apps.siteconfig.manutenzione import messaggio_manutenzione
+
                 return HttpResponse(
-                    json.dumps({"detail": "Servizio in manutenzione. Riprovare più tardi."}),
+                    json.dumps({"detail": messaggio_manutenzione(imp), "maintenance": True}),
                     content_type="application/json",
                     status=503,
                 )

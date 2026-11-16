@@ -198,6 +198,12 @@ class Impostazioni(models.Model):
 
     # Stato piattaforma / diagnostica
     manutenzione = models.BooleanField(default=False)
+    manutenzione_messaggio = models.TextField(
+        blank=True,
+        default="",
+        verbose_name="messaggio di manutenzione",
+        help_text="Mostrato agli utenti durante la manutenzione. Vuoto = messaggio predefinito.",
+    )
     debug_diagnostico = models.BooleanField(
         default=False
     )  # logging verboso (NON ribalta settings.DEBUG)

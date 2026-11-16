@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import uuid
 
 from django.conf import settings
 from django.contrib import messages
@@ -16,15 +15,15 @@ from django.views.decorators.csrf import csrf_exempt
 from apps.accounts.mixins import RuoloRequiredMixin
 from apps.accounts.models import Ruolo
 from apps.notifications.models import TAG_REGISTRY, MailTemplate
+from apps.siteconfig import services
 from apps.siteconfig.forms import (
-    CAMPI_SMTP_MANUALI,
     SEZIONE_FORM,
     SEZIONE_LABEL,
     FooterLinkFormSet,
     MailTemplateForm,
     PaginaStaticaForm,
 )
-from apps.siteconfig.models import Impostazioni, PaginaStatica, SlugPagina
+from apps.siteconfig.models import Impostazioni
 
 
 class ImpostazioniView(RuoloRequiredMixin, View):
@@ -68,8 +67,6 @@ class ImpostazioniView(RuoloRequiredMixin, View):
         return render(request, self.template_name, self._build_context(imp))
 
     def post(self, request, *args, **kwargs):
-        from django.core.cache import cache
-
         sezione = request.POST.get("sezione", "")
         if sezione not in SEZIONE_FORM:
             messages.error(request, "Sezione non valida.")
@@ -85,16 +82,9 @@ class ImpostazioniView(RuoloRequiredMixin, View):
             link_formset = FooterLinkFormSet(request.POST, instance=imp)
 
         if form.is_valid():
-            update_fields = list(form_class.Meta.fields)
-
-            # Quando Gmail OAuth è attivo i campi SMTP manuali non vengono renderizzati
-            # nell'HTML: arriverebbero vuoti e sovrascriverebbero i valori salvati.
-            if sezione == "email" and imp.smtp_use_gmail_oauth:
-                update_fields = [f for f in update_fields if f not in CAMPI_SMTP_MANUALI]
-
-            saved = form.save(commit=False)
-            saved.save(update_fields=[*update_fields, "aggiornato_at"])
-            cache.set(Impostazioni.CACHE_KEY, saved, 300)
+            # Con Gmail OAuth attivo i campi SMTP manuali non vengono renderizzati
+            # nell'HTML: salva_sezione non li sovrascrive.
+            services.salva_sezione(form, sezione)
 
             if link_formset is not None:
                 if link_formset.is_valid():
@@ -121,64 +111,27 @@ class ImpostazioniView(RuoloRequiredMixin, View):
 
 
 class LanciaImportView(RuoloRequiredMixin, View):
-    """Riceve il file caricato dall'utente, lo salva su disco e accoda il task Celery."""
+    """Riceve il file caricato dall'utente, lo salva su disco e accoda il task Celery.
+
+    Logica in `apps.imports.services.lancia_import` (condivisa con l'API).
+    """
 
     ruoli_ammessi = (Ruolo.ADMIN, Ruolo.SEGRETERIA, Ruolo.INCARICATO_EG)
-    TRACCIATI_VALIDI = {"coca", "ragazzi", "squadriglie", "risposte_eg"}
 
     def post(self, request, tracciato):
-        if tracciato not in self.TRACCIATI_VALIDI:
-            messages.error(request, "Tracciato non valido.")
-            return redirect("imports:log_list")
+        from django.core.exceptions import ValidationError
 
-        file_obj = request.FILES.get("file")
-        if not file_obj:
-            messages.error(request, "Seleziona un file prima di avviare l'import.")
-            return redirect("imports:log_list")
+        from apps.imports.services import lancia_import
 
-        import os
-        import time
-
-        from django.conf import settings
-        from django.utils.text import get_valid_filename
-
-        tmp_dir = os.path.join(settings.MEDIA_ROOT, "imports", "tmp")
-        os.makedirs(tmp_dir, exist_ok=True)
-        nome_sicuro = get_valid_filename(file_obj.name)
-        path = os.path.join(tmp_dir, f"{int(time.time())}_{nome_sicuro}")
-        with open(path, "wb") as f:
-            for chunk in file_obj.chunks():
-                f.write(chunk)
-
-        # ── Risposte EG (xlsx, asincrono con email agli Admin) ──────────────
-        if tracciato == "risposte_eg":
-            edizione_pk = None
-            import contextlib
-            with contextlib.suppress(ValueError, TypeError):
-                edizione_pk = int(request.POST.get("edizione_pk", "")) or None
-            from apps.imports.tasks import task_import_risposte_eg
-            task_import_risposte_eg.delay(path, edizione_pk=edizione_pk)
-            messages.success(
-                request,
-                "Import Risposte EG avviato in background. "
-                "Gli amministratori riceveranno una mail con i risultati al termine.",
+        try:
+            esito = lancia_import(
+                tracciato, request.FILES.get("file"), request.POST.get("edizione_pk")
             )
+        except ValidationError as exc:
+            for msg in exc.messages:
+                messages.error(request, msg)
             return redirect("imports:log_list")
-
-        # ── Import CSV standard ──────────────────────────────────────────────
-        edizione_pk = None
-        if tracciato == "squadriglie":
-            try:
-                edizione_pk = int(request.POST.get("edizione_pk", ""))
-            except (ValueError, TypeError):
-                messages.error(request, "Seleziona un'edizione per l'import squadriglie iscritte.")
-                return redirect("imports:log_list")
-
-        from apps.imports.tasks import task_lancia_import
-        task_lancia_import.delay(tracciato, path=path, edizione_pk=edizione_pk)
-
-        label = {"coca": "Capi (Co.Ca.)", "ragazzi": "Ragazzi", "squadriglie": "Squadriglie iscritte"}
-        messages.success(request, f"Import «{label[tracciato]}» avviato. Controlla lo storico per l'esito.")
+        messages.success(request, esito.messaggio)
         return redirect("imports:log_list")
 
 
@@ -218,14 +171,12 @@ class MailTemplateEditView(RuoloRequiredMixin, View):
 
     def _ctx(self, form, chiave, instance):
         tags = TAG_REGISTRY.get(chiave, [])
-        db_keys = set(MailTemplate.objects.values_list("chiave", flat=True))
-        chiavi_senza_record = [k for k in TAG_REGISTRY if k != chiave and k not in db_keys]
         return {
             "form": form,
             "chiave": chiave,
             "tag_disponibili": [{"nome": t, "tpl": "{{ " + t + " }}"} for t in tags],
             "instance": instance,
-            "chiavi_senza_record": chiavi_senza_record,
+            "chiavi_senza_record": services.chiavi_senza_record(esclusa=chiave),
         }
 
 
@@ -242,21 +193,9 @@ class MailTemplateImportaView(RuoloRequiredMixin, View):
             messages.warning(request, f"Il template «{chiave}» esiste già — modifica quello.")
             return redirect("siteconfig:mail_template_edit", chiave=chiave)
 
-        from django.template import TemplateDoesNotExist
-        from django.template.loader import get_template
-        try:
-            tpl = get_template(f"mail/{chiave}.html")
-            corpo = tpl.template.source
-        except TemplateDoesNotExist:
-            corpo = ""
+        _tpl, trovato = services.importa_mail_template(chiave)
+        if not trovato:
             messages.warning(request, f"File mail/{chiave}.html non trovato: template creato vuoto.")
-
-        MailTemplate.objects.create(
-            chiave=chiave,
-            oggetto=chiave.replace("_", " ").capitalize(),
-            corpo_html=corpo,
-            attivo=True,
-        )
         messages.success(request, f"Template «{chiave}» importato dal file di default.")
         return redirect("siteconfig:mail_template_edit", chiave=chiave)
 
@@ -275,12 +214,7 @@ class MailTemplateCopiaView(RuoloRequiredMixin, View):
         if MailTemplate.objects.filter(chiave=target_chiave).exists():
             messages.warning(request, f"Il template «{target_chiave}» esiste già.")
             return redirect("siteconfig:mail_template_edit", chiave=target_chiave)
-        MailTemplate.objects.create(
-            chiave=target_chiave,
-            oggetto=source.oggetto,
-            corpo_html=source.corpo_html,
-            attivo=source.attivo,
-        )
+        services.copia_mail_template(source.chiave, target_chiave)
         messages.success(request, f"Template «{target_chiave}» creato da «{chiave}».")
         return redirect("siteconfig:mail_template_edit", chiave=target_chiave)
 
@@ -290,32 +224,15 @@ class MailTemplateImageUploadView(RuoloRequiredMixin, View):
     """Endpoint upload immagini per TinyMCE nei template email."""
 
     ruoli_ammessi = (Ruolo.ADMIN, Ruolo.SEGRETERIA, Ruolo.INCARICATO_EG)
-    _ALLOWED_TYPES = frozenset({"image/jpeg", "image/png", "image/gif", "image/webp"})
-    _MAX_SIZE = 2 * 1024 * 1024  # 2 MB
 
     def post(self, request):
-        upload = request.FILES.get("file")
-        if not upload:
-            return JsonResponse({"error": "Nessun file ricevuto."}, status=400)
-        if upload.content_type not in self._ALLOWED_TYPES:
-            return JsonResponse(
-                {"error": "Tipo non supportato. Usa JPEG, PNG, GIF o WebP."}, status=400
-            )
-        if upload.size > self._MAX_SIZE:
-            return JsonResponse({"error": "File troppo grande (max 2 MB)."}, status=400)
+        from django.core.exceptions import ValidationError
 
-        ext = os.path.splitext(upload.name)[1].lower() or ".jpg"
-        filename = f"{uuid.uuid4().hex}{ext}"
-        save_dir = os.path.join(settings.MEDIA_ROOT, "mail_images")
-        os.makedirs(save_dir, exist_ok=True)
-
-        with open(os.path.join(save_dir, filename), "wb") as fh:
-            for chunk in upload.chunks():
-                fh.write(chunk)
-
-        media_prefix = "/" + settings.MEDIA_URL.lstrip("/")
-        location = request.build_absolute_uri(f"{media_prefix}mail_images/{filename}")
-        return JsonResponse({"location": location})
+        try:
+            percorso = services.salva_immagine_mail(request.FILES.get("file"))
+        except ValidationError as exc:
+            return JsonResponse({"error": exc.messages[0]}, status=400)
+        return JsonResponse({"location": request.build_absolute_uri(percorso)})
 
 
 class MailTemplateDeleteView(RuoloRequiredMixin, View):
@@ -340,16 +257,14 @@ class AxesSbloccaView(RuoloRequiredMixin, View):
 
         attempt_pk = request.POST.get("attempt_pk")
         if attempt_pk == "tutti":
-            count = AccessAttempt.objects.count()
-            AccessAttempt.objects.all().delete()
+            count = services.sblocca_accessi()
             messages.success(request, f"Sbloccati tutti i {count} IP bloccati.")
         else:
             try:
-                attempt = AccessAttempt.objects.get(pk=attempt_pk)
-                ip = attempt.ip_address
-                attempt.delete()
+                ip = AccessAttempt.objects.get(pk=attempt_pk).ip_address
+                services.sblocca_accessi(int(attempt_pk))
                 messages.success(request, f"IP {ip} sbloccato.")
-            except AccessAttempt.DoesNotExist:
+            except (AccessAttempt.DoesNotExist, ValueError, TypeError):
                 messages.error(request, "Tentativo non trovato.")
         return redirect("siteconfig:impostazioni")
 
@@ -413,9 +328,6 @@ class CachePdfView(RuoloRequiredMixin, View):
         })
 
     def post(self, request):
-        from django.core.cache import cache
-
-        from apps.exports.tasks import lock_key_massivo, task_genera_pdf_massivo
         from apps.storage_drive.models import DriveFile, TipoFile
 
         azione = request.POST.get("azione")
@@ -432,26 +344,25 @@ class CachePdfView(RuoloRequiredMixin, View):
 
         elif azione == "invalida_edizione":
             edizione_pk = request.POST.get("edizione_pk")
-            count = DriveFile.objects.filter(
-                tipo=TipoFile.PDF, diario__edizione_id=edizione_pk
-            ).delete()[0]
+            count = services.invalida_cache_pdf(int(edizione_pk)) if edizione_pk else 0
             messages.success(request, f"Eliminati {count} PDF dalla cache.")
 
         elif azione == "invalida_tutti":
-            count = DriveFile.objects.filter(tipo=TipoFile.PDF).delete()[0]
+            count = services.invalida_cache_pdf()
             messages.success(request, f"Eliminati tutti i {count} PDF dalla cache.")
 
         elif azione == "genera_massivo":
+            from django.core.exceptions import ValidationError
+
             edizione_pk = request.POST.get("edizione_pk")
             if not edizione_pk:
                 messages.error(request, "Seleziona un'edizione.")
                 return redirect("siteconfig:cache_pdf")
-            edizione_pk = int(edizione_pk)
-            if cache.get(lock_key_massivo(edizione_pk)):
-                messages.warning(request, "Generazione massiva già in corso per questa edizione.")
+            try:
+                services.avvia_pdf_massivo(int(edizione_pk), request.user.pk)
+            except ValidationError as exc:
+                messages.warning(request, exc.messages[0])
                 return redirect("siteconfig:cache_pdf")
-            cache.set(lock_key_massivo(edizione_pk), True, 7200)
-            task_genera_pdf_massivo.delay(edizione_pk, request.user.pk)
             messages.success(
                 request,
                 "Generazione massiva avviata. Riceverai una mail al termine. "
@@ -459,10 +370,9 @@ class CachePdfView(RuoloRequiredMixin, View):
             )
 
         elif azione == "interrompi_massivo":
-            from apps.exports.tasks import cancel_key_massivo
             edizione_pk = request.POST.get("edizione_pk")
             if edizione_pk:
-                cache.set(cancel_key_massivo(int(edizione_pk)), True, 3600)
+                services.interrompi_pdf_massivo(int(edizione_pk))
                 messages.info(
                     request,
                     "Interruzione richiesta. Il task si fermerà dopo il diario in corso.",
@@ -477,34 +387,12 @@ class TestEmailView(RuoloRequiredMixin, View):
     ruoli_ammessi = (Ruolo.ADMIN, Ruolo.SEGRETERIA, Ruolo.INCARICATO_EG)
 
     def post(self, request):
-        from django.core.mail import EmailMessage
         from django.urls import reverse
 
-        from apps.siteconfig.email_backends import _smtp_backend, _transazionale_backend
-        from apps.siteconfig.models import Impostazioni
-
-        imp = Impostazioni.get()
         backend_tipo = request.POST.get("backend", "smtp")  # "smtp" | "transazionale"
-
+        label = "provider transazionale" if backend_tipo == "transazionale" else "SMTP"
         try:
-            if backend_tipo == "transazionale":
-                conn = _transazionale_backend(imp, fail_silently=False)
-                label = "provider transazionale"
-            else:
-                conn = _smtp_backend(imp, fail_silently=False)
-                label = "SMTP"
-
-            msg = EmailMessage(
-                subject=f"Test invio email ({label}) — {imp.titolo or 'Plancia'}",
-                body=(
-                    f"Questo è un messaggio di test inviato tramite {label} "
-                    "dalle impostazioni di Plancia.\n"
-                    "Se lo ricevi, la configurazione funziona correttamente."
-                ),
-                from_email=imp.from_email_completo,
-                to=[request.user.email],
-            )
-            conn.send_messages([msg])
+            services.invia_email_test(backend_tipo, request.user.email)
             messages.success(
                 request,
                 f"Email di test ({label}) inviata a {request.user.email}.",
@@ -514,11 +402,10 @@ class TestEmailView(RuoloRequiredMixin, View):
         return redirect(reverse("siteconfig:impostazioni") + "#email")
 
 
-GMAIL_SMTP_SCOPES = [
-    "https://mail.google.com/",
-    "openid",
-    "https://www.googleapis.com/auth/userinfo.email",
-]
+GMAIL_SMTP_SCOPES = services.GMAIL_SMTP_SCOPES
+
+# Pagina della SPA a cui torna la callback quando il flusso è partito dall'API.
+SPA_IMPOSTAZIONI_EMAIL = "/impostazioni/email"
 
 
 class GmailSMTPOAuthInitView(RuoloRequiredMixin, View):
@@ -527,110 +414,40 @@ class GmailSMTPOAuthInitView(RuoloRequiredMixin, View):
     ruoli_ammessi = (Ruolo.ADMIN, Ruolo.SEGRETERIA, Ruolo.INCARICATO_EG)
 
     def get(self, request):
-        import base64
-        import hashlib
-        import secrets
-
-        from google_auth_oauthlib.flow import Flow
-
-        code_verifier = secrets.token_urlsafe(96)
-        code_challenge = (
-            base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest())
-            .decode()
-            .rstrip("=")
-        )
-
-        flow = Flow.from_client_config(
-            {
-                "web": {
-                    "client_id": settings.GOOGLE_OAUTH_CLIENT_ID,
-                    "client_secret": settings.GOOGLE_OAUTH_CLIENT_SECRET,
-                    "redirect_uris": [settings.GOOGLE_GMAIL_SMTP_REDIRECT_URI],
-                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                    "token_uri": "https://oauth2.googleapis.com/token",
-                }
-            },
-            scopes=GMAIL_SMTP_SCOPES,
-            redirect_uri=settings.GOOGLE_GMAIL_SMTP_REDIRECT_URI,
-        )
-        auth_url, state = flow.authorization_url(
-            access_type="offline",
-            prompt="consent",
-            code_challenge=code_challenge,
-            code_challenge_method="S256",
-        )
-        request.session["gmail_smtp_oauth_state"] = state
-        request.session["gmail_smtp_oauth_code_verifier"] = code_verifier
-        return redirect(auth_url)
+        return redirect(services.url_autorizzazione_gmail(request.session, origine="web"))
 
 
 class GmailSMTPOAuthCallbackView(View):
-    """Callback OAuth Gmail SMTP: scambia il codice e salva GmailSMTPCredenziali."""
+    """Callback OAuth Gmail SMTP: scambia il codice e salva GmailSMTPCredenziali.
+
+    Resta sullo stesso percorso (registrato presso Google). Se il flusso è partito
+    dall'API (SPA) rimanda a `/impostazioni/email?esito=ok|errore&messaggio=...`,
+    altrimenti alla pagina Impostazioni Django.
+    """
 
     def get(self, request):
-        import os
+        import logging
+        from urllib.parse import urlencode
 
-        from django.utils import timezone
-        from google_auth_oauthlib.flow import Flow
-        from googleapiclient.discovery import build
+        from django.core.exceptions import ValidationError
 
-        from apps.siteconfig.models import GmailSMTPCredenziali, Impostazioni
-
-        state = request.session.pop("gmail_smtp_oauth_state", None)
-        code_verifier = request.session.pop("gmail_smtp_oauth_code_verifier", None)
-
-        if not state or state != request.GET.get("state"):
-            messages.error(request, "Sessione OAuth non valida. Riprova.")
-            return redirect("siteconfig:impostazioni")
-
-        os.environ.setdefault("OAUTHLIB_INSECURE_TRANSPORT", "1")
-
-        flow = Flow.from_client_config(
-            {
-                "web": {
-                    "client_id": settings.GOOGLE_OAUTH_CLIENT_ID,
-                    "client_secret": settings.GOOGLE_OAUTH_CLIENT_SECRET,
-                    "redirect_uris": [settings.GOOGLE_GMAIL_SMTP_REDIRECT_URI],
-                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                    "token_uri": "https://oauth2.googleapis.com/token",
-                }
-            },
-            scopes=GMAIL_SMTP_SCOPES,
-            state=state,
-            redirect_uri=settings.GOOGLE_GMAIL_SMTP_REDIRECT_URI,
-        )
-        flow.fetch_token(
-            authorization_response=request.build_absolute_uri(),
-            code_verifier=code_verifier,
-        )
-        creds = flow.credentials
-
-        service = build("oauth2", "v2", credentials=creds)
-        email = service.userinfo().get().execute().get("email", "")
-
-        expires_at = None
-        if creds.expiry:
-            expires_at = (
-                timezone.make_aware(creds.expiry)
-                if creds.expiry.tzinfo is None
-                else creds.expiry
+        spa = request.session.pop(services.SESSIONE_GMAIL_ORIGINE, "web") == "spa"
+        try:
+            email = services.completa_oauth_gmail(
+                request.session, request.GET.get("state"), request.build_absolute_uri()
             )
+        except ValidationError as exc:
+            esito, testo = "errore", exc.messages[0]
+        except Exception as exc:  # errore di Google (consenso negato, codice non valido, …)
+            logging.getLogger(__name__).exception("Callback Gmail SMTP OAuth fallita")
+            esito, testo = "errore", f"Collegamento Gmail non riuscito: {exc}"
+        else:
+            esito, testo = "ok", f"Account Gmail {email} collegato per SMTP OAuth."
 
-        GmailSMTPCredenziali.objects.update_or_create(
-            account_email=email,
-            defaults={
-                "access_token": creds.token,
-                "refresh_token": creds.refresh_token or "",
-                "expires_at": expires_at,
-            },
-        )
-
-        imp = Impostazioni.get()
-        imp.smtp_gmail_account = email
-        imp.smtp_use_gmail_oauth = True
-        imp.save(update_fields=["smtp_gmail_account", "smtp_use_gmail_oauth", "aggiornato_at"])
-
-        messages.success(request, f"Account Gmail {email} collegato per SMTP OAuth.")
+        if spa:
+            query = urlencode({"esito": esito, "messaggio": testo})
+            return redirect(f"{SPA_IMPOSTAZIONI_EMAIL}?{query}")
+        (messages.success if esito == "ok" else messages.error)(request, testo)
         return redirect("siteconfig:impostazioni")
 
 
@@ -640,14 +457,7 @@ class GmailSMTPOAuthDisconnectView(RuoloRequiredMixin, View):
     ruoli_ammessi = (Ruolo.ADMIN, Ruolo.SEGRETERIA, Ruolo.INCARICATO_EG)
 
     def post(self, request):
-        from apps.siteconfig.models import GmailSMTPCredenziali, Impostazioni
-
-        imp = Impostazioni.get()
-        if imp.smtp_gmail_account:
-            GmailSMTPCredenziali.objects.filter(account_email=imp.smtp_gmail_account).delete()
-        imp.smtp_use_gmail_oauth = False
-        imp.smtp_gmail_account = ""
-        imp.save(update_fields=["smtp_use_gmail_oauth", "smtp_gmail_account", "aggiornato_at"])
+        services.scollega_gmail()
         messages.success(request, "Account Gmail scollegato.")
         return redirect("siteconfig:impostazioni")
 
@@ -656,20 +466,7 @@ class PaginaStaticaPublicView(View):
     """Pagina pubblica (privacy / termini). Non richiede autenticazione."""
 
     def get(self, request, slug):
-        try:
-            SlugPagina(slug)
-        except ValueError:
-            from django.http import Http404
-            raise Http404 from None
-
-        pagina = PaginaStatica.objects.filter(slug=slug).first()
-        if not pagina:
-            # Mostra pagina vuota con titolo di default
-            pagina = PaginaStatica(
-                slug=slug,
-                titolo=SlugPagina(slug).label,
-                contenuto="<p>Contenuto non ancora disponibile.</p>",
-            )
+        pagina = services.pagina_pubblica(slug)
         return render(request, "siteconfig/pagina_statica.html", {"pagina": pagina})
 
 
@@ -678,20 +475,8 @@ class PaginaStaticaEditView(RuoloRequiredMixin, View):
 
     ruoli_ammessi = (Ruolo.ADMIN, Ruolo.SEGRETERIA, Ruolo.INCARICATO_EG)
 
-    def _get_or_init(self, slug):
-        try:
-            SlugPagina(slug)
-        except ValueError:
-            from django.http import Http404
-            raise Http404 from None
-        pagina, _ = PaginaStatica.objects.get_or_create(
-            slug=slug,
-            defaults={"titolo": SlugPagina(slug).label, "contenuto": ""},
-        )
-        return pagina
-
     def get(self, request, slug):
-        pagina = self._get_or_init(slug)
+        pagina = services.pagina_per_modifica(slug)
         form = PaginaStaticaForm(instance=pagina)
         return render(request, "siteconfig/pagina_statica_edit.html", {
             "form": form,
@@ -700,7 +485,7 @@ class PaginaStaticaEditView(RuoloRequiredMixin, View):
         })
 
     def post(self, request, slug):
-        pagina = self._get_or_init(slug)
+        pagina = services.pagina_per_modifica(slug)
         form = PaginaStaticaForm(request.POST, instance=pagina)
         if form.is_valid():
             form.save()
@@ -719,27 +504,13 @@ class PaginaStaticaImportaView(RuoloRequiredMixin, View):
     ruoli_ammessi = (Ruolo.ADMIN, Ruolo.SEGRETERIA, Ruolo.INCARICATO_EG)
 
     def post(self, request, slug):
-        try:
-            SlugPagina(slug)
-        except ValueError:
-            from django.http import Http404
-            raise Http404 from None
+        from django.core.exceptions import ValidationError
 
-        from django.template import TemplateDoesNotExist
-        from django.template.loader import get_template
         try:
-            tpl = get_template(f"siteconfig/default_pages/{slug}.html")
-            contenuto = tpl.template.source
-        except TemplateDoesNotExist:
-            messages.error(request, f"Nessun template predefinito trovato per «{slug}».")
+            pagina = services.importa_pagina_predefinita(slug)
+        except ValidationError as exc:
+            messages.error(request, exc.messages[0])
             return redirect("siteconfig:pagina_edit", slug=slug)
-
-        pagina, _ = PaginaStatica.objects.get_or_create(
-            slug=slug,
-            defaults={"titolo": SlugPagina(slug).label, "contenuto": ""},
-        )
-        pagina.contenuto = contenuto
-        pagina.save()
         messages.success(request, f"Contenuto predefinito caricato per «{pagina.get_slug_display()}».")
         return redirect("siteconfig:pagina_edit", slug=slug)
 

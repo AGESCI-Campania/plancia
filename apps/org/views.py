@@ -8,41 +8,24 @@ Risponde con { results: [{id, user_pk, codice_socio, label, categoria}, ...] }.
              (usato dall'assegnazione PGV e ovunque serva un User PK)
 """
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
 from django.http import JsonResponse
 
 
 @login_required
 def soci_autocomplete(request):
-    from apps.org.models import Socio
+    from apps.org.services import cerca_soci, etichetta, utente_pk
 
-    q = (request.GET.get("q") or "").strip()
-    categoria = request.GET.get("categoria")  # "capo" | "ragazzo" | None
-    ruolo = request.GET.get("ruolo")           # filtra per ruolo utente collegato
-    qs = Socio.objects.select_related("gruppo", "zona", "utente")
-    if categoria:
-        qs = qs.filter(categoria=categoria)
-    if ruolo:
-        qs = qs.filter(utente__ruolo=ruolo)
-    if q:
-        qs = qs.filter(
-            Q(nome__icontains=q)
-            | Q(cognome__icontains=q)
-            | Q(zona__nome__icontains=q)
-            | Q(gruppo__nome__icontains=q)
-            | Q(codice_socio__startswith=q)
-        )
-    results = []
-    for s in qs[:20]:
-        try:
-            user_pk = s.utente.pk
-        except Exception:
-            user_pk = None
-        results.append({
+    qs = cerca_soci(
+        request.GET.get("q"), request.GET.get("categoria"), request.GET.get("ruolo")
+    )
+    results = [
+        {
             "id": s.pk,
-            "user_pk": user_pk,
+            "user_pk": utente_pk(s),
             "codice_socio": s.codice_socio,
             "categoria": s.categoria,
-            "label": f"{s.cognome} {s.nome} - {s.gruppo.nome} ({s.zona.nome}) #{s.codice_socio}",
-        })
+            "label": etichetta(s),
+        }
+        for s in qs
+    ]
     return JsonResponse({"results": results})

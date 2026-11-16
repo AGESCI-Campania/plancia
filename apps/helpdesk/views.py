@@ -4,15 +4,15 @@ from __future__ import annotations
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.shortcuts import get_object_or_404, redirect
 from django.views import View
 from django.views.generic import CreateView, DetailView, ListView
 
-from apps.accounts.models import Ruolo
-from apps.helpdesk.models import RispostaTicket, StatoTicket, Ticket
+from apps.helpdesk import services
+from apps.helpdesk.models import StatoTicket, Ticket
 
-_STAFF_RUOLI = (Ruolo.ADMIN, Ruolo.SEGRETERIA, Ruolo.INCARICATO_EG)
+_STAFF_RUOLI = services.STAFF_HELPDESK
 
 
 class TicketListView(LoginRequiredMixin, ListView):
@@ -22,10 +22,7 @@ class TicketListView(LoginRequiredMixin, ListView):
     paginate_by = 25
 
     def get_queryset(self):
-        user = self.request.user
-        qs = Ticket.objects.select_related("aperto_da", "assegnato_a", "diario")
-        if user.ruolo not in _STAFF_RUOLI and not user.is_superuser:
-            qs = qs.filter(aperto_da=user)
+        qs = services.ticket_visibili(self.request.user)
         stato = self.request.GET.get("stato")
         if stato in StatoTicket.values:
             qs = qs.filter(stato=stato)
@@ -47,16 +44,7 @@ class TicketCreateView(LoginRequiredMixin, CreateView):
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        from apps.diaries.models import Diario
-        user = self.request.user
-        if user.ruolo == Ruolo.CSQ and hasattr(user, "socio") and user.socio:
-            form.fields["diario"].queryset = Diario.objects.filter(csq=user.socio)
-        elif user.ruolo == Ruolo.CRP and hasattr(user, "socio") and user.socio:
-            form.fields["diario"].queryset = Diario.objects.filter(
-                squadriglia__reparto__in=user.socio.reparti_capo.all()
-            )
-        else:
-            form.fields["diario"].queryset = Diario.objects.none()
+        form.fields["diario"].queryset = services.diari_selezionabili(self.request.user)
         form.fields["diario"].required = False
         return form
 
@@ -76,9 +64,7 @@ class TicketDetailView(LoginRequiredMixin, DetailView):
 
     def get_object(self, queryset=None):
         obj = super().get_object(queryset)
-        user = self.request.user
-        if obj.aperto_da != user and user.ruolo not in _STAFF_RUOLI and not user.is_superuser:
-            raise PermissionDenied
+        services.controlla_accesso(self.request.user, obj)
         return obj
 
     def get_context_data(self, **kwargs):
@@ -93,16 +79,12 @@ class RispostaTicketView(LoginRequiredMixin, View):
 
     def post(self, request, pk):
         ticket = get_object_or_404(Ticket, pk=pk)
-        user = request.user
-        if ticket.aperto_da != user and user.ruolo not in _STAFF_RUOLI and not user.is_superuser:
-            raise PermissionDenied
-        testo = request.POST.get("testo", "").strip()
-        if not testo:
-            messages.error(request, "La risposta non può essere vuota.")
+        try:
+            services.rispondi(request.user, ticket, request.POST.get("testo", ""))
+        except ValidationError as exc:
+            for msg in exc.messages:
+                messages.error(request, msg)
             return redirect("helpdesk:detail", pk=pk)
-        RispostaTicket.objects.create(ticket=ticket, autore=user, testo=testo)
-        if ticket.stato == StatoTicket.APERTO and user.ruolo in _STAFF_RUOLI:
-            ticket.prendi_in_carico(user)
         messages.success(request, "Risposta aggiunta.")
         return redirect("helpdesk:detail", pk=pk)
 
@@ -111,10 +93,15 @@ class TicketPrendiView(LoginRequiredMixin, View):
     """Staff prende in carico un ticket."""
 
     def post(self, request, pk):
-        if request.user.ruolo not in _STAFF_RUOLI and not request.user.is_superuser:
+        if not services.e_staff_helpdesk(request.user):
             raise PermissionDenied
         ticket = get_object_or_404(Ticket, pk=pk)
-        ticket.prendi_in_carico(request.user)
+        try:
+            services.prendi_in_carico(request.user, ticket)
+        except ValidationError as exc:
+            for msg in exc.messages:
+                messages.error(request, msg)
+            return redirect("helpdesk:detail", pk=pk)
         messages.success(request, "Ticket preso in carico.")
         return redirect("helpdesk:detail", pk=pk)
 
@@ -124,8 +111,11 @@ class TicketChiudiView(LoginRequiredMixin, View):
 
     def post(self, request, pk):
         ticket = get_object_or_404(Ticket, pk=pk)
-        if ticket.aperto_da != request.user and request.user.ruolo not in _STAFF_RUOLI:
-            raise PermissionDenied
-        ticket.chiudi(request.user)
+        try:
+            services.chiudi(request.user, ticket)
+        except ValidationError as exc:
+            for msg in exc.messages:
+                messages.error(request, msg)
+            return redirect("helpdesk:detail", pk=pk)
         messages.success(request, "Ticket chiuso.")
         return redirect("helpdesk:detail", pk=pk)

@@ -14,6 +14,14 @@ class StatoValutazione(models.TextChoices):
     CONFERMATA = "confermata", "Confermata"
 
 
+#: Esito della valutazione → stato del diario corrispondente (valori di `StatoDiario`).
+_STATO_DA_ESITO = {
+    EsitoValutazione.APPROVATA: "approvato",
+    EsitoValutazione.NON_APPROVATA: "non_approvato",
+    EsitoValutazione.MAGGIORI_INFO: "maggiori_info",
+}
+
+
 class Valutazione(models.Model):
     """Valutazione 0:1 con Diario. Vedi docs sez. 4, 6.
 
@@ -85,7 +93,9 @@ class Valutazione(models.Model):
                 d.richiedi_info()
         elif self.stato == StatoValutazione.IN_REVISIONE and self.proposta_esito is not None:
             if d.stato != StatoDiario.IN_REVISIONE:
-                d.proponi(self.proposta_esito)
+                # Diario.proponi si aspetta lo stato di destinazione (approvato/non_approvato),
+                # non l'esito della valutazione (approvata/non_approvata).
+                d.proponi(_STATO_DA_ESITO.get(self.proposta_esito, self.proposta_esito))
 
     # --- Azioni ---------------------------------------------------------------
 
@@ -135,6 +145,14 @@ class Valutazione(models.Model):
         """Incaricato modifica l'esito fino alla pubblicazione (docs sez. 6 r.4)."""
         if self.pubblicata:
             raise ValueError("Non è possibile modificare un esito già pubblicato.")
+        from apps.diaries.models import StatoDiario
+
+        # Rettifica di un esito già espresso (non pubblicato): il diario torna "in valutazione"
+        # così che la sincronizzazione applichi la transizione verso il nuovo esito.
+        if self.diario.stato in (
+            StatoDiario.APPROVATO, StatoDiario.NON_APPROVATO, StatoDiario.MAGGIORI_INFO,
+        ):
+            self.diario.stato = StatoDiario.IN_VALUTAZIONE
         self.esito = esito
         self.stato = StatoValutazione.CONFERMATA
         self.confermata_da = incaricato

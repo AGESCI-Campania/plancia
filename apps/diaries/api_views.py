@@ -7,7 +7,6 @@ from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views import View
 
-from apps.accounts.models import Ruolo
 from apps.diaries.models import (
     Anagrafica,
     Diario,
@@ -17,9 +16,9 @@ from apps.diaries.models import (
     Missione,
     PostoAzione,
     Presentazione,
-    StatoDiario,
     TipoEsito,
 )
+from apps.diaries.permessi import puo_modificare_moduli
 from apps.diaries.serialization import (
     SCELTE_BREVETTI,
     SCELTE_SPECIALITA_IND,
@@ -40,6 +39,8 @@ from apps.diaries.serialization import (
     _validate_nested,
     _validate_posto_azione,
 )
+from apps.diaries.service import inizia_se_necessario
+from apps.diaries.visibility import diari_visibili
 
 # ---------------------------------------------------------------------------
 # Mixin base
@@ -66,29 +67,16 @@ class DiarioApiMixin(View):
             Diario.objects.select_related("edizione", "squadriglia", "csq", "crp"),
             pk=pk,
         )
-        user = self.request.user
-        if user.is_superuser or user.is_staff_plancia:
-            return diario
-        if user.ruolo == Ruolo.CSQ and user.socio and diario.csq == user.socio:
-            return diario
-        if user.ruolo == Ruolo.CRP and user.socio and diario.crp == user.socio:
-            return diario
-        if user.ruolo == Ruolo.PGV:
-            return diario
-        raise PermissionDenied
+        # Visibilità: unica fonte di verità in diari_visibili (PGV solo diari assegnati)
+        if not diari_visibili(self.request.user).filter(pk=diario.pk).exists():
+            raise PermissionDenied
+        return diario
 
     def _puo_editare(self, diario: Diario) -> bool:
-        user = self.request.user
-        if user.is_superuser or user.is_staff_plancia:
-            return True
-        return (
-            diario.stato in (StatoDiario.NON_INIZIATO, StatoDiario.IN_COMPILAZIONE)
-            and user.ruolo == Ruolo.CSQ
-        )
+        return puo_modificare_moduli(self.request.user, diario)
 
     def _inizia_se_necessario(self, diario: Diario) -> None:
-        if diario.stato == StatoDiario.NON_INIZIATO:
-            diario.inizia()
+        inizia_se_necessario(diario)
 
     @staticmethod
     def _parse_body(request) -> tuple[dict, None] | tuple[None, JsonResponse]:

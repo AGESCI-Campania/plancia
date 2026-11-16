@@ -5,6 +5,7 @@ import tomllib
 from pathlib import Path
 
 import environ
+from celery.schedules import crontab
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -114,6 +115,7 @@ LOCAL_APPS = [
     "apps.stats",
     "apps.siteconfig",
     "apps.imports",
+    "apps.aggiornamenti",
     "apps.api",
 ]
 
@@ -321,6 +323,20 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 CELERY_BROKER_URL = env.str("CELERY_BROKER_URL", default="redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = env.str("CELERY_RESULT_BACKEND", default="redis://localhost:6379/1")
 CELERY_TASK_ALWAYS_EAGER = env.bool("CELERY_TASK_ALWAYS_EAGER", default=False)
+CELERY_BEAT_SCHEDULE = {
+    # Ultima release su GitHub per la pagina Impostazioni → Aggiornamenti (solo Admin).
+    "controlla-ultima-release": {
+        "task": "aggiornamenti.controlla_ultima_release",
+        "schedule": crontab(hour=4, minute=17),
+    },
+}
+
+# --- Aggiornamento del server dal web ----------------------------------------
+# Cartella (bind mount dal repo sul server: /opt/plancia/aggiornamenti) in cui Django scrive
+# richiesta.json e legge stato.json del runner sull'host. Vedi docs/api/fase2-aggiornamenti.md.
+AGGIORNAMENTI_DIR = Path(env.str("AGGIORNAMENTI_DIR", default=str(BASE_DIR / "aggiornamenti")))
+# Token GitHub read-only opzionale (alza il limite di 60 richieste/ora dell'API anonima).
+GITHUB_TOKEN_RELEASES = env.str("GITHUB_TOKEN_RELEASES", default="")
 
 # --- PWA (django-pwa) -------------------------------------------------------
 PWA_APP_NAME = env.str("PWA_APP_NAME", default="Plancia")
