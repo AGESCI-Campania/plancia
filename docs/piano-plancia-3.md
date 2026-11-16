@@ -150,11 +150,12 @@ Prima di toccare l'interfaccia, così gli aggiornamenti sono verificati dai test
   `APP_UID`/`APP_GID` come build arg, valorizzati dagli script con l'uid/gid del proprietario del
   repo (`stat -c %u/%g`, cioè `agesci`); stesso uid per i volumi media. Vale anche per
   `aggiornamenti/` (aggiornamento dal web).
-- Server (da `note/preparazione-server.md` del frontend): Docker dal repo ufficiale o, se la 26.04
-  non è supportata, `docker.io` + `docker-compose-v2` di Ubuntu → richiedere Compose ≥ 2.17
-  (`up --wait`) e niente funzioni solo di Docker CE; rotazione log già in `daemon.json` (niente
-  `logging:` nel compose); porte Docker scavalcano ufw → al più `127.0.0.1`; fuso `Europe/Rome`
-  di sistema, nei container `TZ` da `.env` solo se serve.
+- Server (da `note/preparazione-server.md` del frontend, verificato il 2026-11-16): **x86_64**,
+  **Docker CE 29.9.3** dal repo ufficiale, **Compose v5.7.1** (plugin), buildx 0.39, containerd 2.4.
+  Immagini `linux/amd64` (build sul server); verificare al bump che i comandi usati (`up --wait`,
+  `build`, `pull --ignore-buildable`, `exec -T`) non siano cambiati con Compose v5; rotazione log
+  già in `daemon.json` (niente `logging:` nel compose); porte Docker scavalcano ufw → al più
+  `127.0.0.1`; fuso `Europe/Rome` di sistema, nei container `TZ` da `.env` solo se serve.
 - `docker-compose.yml` (e `.dev.yml`): `postgres:18`, volume montato su **`/var/lib/postgresql`**
   (con la 18 `PGDATA=/var/lib/postgresql/18/docker`); ricontrollare tag nginx/redis/mailpit.
 - `.readthedocs.yaml` → Python 3.14; `.github/workflows/release-manual.yml`: verificare le major attuali
