@@ -109,6 +109,14 @@ i test delle viste esistenti; visibilità relazione/valutazione invariata (§ Re
 - Layout: menu laterale + drawer `<dialog>` su mobile, selettore ruolo, avatar per ruolo, breadcrumb,
   footer e titolo da `Impostazioni`, banner manutenzione, indicatori offline/sync.
 - Store sessione (profilo, ruoli, flag menu); guardie router solo per l'interfaccia.
+- **Nuova icona della PWA (scelta): "Diario di bordo".** Quadrato a angoli arrotondati verde E/G
+  `#3D8E33`; quaderno bianco con dorso verde trasparente e tre righe verdi; segnalibro a guidoncino in
+  giallo oro `#FFCC1E` in alto a destra. Dai **180 px in su** (icona Home, `apple-touch-icon`, 512 px,
+  splash) in copertina, a sinistra del segnalibro, l'**emblema di AGESCI Campania a colori**
+  (`agesci_theme/img/emblemi/EMBLEMA_CAMPANIA.png` del tema, ~20% del lato, a 35,5%/21% da
+  sinistra/alto); sotto i 180 px (64, 48, 32 px, favicon) solo il quaderno. Da produrre: master SVG,
+  PNG 32/64/180/192/512, variante *maskable* Android con l'area di sicurezza, `theme_color` = verde E/G,
+  favicon.
 
 ## Fase 4 — Pagine, per dominio
 
