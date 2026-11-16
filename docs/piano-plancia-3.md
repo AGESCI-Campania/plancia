@@ -116,7 +116,7 @@ i test delle viste esistenti; visibilità relazione/valutazione invariata (§ Re
   (`agesci_theme/img/emblemi/EMBLEMA_CAMPANIA.png` del tema, ~20% del lato, a 35,5%/21% da
   sinistra/alto); sotto i 180 px (64, 48, 32 px, favicon) solo il quaderno. Da produrre: master SVG,
   PNG 32/64/180/192/512, variante *maskable* Android con l'area di sicurezza, `theme_color` = verde E/G,
-  favicon.
+  favicon. **Sorgenti approvati: `docs/icona-pwa/`** (generare le icone da lì, non ridisegnarle).
 
 ## Fase 4 — Pagine, per dominio
 
