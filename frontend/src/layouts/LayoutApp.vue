@@ -11,7 +11,7 @@ import IconaBs from '@/components/IconaBs.vue'
 import { useOnline } from '@/composables/online'
 import { vociMenu } from '@/layouts/menu'
 import PiePagina from '@/components/PiePagina.vue'
-import { inAttesa } from '@/offline/coda'
+import { inAttesa, sincronizzaCoda, sincronizzazioneInCorso } from '@/offline/coda'
 import { useSessioneStore } from '@/stores/sessione'
 import { useSitoStore } from '@/stores/sito'
 import emblema from '@/assets/EMBLEMA_CAMPANIA_WHITE.svg'
@@ -63,8 +63,7 @@ async function cambiaRuolo(ruolo: string): Promise<void> {
 }
 
 async function esci(): Promise<void> {
-  await sessione.esci()
-  await router.push({ name: 'accesso' })
+  if (await sessione.esci()) await router.push({ name: 'accesso' })
 }
 
 async function terminaImpersonazione(): Promise<void> {
@@ -106,9 +105,16 @@ async function terminaImpersonazione(): Promise<void> {
         <span v-if="!online" class="badge theme-danger" role="status">
           <IconaBs nome="wifi-off" class="me-1" />Offline
         </span>
-        <span v-if="inAttesa > 0" class="badge theme-warning" role="status">
-          <IconaBs nome="cloud-upload" class="me-1" />{{ inAttesa }} in attesa
-        </span>
+        <button
+          v-if="inAttesa > 0"
+          type="button"
+          class="badge theme-warning border-0"
+          :title="online ? 'Invia ora le modifiche fatte offline' : 'Verranno inviate quando torni online'"
+          :disabled="!online || sincronizzazioneInCorso"
+          @click="sincronizzaCoda()"
+        >
+          <IconaBs nome="cloud-upload" class="me-1" />{{ inAttesa }} da inviare
+        </button>
         <button
           type="button"
           class="ag-header-toggler lg:d-none"

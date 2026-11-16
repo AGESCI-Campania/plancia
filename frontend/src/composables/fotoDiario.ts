@@ -11,6 +11,7 @@ import { onScopeDispose, ref, toValue, type MaybeRefOrGetter } from 'vue'
 import { api, ErroreApi, leggiCookie } from '@/api/http'
 import type { Allegato } from '@/composables/diarioCompilazione'
 import { conferma } from '@/composables/conferma'
+import { leggiConCopia } from '@/offline/letture'
 
 export interface InvioFoto {
   diarioId: number | string
@@ -154,7 +155,8 @@ export function useGalleriaFoto(diarioId: number | string, modulo: string, opzio
     caricamento.value = true
     errore.value = ''
     try {
-      foto.value = await api.get<Allegato[]>(`/diari/${diarioId}/allegati`, { modulo })
+      const url = `/diari/${diarioId}/allegati?modulo=${encodeURIComponent(modulo)}`
+      foto.value = (await leggiConCopia(url, () => api.get<Allegato[]>(`/diari/${diarioId}/allegati`, { modulo }))).dati
     } catch (e) {
       errore.value = e instanceof Error ? e.message : 'Errore imprevisto.'
     } finally {
@@ -219,6 +221,11 @@ export function useGalleriaFoto(diarioId: number | string, modulo: string, opzio
       togli(id)
       opzioni.dopoModifica?.()
     } catch (e) {
+      if (e instanceof Error && e.name === 'FotoInCoda') {
+        // Salvata sul dispositivo: la mostra la galleria tra le foto in attesa di invio.
+        togli(id)
+        return
+      }
       const corrente = voce(id)
       if (!corrente) return
       corrente.stato = 'errore'

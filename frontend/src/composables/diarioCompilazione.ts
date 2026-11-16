@@ -6,6 +6,7 @@
 import { ref, shallowRef } from 'vue'
 
 import { api } from '@/api/http'
+import { leggiConCopia } from '@/offline/letture'
 import type { components } from '@/api/schema'
 
 export type DiarioDettaglio = components['schemas']['DiarioDettaglioSchema']
@@ -17,7 +18,9 @@ let opzioniInCache: Promise<OpzioniModuli> | null = null
 
 /** Scelte dei campi dei moduli (una sola richiesta per sessione). */
 export function caricaOpzioniModuli(): Promise<OpzioniModuli> {
-  opzioniInCache ??= api.get<OpzioniModuli>('/diari/moduli/opzioni').catch((e: unknown) => {
+  opzioniInCache ??= leggiConCopia('/diari/moduli/opzioni', () => api.get<OpzioniModuli>('/diari/moduli/opzioni'))
+    .then((r) => r.dati)
+    .catch((e: unknown) => {
     opzioniInCache = null
     throw e
   })
@@ -34,13 +37,17 @@ export function useDiarioCompilazione(diarioId: number | string) {
   const opzioni = shallowRef<OpzioniModuli | null>(null)
   const errore = ref('')
   const inCorso = ref(false)
+  /** Dati presi dalla copia sul dispositivo (offline): possono non essere aggiornati. */
+  const copiaLocale = ref(false)
+  const leggiDiario = () => leggiConCopia(`/diari/${diarioId}`, () => api.get<DiarioDettaglio>(`/diari/${diarioId}`))
 
   async function carica(): Promise<void> {
     inCorso.value = true
     errore.value = ''
     try {
-      const [d, o] = await Promise.all([api.get<DiarioDettaglio>(`/diari/${diarioId}`), caricaOpzioniModuli()])
-      diario.value = d
+      const [d, o] = await Promise.all([leggiDiario(), caricaOpzioniModuli()])
+      diario.value = d.dati
+      copiaLocale.value = d.copia
       opzioni.value = o
     } catch (e) {
       errore.value = e instanceof Error ? e.message : 'Errore imprevisto.'
@@ -52,11 +59,13 @@ export function useDiarioCompilazione(diarioId: number | string) {
   /** Dopo un salvataggio: aggiorna stato e completezza (in silenzio, senza spinner). */
   async function aggiorna(): Promise<void> {
     try {
-      diario.value = await api.get<DiarioDettaglio>(`/diari/${diarioId}`)
+      const d = await leggiDiario()
+      diario.value = d.dati
+      copiaLocale.value = d.copia
     } catch {
       // L'intestazione resta quella di prima: il modulo è comunque salvato.
     }
   }
 
-  return { diario, opzioni, errore, inCorso, carica, aggiorna }
+  return { diario, opzioni, errore, inCorso, copiaLocale, carica, aggiorna }
 }

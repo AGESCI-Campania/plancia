@@ -123,6 +123,13 @@ npm run icone          # icone PWA da docs/icona-pwa/ (non ridisegnarle)
 - **Dialog/drawer** Bootstrap 6 sul `<dialog>` nativo (`FinestraDialogo.vue`, sidebar);
   i menu usano la data API di Bootstrap (`import 'bootstrap'` in `main.ts`).
 - Componenti: icone `IconaBs` (sprite di bootstrap-icons), mai `<i class="bi">`.
+- **Offline (Fase 5, `src/offline/`)**: Dexie (`db.ts`: `letture`, `coda`, `meta`). Moduli e foto
+  passano da `trasportoOffline`/`inviaFotoOffline` (`coda.ts`): offline o server giù → coda con la
+  stessa `Idempotency-Key`, invio alla riconnessione/primo piano/ogni minuto; conflitti (409) e
+  dati rifiutati restano in coda e si risolvono in pagina (`ModificheOffline.vue`). Letture per
+  compilare offline con `leggiConCopia` (`letture.ts`). Mai risposte API nel service worker.
+  Dati legati all'utente: cancellati al logout (con conferma se c'è coda) e se entra un altro
+  utente; a sessione scaduta si cancellano le letture e resta solo la coda.
 
 ## Gotchas e trappole
 

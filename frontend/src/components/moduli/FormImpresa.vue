@@ -71,6 +71,7 @@ const ESITI = [
     :diario="diario"
     :errore-diario="pagina.errore.value"
     :in-corso-diario="pagina.inCorso.value"
+    :copia-locale="pagina.copiaLocale.value"
     :modulo="modulo"
     :sola-lettura="solaLettura"
     :avviso-sola-lettura="pagina.avvisoSolaLettura.value"

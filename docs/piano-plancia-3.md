@@ -30,7 +30,7 @@ Domande chiuse prima di partire, per non fermare lo sviluppo fase per fase:
 | 2 | PWA ≠ server | **Modale rimandabile** ("È disponibile la versione X.Y.Z", Aggiorna / Più tardi), ripresentata a ogni avvio; prima sincronizza la coda offline (offline: avvisa e non aggiorna); badge con Aggiorna nel footer |
 | 3 | Aggiornamento da Impostazioni | **Sì, schema completo** (§ Versioni e aggiornamenti) |
 | 4 | Migrazioni | **Rigenerate da zero**: una `0001_initial` per app dopo le modifiche ai modelli; data migration utili → seed/fixture |
-| 5 | Dati offline | **Nessuna cifratura**; cancellazione al logout e a sessione scaduta (con avviso se c'è coda), solo i diari dell'utente |
+| 5 | Dati offline | **Nessuna cifratura**; cancellazione al logout (con avviso se c'è coda) e all'accesso di un altro utente; a sessione scaduta si cancellano le copie e resta solo la coda non inviata, per non perdere il lavoro (scelta di implementazione) |
 | 6 | Editor email/pagine | **Tiptap** (Vue, barra Bootstrap, segnaposto come pulsanti); via TinyMCE |
 | 7 | `django-agesci-campania-theme` | **Rimosso**: pagine d'errore HTML statiche autonome (servite anche da nginx), callback → SPA |
 | 8 | Ambiente di prova | **Docker sul Mac** (rete `agesci-proxy` finta); systemd/`.path` non verificabili in locale → runner provato a mano, unit verificate all'installazione sul server |

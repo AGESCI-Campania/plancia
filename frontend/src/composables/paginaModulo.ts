@@ -8,6 +8,7 @@ import { voceModulo, type ChiaveModulo } from '@/components/moduli/elenco'
 import { useDiarioCompilazione } from '@/composables/diarioCompilazione'
 import { useModuloDiario, type OpzioniModuloDiario } from '@/composables/moduloDiario'
 import { useUscitaModulo } from '@/composables/uscitaModulo'
+import { trasportoOffline } from '@/offline/coda'
 
 const STATI_PRIMA_DELLA_RELAZIONE = new Set(['non_iniziato', 'in_compilazione'])
 
@@ -28,6 +29,8 @@ export function usePaginaModulo<T extends object>(
 
   const modulo = useModuloDiario<T>(diarioId, voceModulo(chiave).segmento, {
     ...opzioni,
+    // Offline le scritture vanno in coda sul dispositivo (Fase 5)
+    trasporto: trasportoOffline,
     solaLettura,
     dopoSalvataggio: () => {
       const d = diario.value

@@ -4,13 +4,15 @@
  * "Scarica", caricamento multiplo da fotocamera o galleria con anteprima, avanzamento ed
  * errore per file, eliminazione con conferma. Le azioni seguono i permessi del backend.
  */
-import { onMounted, ref, useId } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, useId } from 'vue'
 
 import FinestraDialogo from '@/components/FinestraDialogo.vue'
 import IconaBs from '@/components/IconaBs.vue'
 import type { Allegato } from '@/composables/diarioCompilazione'
 import { scaricaESalva } from '@/composables/file'
 import { formattaDimensione, useGalleriaFoto, type InviaFoto } from '@/composables/fotoDiario'
+import type { VoceCoda } from '@/offline/db'
+import { fotoInCoda, inviaFotoOffline, scartaVoce } from '@/offline/coda'
 import { useAvvisiStore } from '@/stores/avvisi'
 
 const props = withDefaults(
@@ -33,13 +35,25 @@ const emit = defineEmits<{ modificata: [] }>()
 
 const avvisi = useAvvisiStore()
 const g = useGalleriaFoto(props.diarioId, props.modulo, {
-  invia: props.invia,
+  // Offline le foto restano sul dispositivo e partono alla riconnessione (Fase 5)
+  invia: props.invia ?? inviaFotoOffline,
   maxPx: () => props.maxPx,
   maxMb: () => props.maxMb,
   tipi: () => props.tipi,
   dopoModifica: () => emit('modificata'),
 })
 const { foto, invii, caricamento, errore } = g
+const inCoda = computed(() => fotoInCoda(props.diarioId, props.modulo))
+const anteprimeCoda = new Map<number, string>()
+function anteprimaCoda(v: VoceCoda): string {
+  let url = anteprimeCoda.get(v.id!)
+  if (!url && v.file) {
+    url = URL.createObjectURL(v.file)
+    anteprimeCoda.set(v.id!, url)
+  }
+  return url ?? ''
+}
+onBeforeUnmount(() => anteprimeCoda.forEach((u) => URL.revokeObjectURL(u)))
 const id = useId()
 const inputFotocamera = ref<HTMLInputElement>()
 const inputGalleria = ref<HTMLInputElement>()
@@ -95,7 +109,7 @@ const accetta = () => (props.tipi.length ? props.tipi.join(',') : 'image/*')
       <span class="spinner-border spinner-border-sm me-2" aria-hidden="true" />Caricamento delle foto…
     </div>
 
-    <ul v-if="foto.length || invii.length" class="list-unstyled griglia-foto mb-4">
+    <ul v-if="foto.length || invii.length || inCoda.length" class="list-unstyled griglia-foto mb-4">
       <li v-for="a in foto" :key="a.id" class="foto">
         <button type="button" class="foto-miniatura" :aria-label="`Apri la foto ${a.nome}`" @click="apri(a)">
           <img :src="a.miniatura_url" :alt="a.nome" loading="lazy" width="160" height="160" />
@@ -111,6 +125,20 @@ const accetta = () => (props.tipi.length ? props.tipi.join(',') : 'image/*')
           >
             <IconaBs nome="trash" />
           </button>
+        </div>
+      </li>
+      <li v-for="v in inCoda" :key="`coda-${v.id}`" class="foto foto-in-invio" :aria-label="`${v.nome} in attesa di invio`">
+        <div class="foto-miniatura">
+          <img :src="anteprimaCoda(v)" :alt="v.nome" width="160" height="160" />
+          <div class="foto-sovrimpressione"><IconaBs nome="cloud-upload" etichetta="In attesa di invio" /></div>
+        </div>
+        <div class="foto-didascalia small flex-column align-items-stretch">
+          <span class="text-truncate" :title="v.nome">{{ v.nome }}</span>
+          <span v-if="v.stato === 'attesa'" class="fg-2">Sul dispositivo: verrà inviata online</span>
+          <template v-else>
+            <span class="fg-danger" role="alert">{{ v.errore }}</span>
+            <button type="button" class="btn btn-text theme-secondary btn-sm px-1" @click="scartaVoce(v)">Rimuovi</button>
+          </template>
         </div>
       </li>
       <li v-for="v in invii" :key="v.id" class="foto foto-in-invio" :aria-label="`Invio di ${v.nome}`">

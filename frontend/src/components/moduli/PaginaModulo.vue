@@ -13,6 +13,7 @@ import type { DiarioDettaglio } from '@/composables/diarioCompilazione'
 import type { ModuloDiario } from '@/composables/moduloDiario'
 
 import IndicatoreSalvataggio from './IndicatoreSalvataggio.vue'
+import ModificheOffline from './ModificheOffline.vue'
 import NavigazioneModuli from './NavigazioneModuli.vue'
 import { voceModulo, type ChiaveModulo } from './elenco'
 
@@ -29,8 +30,10 @@ const props = withDefaults(
     /** Perché il modulo non è modificabile (mostrato se `solaLettura`). */
     avvisoSolaLettura?: string
     descrizione?: string
+    /** Diario letto dalla copia sul dispositivo (offline). */
+    copiaLocale?: boolean
   }>(),
-  { erroreDiario: '', inCorsoDiario: false, avvisoSolaLettura: '', descrizione: '' },
+  { erroreDiario: '', inCorsoDiario: false, avvisoSolaLettura: '', descrizione: '', copiaLocale: false },
 )
 const emit = defineEmits<{ ricaricaDiario: [] }>()
 
@@ -110,6 +113,11 @@ async function ricarica(): Promise<void> {
         <li v-for="e in m.erroriDi('__all__')" :key="e">{{ e }}</li>
       </ul>
       </div>
+    </div>
+
+    <ModificheOffline v-if="m.dati.value && !solaLettura" :modulo="m" />
+    <div v-if="copiaLocale" class="alert theme-info" role="status">
+      Sei offline: vedi i dati salvati sul dispositivo. Le modifiche vengono inviate quando torni online.
     </div>
 
     <form v-if="m.dati.value" novalidate @submit.prevent="m.salvaOra()">
