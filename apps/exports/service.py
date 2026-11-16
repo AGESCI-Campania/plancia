@@ -359,7 +359,7 @@ def _riga_export_diario(diario, mostra_valutazione: bool) -> list:
         (missione.titolo if missione else ""),
         _d(missione.data) if missione else "",
         (missione.descrizione_svolgimento if missione else ""),
-        _posti_azione(missione.posti_azione_missione) if missione else "",
+        _posti_azione(missione.posti_azione) if missione else "",
         # Relazione finale
         (rf.sintesi_impresa_1 if rf else ""),
         (rf.sintesi_impresa_2 if rf else ""),
@@ -394,7 +394,7 @@ def costruisci_tabella_diari(qs, user) -> tuple[list[str], list[list]]:
             "presentazione__membri",
             "imprese__posti_azione",
             "imprese__esiti_specialita",
-            "missione__posti_azione_missione",
+            "missione__posti_azione",
         )
     )
 

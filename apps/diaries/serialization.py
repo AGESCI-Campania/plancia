@@ -192,9 +192,10 @@ def _missione_data(missione) -> dict:
         "titolo": missione.titolo,
         "data": missione.data.isoformat() if missione.data else None,
         "descrizione_svolgimento": missione.descrizione_svolgimento,
+        # Missione() non ancora salvata (GET di un modulo vuoto): nessun posto d'azione
         "posti_azione": [
             {"descrizione": p.descrizione}
-            for p in missione.posti_azione_missione.all()
+            for p in (missione.posti_azione.all() if missione.pk else [])
         ],
     }
 

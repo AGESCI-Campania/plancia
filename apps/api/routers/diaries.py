@@ -90,7 +90,7 @@ def get_diario(request, diario_id: int):
             "presentazione__membri",
             "imprese__posti_azione",
             "imprese__esiti_specialita",
-            "missione__posti_azione_missione",
+            "missione__posti_azione",
         ).get(pk=diario_id)
     except Diario.DoesNotExist:
         raise HttpError(404, "Diario non trovato") from None
@@ -174,7 +174,7 @@ def get_diario(request, diario_id: int):
             data=missione.data,
             descrizione_svolgimento=missione.descrizione_svolgimento,
             posti_azione=[PostoAzioneMissioneSchema(descrizione=p.descrizione)
-                          for p in missione.posti_azione_missione.all()],
+                          for p in missione.posti_azione.all()],
         ) if missione else None,
         relazione_finale=RelazioneFinaleSchema(**_relazione_finale_data(rf))
             if rf and mostra_relazione else None,

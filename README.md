@@ -367,6 +367,9 @@ I PDF sono esclusi dal repository (artefatti generati).
 - **django-axes**: IP del client letto da `X-Forwarded-For` dietro Caddy + nginx (prima tutti
   gli utenti avevano l'IP del proxy e un blocco li avrebbe colpiti tutti).
 - Dominio `agescicampania.org` → `agescicampania.net` (host, email, documentazione).
+- **Fix missione**: i posti d'azione della missione erano letti da un accessor inesistente
+  (`posti_azione_missione`): andavano in errore l'API PWA del modulo missione, il dettaglio
+  diario di `/api/v1/diari/<id>` e l'export riassuntivo diari con almeno una missione.
 
 ### v2.4.1
 
