@@ -2,6 +2,8 @@
 import { RouterView } from 'vue-router'
 
 import AggiornamentoApp from '@/components/AggiornamentoApp.vue'
+import AvvisiToast from '@/components/AvvisiToast.vue'
+import ConfermaDialogo from '@/components/ConfermaDialogo.vue'
 import RiautenticazioneDialogo from '@/components/RiautenticazioneDialogo.vue'
 </script>
 
@@ -9,4 +11,6 @@ import RiautenticazioneDialogo from '@/components/RiautenticazioneDialogo.vue'
   <RouterView />
   <AggiornamentoApp />
   <RiautenticazioneDialogo />
+  <ConfermaDialogo />
+  <AvvisiToast />
 </template>

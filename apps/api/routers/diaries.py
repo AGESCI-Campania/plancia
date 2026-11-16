@@ -43,6 +43,7 @@ from apps.api.schemas.diaries import (
     MissioneResponseSchema,
     MissioneSchema,
     OpzioneSchema,
+    OpzioniModuliDiarioSchema,
     PdfStatoSchema,
     PermessiDiarioSchema,
     PostoAzioneMissioneSchema,
@@ -395,6 +396,42 @@ def filtri_diari(request, edizione_id: int | None = Query(None)):
         stati=[SceltaSchema(valore=v, etichetta=e) for v, e in StatoDiario.choices],
         tipi=[SceltaSchema(valore=v, etichetta=e) for v, e in TipoDiario.choices],
         ordinamenti=list(_ORDINAMENTI),
+    )
+
+
+@router.get("/moduli/opzioni", response=OpzioniModuliDiarioSchema,
+            summary="Scelte dei campi dei moduli e limiti delle foto")
+def opzioni_moduli(request):
+    """Specialità di squadriglia e individuali, brevetti, ruoli, sentieri, stati delle
+    specialità, moduli con foto e lato massimo delle foto (`Impostazioni.allegati_max_px`)."""
+    from apps.diaries.models import (
+        BREVETTI_COMPETENZA,
+        MODULO_FOTO_CHOICES,
+        SPECIALITA_INDIVIDUALI,
+        SPECIALITA_SQUADRIGLIA,
+        RuoloSq,
+        SentieroCammino,
+        StatoSpecialita,
+        TipoDiario,
+    )
+    from apps.diaries.service import MAX_BYTES_ALLEGATO, MIME_ALLEGATI_CONSENTITI
+    from apps.siteconfig.models import Impostazioni
+
+    def _scelte(choices) -> list[SceltaSchema]:
+        return [SceltaSchema(valore=v, etichetta=str(e)) for v, e in choices]
+
+    return OpzioniModuliDiarioSchema(
+        tipi_diario=_scelte(TipoDiario.choices),
+        specialita_squadriglia=list(SPECIALITA_SQUADRIGLIA),
+        specialita_individuali=list(SPECIALITA_INDIVIDUALI),
+        brevetti=list(BREVETTI_COMPETENZA),
+        ruoli_squadriglia=_scelte(RuoloSq.choices),
+        sentieri=_scelte(SentieroCammino.choices),
+        stati_specialita=_scelte(StatoSpecialita.choices),
+        moduli_foto=_scelte(MODULO_FOTO_CHOICES),
+        allegati_max_px=Impostazioni.get().allegati_max_px or 1024,
+        allegati_max_mb=MAX_BYTES_ALLEGATO // (1024 * 1024),
+        allegati_tipi=sorted(MIME_ALLEGATI_CONSENTITI),
     )
 
 

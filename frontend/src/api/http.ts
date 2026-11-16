@@ -53,6 +53,7 @@ function messaggioDa(stato: number, corpo: unknown): string {
     if (typeof c.detail === 'string') return c.detail
     if (Array.isArray(c.detail) && c.detail.length) return 'Dati non validi.'
     if (Array.isArray(c.errors) && c.errors[0]?.message) return c.errors[0].message
+    if (c.errors && typeof c.errors === 'object') return 'Dati non validi: controlla i campi evidenziati.'
   }
   if (stato === 401) return 'Sessione scaduta: accedi di nuovo.'
   if (stato === 403) return 'Non hai i permessi per questa operazione.'
@@ -60,6 +61,15 @@ function messaggioDa(stato: number, corpo: unknown): string {
   if (stato === 429) return 'Troppe richieste: riprova tra poco.'
   if (stato >= 500) return 'Errore del server: riprova più tardi.'
   return `Errore ${stato}.`
+}
+
+/** Errori per campo: `errori` (API v1) o `errors` come oggetto (validazione dei moduli, 400). */
+function erroriDa(corpo: unknown): ErroriCampo {
+  if (!corpo || typeof corpo !== 'object') return {}
+  const c = corpo as { errori?: ErroriCampo; errors?: unknown }
+  if (c.errori) return c.errori
+  if (c.errors && typeof c.errors === 'object' && !Array.isArray(c.errors)) return c.errors as ErroriCampo
+  return {}
 }
 
 /** Richiesta generica; restituisce il corpo JSON (o `null` per 204). */
@@ -93,7 +103,7 @@ export async function richiesta<T = unknown>(url: string, opzioni: OpzioniRichie
   const tipo = risposta.headers.get('Content-Type') ?? ''
   const dati: unknown = tipo.includes('json') ? await risposta.json().catch(() => null) : null
   if (!risposta.ok) {
-    const errori = (dati as { errori?: ErroriCampo } | null)?.errori ?? {}
+    const errori = erroriDa(dati)
     throw new ErroreApi(risposta.status, messaggioDa(risposta.status, dati), errori, dati)
   }
   return dati as T

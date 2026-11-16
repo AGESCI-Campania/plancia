@@ -121,18 +121,17 @@ async function terminaImpersonazione(): Promise<void> {
       </div>
     </div>
     <div v-if="breadcrumb.length" class="ag-header-bottom">
-      <nav aria-label="Percorso" class="container py-3">
-        <ol class="breadcrumb mb-0">
-          <li
-            v-for="(voce, i) in breadcrumb"
-            :key="i"
-            class="breadcrumb-item"
-            :class="{ active: !voce.to }"
-            :aria-current="voce.to ? undefined : 'page'"
-          >
-            <RouterLink v-if="voce.to" :to="voce.to">{{ voce.label }}</RouterLink>
-            <template v-else>{{ voce.label }}</template>
-          </li>
+      <nav aria-label="Percorso" class="breadcrumb-agesci">
+        <ol class="breadcrumb mb-0 py-3 px-5">
+          <template v-for="(voce, i) in breadcrumb" :key="i">
+            <li v-if="voce.to" class="breadcrumb-item">
+              <RouterLink class="breadcrumb-link" :to="voce.to">{{ voce.label }}</RouterLink>
+            </li>
+            <li v-else class="breadcrumb-item" aria-current="page">
+              <span class="breadcrumb-link active">{{ voce.label }}</span>
+            </li>
+            <li v-if="i < breadcrumb.length - 1" class="breadcrumb-divider" aria-hidden="true" />
+          </template>
         </ol>
       </nav>
     </div>

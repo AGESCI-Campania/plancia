@@ -70,6 +70,7 @@ class AllegatiSchema(Schema):
 
 class DiagnosticaSchema(Schema):
     manutenzione: bool
+    manutenzione_messaggio: str  # vuoto = messaggio predefinito
     debug_toolbar: bool
     debug_diagnostico: bool
 
@@ -131,16 +132,19 @@ class AllegatiIn(Schema):
 
 class DiagnosticaIn(Schema):
     manutenzione: bool | None = None
+    manutenzione_messaggio: str | None = None  # "" = torna il messaggio predefinito
     debug_toolbar: bool | None = None
     debug_diagnostico: bool | None = None
 
 
 class ManutenzioneImpostazioniSchema(Schema):
     manutenzione: bool
+    messaggio: str  # vuoto = messaggio predefinito
 
 
 class ManutenzioneIn(Schema):
     attiva: bool
+    messaggio: str | None = None  # assente = invariato
 
 
 # --- Footer link ------------------------------------------------------------

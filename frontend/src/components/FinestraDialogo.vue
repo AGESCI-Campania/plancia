@@ -3,7 +3,7 @@
  * Finestra modale Bootstrap 6 sul <dialog> nativo (focus, Esc e backdrop gestiti dal browser).
  * `v-model:aperta` la apre e la chiude; `chiusa` segnala la chiusura da Esc o dal pulsante.
  */
-import { onMounted, ref, watch } from 'vue'
+import { onMounted, ref, useId, watch } from 'vue'
 
 const props = withDefaults(defineProps<{ titolo: string; chiudibile?: boolean }>(), {
   chiudibile: true,
@@ -11,6 +11,7 @@ const props = withDefaults(defineProps<{ titolo: string; chiudibile?: boolean }>
 const aperta = defineModel<boolean>('aperta', { default: false })
 const emit = defineEmits<{ chiusa: [] }>()
 const dialogo = ref<HTMLDialogElement>()
+const idTitolo = useId()
 
 function sincronizza(valore: boolean): void {
   const d = dialogo.value
@@ -33,9 +34,9 @@ function chiudi(): void {
 </script>
 
 <template>
-  <dialog ref="dialogo" class="dialog" aria-labelledby="titolo-dialogo" @cancel="annulla" @close="chiudi">
+  <dialog ref="dialogo" class="dialog" :aria-labelledby="idTitolo" @cancel="annulla" @close="chiudi">
     <div class="dialog-header">
-      <h2 id="titolo-dialogo" class="dialog-title h5">{{ titolo }}</h2>
+      <h2 :id="idTitolo" class="dialog-title h5">{{ titolo }}</h2>
       <button v-if="chiudibile" type="button" class="btn-close" aria-label="Chiudi" @click="chiudi" />
     </div>
     <!-- Contenuto solo a finestra aperta: i campi chiusi non restano nel DOM (etichette duplicate) -->

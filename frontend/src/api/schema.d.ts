@@ -181,6 +181,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/diari/moduli/opzioni": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Scelte dei campi dei moduli e limiti delle foto
+         * @description Specialità di squadriglia e individuali, brevetti, ruoli, sentieri, stati delle
+         *     specialità, moduli con foto e lato massimo delle foto (`Impostazioni.allegati_max_px`).
+         */
+        get: operations["apps_api_routers_diaries_opzioni_moduli"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/diari/reparti/{reparto_id}/cambia-crp": {
         parameters: {
             query?: never;
@@ -601,6 +622,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/diari/{diario_id}/valutazione/azioni": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Azioni di valutazione proponibili (anche prima che la valutazione esista)
+         * @description Come `azioni` del dettaglio, ma risponde anche quando il diario non ha ancora una
+         *     valutazione (il dettaglio dà 404): la pagina può proporre la prima valutazione o
+         *     l'assegnazione alla Pattuglia GV. Stessa visibilità del dettaglio; non crea nulla.
+         */
+        get: operations["apps_api_routers_evaluations_get_azioni_valutazione"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/diari/{diario_id}/valutazione/conferma": {
         parameters: {
             query?: never;
@@ -719,7 +762,8 @@ export interface paths {
         };
         /**
          * Cerca cartelle Drive dell'account
-         * @description Prime 20 cartelle dell'account il cui nome contiene `q`.
+         * @description Prime 20 cartelle dell'account il cui nome contiene `q`; con `parent_id` solo le
+         *     sottocartelle di quella cartella.
          */
         get: operations["apps_api_routers_drive_elenca_cartelle"];
         put?: never;
@@ -2654,6 +2698,8 @@ export interface components {
             debug_toolbar?: boolean | null;
             /** Manutenzione */
             manutenzione?: boolean | null;
+            /** Manutenzione Messaggio */
+            manutenzione_messaggio?: string | null;
         };
         /** DiagnosticaSchema */
         DiagnosticaSchema: {
@@ -2663,6 +2709,8 @@ export interface components {
             debug_toolbar: boolean;
             /** Manutenzione */
             manutenzione: boolean;
+            /** Manutenzione Messaggio */
+            manutenzione_messaggio: string;
         };
         /** DiarioBreveSchema */
         DiarioBreveSchema: {
@@ -3620,11 +3668,15 @@ export interface components {
         ManutenzioneImpostazioniSchema: {
             /** Manutenzione */
             manutenzione: boolean;
+            /** Messaggio */
+            messaggio: string;
         };
         /** ManutenzioneIn */
         ManutenzioneIn: {
             /** Attiva */
             attiva: boolean;
+            /** Messaggio */
+            messaggio?: string | null;
         };
         /**
          * MeEstesoSchema
@@ -3792,6 +3844,34 @@ export interface components {
             id: number;
             /** Nome */
             nome: string;
+        };
+        /**
+         * OpzioniModuliDiarioSchema
+         * @description Scelte dei campi dei moduli 1–5 e limiti delle foto (per i form della SPA).
+         */
+        OpzioniModuliDiarioSchema: {
+            /** Allegati Max Mb */
+            allegati_max_mb: number;
+            /** Allegati Max Px */
+            allegati_max_px: number;
+            /** Allegati Tipi */
+            allegati_tipi: string[];
+            /** Brevetti */
+            brevetti: string[];
+            /** Moduli Foto */
+            moduli_foto: components["schemas"]["SceltaSchema"][];
+            /** Ruoli Squadriglia */
+            ruoli_squadriglia: components["schemas"]["SceltaSchema"][];
+            /** Sentieri */
+            sentieri: components["schemas"]["SceltaSchema"][];
+            /** Specialita Individuali */
+            specialita_individuali: string[];
+            /** Specialita Squadriglia */
+            specialita_squadriglia: string[];
+            /** Stati Specialita */
+            stati_specialita: components["schemas"]["SceltaSchema"][];
+            /** Tipi Diario */
+            tipi_diario: components["schemas"]["SceltaSchema"][];
         };
         /**
          * OpzioniTicketSchema
@@ -4242,6 +4322,11 @@ export interface components {
             filtri: components["schemas"]["FiltriRiepilogoSchema"];
             /** Puo Gestire */
             puo_gestire: boolean;
+            /**
+             * Puo Pubblicare Esiti
+             * @default false
+             */
+            puo_pubblicare_esiti: boolean;
             stats_diari?: components["schemas"]["StatsDiariSchema"] | null;
             /** Totale Diari */
             totale_diari: number;
@@ -4606,6 +4691,11 @@ export interface components {
             globali: components["schemas"]["StatGlobaliSchema"] | null;
             /** Per Zona */
             per_zona: components["schemas"]["StatZonaSchema"][];
+            /**
+             * Puo Pubblicare Esiti
+             * @default false
+             */
+            puo_pubblicare_esiti: boolean;
             ticket: components["schemas"]["StatTicketSchema"] | null;
         };
         /** StatoAggiornamentoSchema */
@@ -5413,6 +5503,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FiltriDiariSchema"];
+                };
+            };
+        };
+    };
+    apps_api_routers_diaries_opzioni_moduli: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpzioniModuliDiarioSchema"];
                 };
             };
         };
@@ -6876,6 +6986,55 @@ export interface operations {
             };
         };
     };
+    apps_api_routers_evaluations_get_azioni_valutazione: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                diario_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AzioniValutazioneSchema"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionErrorSchema"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionErrorSchema"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionErrorSchema"];
+                };
+            };
+        };
+    };
     apps_api_routers_evaluations_conferma_api: {
         parameters: {
             query?: never;
@@ -7191,6 +7350,7 @@ export interface operations {
             query: {
                 account: string;
                 q?: string;
+                parent_id?: string | null;
             };
             header?: never;
             path?: never;

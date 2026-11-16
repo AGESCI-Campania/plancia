@@ -71,3 +71,18 @@ def test_statistiche_senza_edizioni(client_di, utenti):
                                           ("anonimo", 401)])
 def test_statistiche_vietate(client_di, ruolo, atteso):
     assert client_di(ruolo).get("/api/v1/statistiche").status_code == atteso
+
+
+@pytest.mark.parametrize("ruolo,atteso", [("admin", True), ("incaricato_eg", True),
+                                          ("segreteria", False)])
+def test_statistiche_puo_pubblicare_esiti(client_di, edizione, ruolo, atteso):
+    """Il flag segue la regola di `POST /edizioni/{id}/pubblica-esiti`."""
+    corpo = client_di(ruolo).get("/api/v1/statistiche").json()
+    assert corpo["puo_pubblicare_esiti"] is atteso
+    if not atteso:
+        r = client_di(ruolo).post(f"/api/v1/edizioni/{edizione.pk}/pubblica-esiti")
+        assert r.status_code == 403
+
+
+def test_statistiche_senza_edizioni_non_pubblica(client_di, utenti):
+    assert client_di("admin").get("/api/v1/statistiche").json()["puo_pubblicare_esiti"] is False

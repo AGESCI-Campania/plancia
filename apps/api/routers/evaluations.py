@@ -61,13 +61,27 @@ def _azioni(val, user) -> AzioniValutazioneSchema:
     return AzioniValutazioneSchema(
         puo_valutare_direttamente=_ha_ruolo(user, _RUOLI_VALUTAZIONE_DIRETTA) and not pubblicata
         and d.stato in (StatoDiario.INVIATO, StatoDiario.IN_VALUTAZIONE, StatoDiario.IN_REVISIONE),
-        puo_proporre=user.ruolo == Ruolo.PGV and not pubblicata,
+        # La proposta porta il diario IN_REVISIONE: ammessa solo da IN_VALUTAZIONE/IN_REVISIONE
+        # (`proponi_pgv` non avvia la valutazione di un diario solo inviato).
+        puo_proporre=user.ruolo == Ruolo.PGV and not pubblicata
+        and d.stato in (StatoDiario.IN_VALUTAZIONE, StatoDiario.IN_REVISIONE),
         puo_confermare=conferma and in_revisione,
         puo_rigettare=conferma and in_revisione,
         puo_modificare=conferma and bool(val.esito) and not pubblicata,
         puo_pubblicare=conferma and bool(val.esito) and not pubblicata,
         puo_assegnare_pgv=_ha_ruolo(user, _RUOLI_VALUTAZIONE_DIRETTA),
     )
+
+
+def _verifica_visibilita(user, d) -> None:
+    """Mai al Capo Squadriglia; al Capo Reparto solo dopo la pubblicazione; per gli altri
+    la visibilità del diario (Pattuglia GV: solo i diari assegnati)."""
+    if user.ruolo == Ruolo.CSQ and not user.is_superuser:
+        raise HttpError(403, "Valutazione non ancora pubblicata.")
+    if not puo_vedere_diario(user, d):
+        raise HttpError(403, "Non hai accesso a questo diario.")
+    if user.ruolo == Ruolo.CRP and not user.is_superuser and not d.pubblicato:
+        raise HttpError(403, "Valutazione non ancora pubblicata.")
 
 
 def _val_schema(val, user=None) -> ValutazioneApiSchema:
@@ -145,18 +159,29 @@ def get_valutazione(request, diario_id: int):
 
     d = _get_diario(diario_id)
     user = request.auth
-
-    if user.ruolo == Ruolo.CSQ and not user.is_superuser:
-        return Status(403, ActionErrorSchema(detail="Valutazione non ancora pubblicata."))
-    if not puo_vedere_diario(user, d):
-        return Status(403, ActionErrorSchema(detail="Non hai accesso a questo diario."))
-    if user.ruolo == Ruolo.CRP and not user.is_superuser and not d.pubblicato:
-        return Status(403, ActionErrorSchema(detail="Valutazione non ancora pubblicata."))
+    _verifica_visibilita(user, d)
 
     try:
         return Status(200, _risposta(d.pk, user))
     except Valutazione.DoesNotExist:
         raise HttpError(404, "Nessuna valutazione per questo diario") from None
+
+
+@router.get(
+    "/{diario_id}/valutazione/azioni",
+    response={200: AzioniValutazioneSchema, **_ERRORI},
+    summary="Azioni di valutazione proponibili (anche prima che la valutazione esista)",
+)
+def get_azioni_valutazione(request, diario_id: int):
+    """Come `azioni` del dettaglio, ma risponde anche quando il diario non ha ancora una
+    valutazione (il dettaglio dà 404): la pagina può proporre la prima valutazione o
+    l'assegnazione alla Pattuglia GV. Stessa visibilità del dettaglio; non crea nulla."""
+    from apps.evaluations.models import Valutazione
+
+    d = _get_diario(diario_id)
+    _verifica_visibilita(request.auth, d)
+    val = Valutazione.objects.filter(diario=d).first() or Valutazione(diario=d)
+    return Status(200, _azioni(val, request.auth))
 
 
 # ---------------------------------------------------------------------------

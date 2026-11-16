@@ -57,6 +57,8 @@ class RiepilogoEdizioneSchema(Schema):
     edizione: EdizioneSchema
     puo_gestire: bool
     totale_diari: int
+    #: Incaricato EG / Admin: pubblicazione di tutti gli esiti confermati
+    puo_pubblicare_esiti: bool = False
     stats_diari: StatsDiariSchema | None = None
     filtri: FiltriRiepilogoSchema
 

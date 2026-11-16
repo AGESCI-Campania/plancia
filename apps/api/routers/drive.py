@@ -94,14 +94,16 @@ def stato(request):
 
 @router.get("/cartelle", response={200: list[CartellaSchema], **_ERRORI_GOOGLE},
             summary="Cerca cartelle Drive dell'account")
-def elenca_cartelle(request, account: str = Query(...), q: str = Query("")):
-    """Prime 20 cartelle dell'account il cui nome contiene `q`."""
+def elenca_cartelle(request, account: str = Query(...), q: str = Query(""),
+                    parent_id: str | None = Query(None)):
+    """Prime 20 cartelle dell'account il cui nome contiene `q`; con `parent_id` solo le
+    sottocartelle di quella cartella."""
     from apps.storage_drive.service import elenca_cartelle as _elenca
 
     richiedi_staff(request.auth)
     cred = _credenziali(account)
     try:
-        cartelle = _elenca(cred, q)
+        cartelle = _elenca(cred, q, parent_id)
     except Exception as exc:
         raise _errore_google(exc) from exc
     return [CartellaSchema(id=c["id"], nome=c.get("name", "")) for c in cartelle]

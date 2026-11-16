@@ -125,7 +125,7 @@ def test_patch_sicurezza_e_allegati(client_di, imp):
 
 def test_manutenzione(client_di, imp):
     c = client_di("admin")
-    assert c.get(f"{BASE}/manutenzione").json() == {"manutenzione": False}
+    assert c.get(f"{BASE}/manutenzione").json() == {"manutenzione": False, "messaggio": ""}
     assert c.put(f"{BASE}/manutenzione", **json_body({"attiva": True})).json()["manutenzione"]
     imp.refresh_from_db()
     assert imp.manutenzione is True
@@ -137,8 +137,28 @@ def test_manutenzione(client_di, imp):
 def test_patch_diagnostica(client_di, imp):
     r = client_di("admin").patch(f"{BASE}/diagnostica", **json_body({"debug_diagnostico": True}))
     assert r.json()["diagnostica"] == {
-        "manutenzione": False, "debug_toolbar": False, "debug_diagnostico": True,
+        "manutenzione": False, "manutenzione_messaggio": "", "debug_toolbar": False,
+        "debug_diagnostico": True,
     }
+
+
+def test_messaggio_manutenzione(client_di, imp):
+    c = client_di("admin")
+    r = c.patch(f"{BASE}/diagnostica",
+                **json_body({"manutenzione": True, "manutenzione_messaggio": "  Torniamo alle 18  "}))
+    assert r.status_code == 200
+    assert r.json()["diagnostica"]["manutenzione_messaggio"] == "Torniamo alle 18"
+    imp.refresh_from_db()
+    assert imp.manutenzione is True and imp.manutenzione_messaggio == "Torniamo alle 18"
+    # un PATCH senza messaggio non lo tocca
+    c.patch(f"{BASE}/diagnostica", **json_body({"debug_toolbar": True}))
+    imp.refresh_from_db()
+    assert imp.manutenzione_messaggio == "Torniamo alle 18"
+    # PUT /manutenzione: messaggio facoltativo
+    r = c.put(f"{BASE}/manutenzione", **json_body({"attiva": False}))
+    assert r.json() == {"manutenzione": False, "messaggio": "Torniamo alle 18"}
+    r = c.put(f"{BASE}/manutenzione", **json_body({"attiva": True, "messaggio": ""}))
+    assert r.json() == {"manutenzione": True, "messaggio": ""}
 
 
 def test_patch_footer_testo(client_di, imp):

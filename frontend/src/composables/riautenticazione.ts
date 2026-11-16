@@ -45,14 +45,32 @@ export async function conRiautenticazioneAllauth<T>(
   return operazione()
 }
 
+/**
+ * Tipo di verifica per un 401 di Plancia: dai `flussi` allauth della risposta (password se
+ * disponibile, altrimenti codice MFA); `null` se l'utente non ne ha (es. entrato con SSO
+ * senza password né MFA: deve rifare l'accesso). Senza `flussi` si chiede la password.
+ */
+export function tipoRiautenticazione(flussi: { id?: string }[] | undefined): 'password' | 'codice' | null {
+  if (!Array.isArray(flussi)) return 'password'
+  const id = flussi.map((f) => f.id)
+  if (id.includes('reauthenticate')) return 'password'
+  if (id.includes('mfa_reauthenticate')) return 'codice'
+  return null
+}
+
 /** Come sopra per le API di Plancia (`riautenticazione_richiesta` in un 401). */
 export async function conRiautenticazione<T>(operazione: () => Promise<T>): Promise<T> {
   try {
     return await operazione()
   } catch (e) {
-    const corpo = e instanceof ErroreApi ? (e.corpo as { riautenticazione_richiesta?: boolean } | null) : null
+    const corpo =
+      e instanceof ErroreApi ? (e.corpo as { riautenticazione_richiesta?: boolean; flussi?: { id?: string }[] } | null) : null
     if (!(e instanceof ErroreApi) || e.stato !== 401 || !corpo?.riautenticazione_richiesta) throw e
-    if (!(await chiedi(false))) throw e
+    const tipo = tipoRiautenticazione(corpo.flussi)
+    if (!tipo) {
+      throw new ErroreApi(401, 'Per confermare questa operazione esci e rientra in Plancia, poi riprova entro 5 minuti.', {}, corpo)
+    }
+    if (!(await chiedi(tipo === 'codice'))) throw e
     return operazione()
   }
 }

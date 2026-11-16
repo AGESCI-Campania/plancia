@@ -114,6 +114,7 @@ def _impostazioni(request) -> ImpostazioniSchema:
         allegati={"allegati_max_px": imp.allegati_max_px},
         diagnostica={
             "manutenzione": imp.manutenzione,
+            "manutenzione_messaggio": imp.manutenzione_messaggio,
             "debug_toolbar": imp.debug_toolbar,
             "debug_diagnostico": imp.debug_diagnostico,
         },
@@ -175,7 +176,18 @@ def aggiorna_allegati(request, payload: AllegatiIn):
 @router.patch("/diagnostica", response={200: ImpostazioniSchema, **_ERRORI},
               summary="Modifica la sezione Diagnostica (manutenzione, debug)")
 def aggiorna_diagnostica(request, payload: DiagnosticaIn):
-    return _aggiorna(request, "diagnostica", payload)
+    from apps.siteconfig import services
+
+    richiedi_staff(request.auth)
+    dati = payload.dict(exclude_unset=True)
+    # Il messaggio non è nel form della vista web (che altrimenti lo azzererebbe):
+    # si salva a parte, come fa il comando `manutenzione`.
+    messaggio = dati.pop("manutenzione_messaggio", None)
+    imp = services.aggiorna_sezione("diagnostica", dati)
+    if messaggio is not None:
+        imp.manutenzione_messaggio = messaggio.strip()
+        imp.save(update_fields=["manutenzione_messaggio", "aggiornato_at"])
+    return _impostazioni(request)
 
 
 @router.get("/manutenzione", response={200: ManutenzioneImpostazioniSchema, **_ERRORI},
@@ -184,17 +196,21 @@ def leggi_manutenzione(request):
     from apps.siteconfig.models import Impostazioni
 
     richiedi_staff(request.auth)
-    return {"manutenzione": Impostazioni.objects.get_or_create(pk=1)[0].manutenzione}
+    imp = Impostazioni.objects.get_or_create(pk=1)[0]
+    return {"manutenzione": imp.manutenzione, "messaggio": imp.manutenzione_messaggio}
 
 
 @router.put("/manutenzione", response={200: ManutenzioneImpostazioniSchema, **_ERRORI},
             summary="Attiva o disattiva la modalità manutenzione")
 def imposta_manutenzione(request, payload: ManutenzioneIn):
-    from apps.siteconfig import services
+    from apps.siteconfig.manutenzione import imposta_manutenzione
+    from apps.siteconfig.models import Impostazioni
 
     richiedi_staff(request.auth)
-    imp = services.aggiorna_sezione("diagnostica", {"manutenzione": payload.attiva})
-    return {"manutenzione": imp.manutenzione}
+    messaggio = payload.messaggio.strip() if payload.messaggio is not None else None
+    imposta_manutenzione(payload.attiva, messaggio)
+    imp = Impostazioni.objects.get(pk=1)
+    return {"manutenzione": imp.manutenzione, "messaggio": imp.manutenzione_messaggio}
 
 
 # ---------------------------------------------------------------------------

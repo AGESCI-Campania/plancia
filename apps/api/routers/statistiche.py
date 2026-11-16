@@ -15,9 +15,11 @@ router = Router(tags=["statistiche"])
             summary="Dati della dashboard statistiche per zona")
 def statistiche(request, edizione_id: int | None = None):
     """Senza `edizione_id` usa l'edizione aperta o in valutazione più recente (o l'ultima)."""
+    from apps.accounts.models import Ruolo
     from apps.editions.models import Edizione
 
-    richiedi_staff(request.auth)
+    user = request.auth
+    richiedi_staff(user)
     edizione = services.edizione_di_riferimento(edizione_id)
     return {
         "edizioni": Edizione.objects.order_by("-anno"),
@@ -25,4 +27,7 @@ def statistiche(request, edizione_id: int | None = None):
         "per_zona": services.stats_per_zona(edizione) if edizione else [],
         "globali": services.stats_globali(edizione) if edizione else None,
         "ticket": services.stats_ticket(edizione) if edizione else None,
+        "puo_pubblicare_esiti": edizione is not None and (
+            user.is_superuser or user.ruolo in (Ruolo.INCARICATO_EG, Ruolo.ADMIN)
+        ),
     }

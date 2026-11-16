@@ -223,6 +223,21 @@ class FiltriDiariSchema(Schema):
     ordinamenti: list[str]
 
 
+class OpzioniModuliDiarioSchema(Schema):
+    """Scelte dei campi dei moduli 1–5 e limiti delle foto (per i form della SPA)."""
+    tipi_diario: list[SceltaSchema]
+    specialita_squadriglia: list[str]
+    specialita_individuali: list[str]
+    brevetti: list[str]
+    ruoli_squadriglia: list[SceltaSchema]
+    sentieri: list[SceltaSchema]
+    stati_specialita: list[SceltaSchema]
+    moduli_foto: list[SceltaSchema]
+    allegati_max_px: int
+    allegati_max_mb: int
+    allegati_tipi: list[str]
+
+
 class PermessiDiarioSchema(Schema):
     """Cosa può fare l'utente corrente sul diario: sempre calcolato dalle regole backend
     (`apps.diaries.permessi`, `apps.evaluations.actions`). Solo per l'interfaccia: ogni

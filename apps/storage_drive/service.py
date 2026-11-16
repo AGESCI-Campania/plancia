@@ -100,13 +100,21 @@ def crea_cartella(
     return folder["id"]
 
 
-def elenca_cartelle(credenziali: DriveCredenziali, q: str = "") -> list[dict]:
-    """Prime 20 cartelle (non cestinate) dell'account, filtrate per nome: `[{id, name}]`."""
+def elenca_cartelle(
+    credenziali: DriveCredenziali, q: str = "", parent_id: str | None = None
+) -> list[dict]:
+    """Prime 20 cartelle (non cestinate) dell'account, filtrate per nome: `[{id, name}]`.
+
+    Con `parent_id` solo le sottocartelle dirette di quella cartella (navigazione nel picker).
+    """
     service = _build_drive_service(credenziali)
     query = "mimeType='application/vnd.google-apps.folder' and trashed=false"
     q = (q or "").strip().replace("'", "")
     if q:
         query += f" and name contains '{q}'"
+    parent = (parent_id or "").strip().replace("'", "")
+    if parent:
+        query += f" and '{parent}' in parents"
     results = (
         service.files()
         .list(q=query, pageSize=20, fields="files(id,name)", orderBy="name")

@@ -8,6 +8,10 @@ import LayoutAccesso from '@/layouts/LayoutAccesso.vue'
 import LayoutApp from '@/layouts/LayoutApp.vue'
 import { useSessioneStore } from '@/stores/sessione'
 
+// Una lista di rotte per dominio (src/router/rotte/<dominio>.ts), figlie di LayoutApp.
+const moduliRotte = import.meta.glob<{ rotte: RouteRecordRaw[] }>('./rotte/*.ts', { eager: true })
+const rotteDomini = Object.values(moduliRotte).flatMap((m) => m.rotte)
+
 declare module 'vue-router' {
   interface RouteMeta {
     /** Accessibile senza login. */
@@ -43,6 +47,7 @@ export const rotte: RouteRecordRaw[] = [
         component: () => import('@/views/auth/SicurezzaView.vue'),
         meta: { titolo: 'Password e sicurezza', breadcrumb: [{ label: 'Home', to: '/' }, { label: 'Password e sicurezza' }] },
       },
+      ...rotteDomini,
       { path: ':percorso(.*)*', name: 'non-trovata', component: () => import('@/views/NonTrovataView.vue'), meta: { titolo: 'Pagina non trovata' } },
     ],
   },

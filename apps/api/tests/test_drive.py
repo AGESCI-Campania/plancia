@@ -151,6 +151,14 @@ def test_elenca_cartelle(client_di, credenziali, servizio):
     assert client_di("admin").get("/api/v1/drive/cartelle?account=x@y.it").status_code == 404
 
 
+def test_elenca_sottocartelle(client_di, credenziali, servizio):
+    servizio.files.return_value.list.return_value.execute.return_value = {"files": []}
+    r = client_di("admin").get(f"/api/v1/drive/cartelle?account={ACCOUNT}&parent_id=p'1")
+    assert r.status_code == 200
+    q = servizio.files.return_value.list.call_args.kwargs["q"]
+    assert "'p1' in parents" in q  # apice rimosso
+
+
 def test_elenca_cartelle_errore_google(client_di, credenziali, servizio):
     servizio.files.return_value.list.return_value.execute.side_effect = RuntimeError("quota")
     r = client_di("admin").get(f"/api/v1/drive/cartelle?account={ACCOUNT}")

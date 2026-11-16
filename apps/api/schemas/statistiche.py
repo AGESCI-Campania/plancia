@@ -53,3 +53,5 @@ class StatisticheSchema(Schema):
     per_zona: list[StatZonaSchema]
     globali: StatGlobaliSchema | None
     ticket: StatTicketSchema | None
+    # Stessa regola di `POST /edizioni/{id}/pubblica-esiti` (Incaricato EG, Admin)
+    puo_pubblicare_esiti: bool = False

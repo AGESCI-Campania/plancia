@@ -50,6 +50,33 @@ def test_dettaglio_senza_valutazione_404(client_di, inviato):
     assert not Valutazione.objects.exists()  # la GET non crea nulla
 
 
+def test_azioni_senza_valutazione(client_di, inviato):
+    """Prima della valutazione il dettaglio dà 404, ma le azioni sono disponibili."""
+    r = client_di("incaricato_eg").get(_url(inviato, "/azioni"))
+    assert r.status_code == 200
+    azioni = r.json()
+    assert azioni["puo_valutare_direttamente"] is True and azioni["puo_assegnare_pgv"] is True
+    assert azioni["puo_pubblicare"] is False and azioni["puo_confermare"] is False
+    assert not Valutazione.objects.exists()  # la GET non crea nulla
+    assert client_di("csq").get(_url(inviato, "/azioni")).status_code == 403
+    assert client_di("crp").get(_url(inviato, "/azioni")).status_code == 403  # non pubblicato
+    assert client_di("pgv").get(_url(inviato, "/azioni")).status_code == 403  # non assegnato
+
+
+def test_azioni_con_valutazione(client_di, inviato, utenti):
+    valuta_direttamente(inviato, "approvata", "", utenti["incaricato_eg"])
+    azioni = client_di("incaricato_eg").get(_url(inviato, "/azioni")).json()
+    assert azioni["puo_pubblicare"] is True
+
+
+def test_pgv_puo_proporre_solo_in_valutazione(client_di, inviato, utenti):
+    assegna_pgv(inviato, utenti["pgv"], utenti["incaricato_eg"])
+    assert client_di("pgv").get(_url(inviato)).json()["azioni"]["puo_proporre"] is False
+    inviato.stato = StatoDiario.IN_VALUTAZIONE
+    inviato.save()
+    assert client_di("pgv").get(_url(inviato)).json()["azioni"]["puo_proporre"] is True
+
+
 def test_capo_squadriglia_mai(client_di, inviato, utenti):
     valuta_direttamente(inviato, "approvata", "", utenti["incaricato_eg"])
     from apps.evaluations.actions import pubblica_esito
@@ -93,7 +120,8 @@ def test_pgv_solo_assegnati(client_di, inviato, utenti):
     assert client_di("pgv").get(_url(inviato)).status_code == 403
     assegna_pgv(inviato, utenti["pgv"], utenti["incaricato_eg"])
     r = client_di("pgv").get(_url(inviato))
-    assert r.status_code == 200 and r.json()["azioni"]["puo_proporre"] is True
+    # Diario già valutato (approvato): la proposta non sarebbe accettata dalla FSM
+    assert r.status_code == 200 and r.json()["azioni"]["puo_proporre"] is False
 
 
 def test_anonimo_401(client_di, inviato):

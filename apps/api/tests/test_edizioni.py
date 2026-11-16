@@ -56,11 +56,15 @@ def test_attiva_staff_con_statistiche(client_di, edizione, diario):
     conteggi = {s["stato"]: s["totale"] for s in rie["stats_diari"]["per_stato"]}
     assert conteggi[StatoDiario.IN_COMPILAZIONE] == 1
     assert rie["filtri"]["zone"] == ["Zona API"]
+    assert rie["puo_pubblicare_esiti"] is True
+    seg = client_di("segreteria").get("/api/v1/edizioni/attiva").json()["riepilogo"]
+    assert seg["puo_gestire"] is True and seg["puo_pubblicare_esiti"] is False
 
 
 def test_attiva_per_ruolo_vede_solo_i_suoi_diari(client_di, edizione, diario):
     rie = client_di("crp").get("/api/v1/edizioni/attiva").json()["riepilogo"]
     assert rie["totale_diari"] == 1 and rie["stats_diari"] is None and rie["puo_gestire"] is False
+    assert rie["puo_pubblicare_esiti"] is False
     assert client_di("estraneo").get("/api/v1/edizioni/attiva").json()["riepilogo"][
         "totale_diari"] == 0
     assert client_di("pgv").get(f"/api/v1/edizioni/{edizione.pk}/riepilogo").json()[

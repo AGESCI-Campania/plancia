@@ -93,6 +93,7 @@ def stats_diari(edizione: Edizione) -> dict[str, Any]:
 
 def riepilogo_edizione(edizione: Edizione, user: User) -> dict[str, Any]:
     """Ciò che mostra il dettaglio edizione (home): diari visibili, filtri, statistiche staff."""
+    from apps.accounts.models import Ruolo
     from apps.diaries.visibility import diari_visibili
 
     diari = list(diari_visibili(user, edizione=edizione))
@@ -100,6 +101,10 @@ def riepilogo_edizione(edizione: Edizione, user: User) -> dict[str, Any]:
     return {
         "edizione": edizione,
         "puo_gestire": gestione,
+        # Stessi ruoli di `POST /edizioni/{id}/pubblica-esiti` (e della vista web)
+        "puo_pubblicare_esiti": bool(
+            user.is_superuser or user.ruolo in (Ruolo.INCARICATO_EG, Ruolo.ADMIN)
+        ),
         "totale_diari": len(diari),
         "stats_diari": stats_diari(edizione) if gestione else None,
         "filtri": {

@@ -97,6 +97,9 @@ export const allauth = {
     chiama('POST', '/account/authenticators/webauthn', { name, credential }),
   eliminaPasskey: (authenticators: number[]) =>
     chiama('DELETE', '/account/authenticators/webauthn', { authenticators }),
+  // Account social/SSO collegati: `account` è lo uid presso il provider.
+  scollegaProvider: (provider: string, account: string) =>
+    chiama('DELETE', '/account/providers', { provider, account }),
 }
 
 /**

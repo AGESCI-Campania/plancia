@@ -12,7 +12,7 @@ Prefisso `/api/v1`. Autenticazione come nel resto dell'API (cookie di sessione p
 | GET | `/edizioni` | tutti | Elenco edizioni (invariato; campi opzionali aggiunti) |
 | GET | `/edizioni/attiva` | tutti | Home: `riepilogo` dell'edizione aperta/in valutazione più recente (o `null`), `puo_gestire` |
 | GET | `/edizioni/{id}` | tutti | Dettaglio edizione (invariato; campi opzionali aggiunti) |
-| GET | `/edizioni/{id}/riepilogo` | tutti | Diari visibili al ruolo (totale, filtri zona/gruppo/specialità); conteggi per stato solo allo staff |
+| GET | `/edizioni/{id}/riepilogo` | tutti | Diari visibili al ruolo (totale, filtri zona/gruppo/specialità); conteggi per stato solo allo staff; `puo_gestire`, `puo_pubblicare_esiti` (Incaricato EG, Admin) |
 | POST | `/edizioni` | staff | Crea edizione (validazione di `EdizioneForm`; `stato` predefinito `bozza`) → `201` |
 | PATCH | `/edizioni/{id}` | staff | Modifica parziale dell'edizione |
 | POST | `/edizioni/{id}/azioni/{azione}` | staff | `apri` · `avvia-valutazione` · `chiudi` (FSM bozza → aperta → in valutazione → chiusa) |
@@ -27,6 +27,7 @@ Prefisso `/api/v1`. Autenticazione come nel resto dell'API (cookie di sessione p
 | Metodo | Percorso | Ruoli | Descrizione |
 |---|---|---|---|
 | GET | `/diari/{id}/valutazione` | staff; Pattuglia GV assegnata; Capo Reparto del diario dopo la pubblicazione | Dettaglio con `azioni` proponibili al ruolo; mai al Capo Squadriglia; `404` se non c'è valutazione |
+| GET | `/diari/{id}/valutazione/azioni` | come il dettaglio | Solo le `azioni` proponibili, anche quando la valutazione non esiste ancora (il dettaglio dà `404`): serve alla pagina per proporre la prima valutazione o l'assegnazione. Non crea nulla |
 | POST | `/diari/{id}/valutazione/assegna-pgv` | Incaricato EG, Admin, Segreteria | Assegna un membro della Pattuglia GV (`pgv_pk`) |
 | POST | `/diari/{id}/valutazione/valuta` | Incaricato EG, Admin, Segreteria | Valutazione diretta (anche da `inviato`, sovrascrive una proposta in revisione) |
 | POST | `/diari/{id}/valutazione/proposta` | Pattuglia GV assegnata | Proposta Approvata/Non approvata (→ in revisione) |
@@ -42,7 +43,7 @@ Prefisso `/api/v1`. Autenticazione come nel resto dell'API (cookie di sessione p
 |---|---|---|---|
 | POST | `/drive/oauth` | staff | Corpo `{"edizione_id"?}` → `{"url"}` di autorizzazione Google (PKCE e state in sessione) |
 | GET | `/drive/stato` | staff | `oauth_configurato` e account collegati (senza token) |
-| GET | `/drive/cartelle?account=&q=` | staff | Picker: prime 20 cartelle dell'account (`[{id, nome}]`) |
+| GET | `/drive/cartelle?account=&q=&parent_id=` | staff | Picker: prime 20 cartelle dell'account (`[{id, nome}]`); con `parent_id` solo le sottocartelle di quella cartella |
 | POST | `/drive/cartelle` | staff | Crea cartella (`account`, `nome`, `parent_id`?) → `201 {id, nome}` |
 | GET | `/drive/cartelle/{folder_id}?account=` | staff | Nome e link della cartella |
 | GET | `/drive/edizioni/{id}` | staff | Configurazione Drive dell'edizione (account, cartelle, formato, `cartelle_configurate`) |
