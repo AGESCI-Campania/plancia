@@ -88,6 +88,27 @@ def nomine_di(u: User) -> list[NominaSchema]:
     return [nomina_schema(n) for n in qs]
 
 
+def url_avatar(user: User, percorso: str) -> str | None:
+    """URL dell'immagine del profilo (con l'hash per la cache del browser), o None."""
+    if not user.avatar:
+        return None
+    return f"/api/v1{percorso}?v={user.avatar_sha256[:12]}"
+
+
+def risposta_avatar(user: User):
+    """L'immagine del profilo come file inline; 404 se non c'è."""
+    import mimetypes
+
+    from django.http import FileResponse, Http404
+
+    if not user.avatar:
+        raise Http404("Nessuna immagine del profilo.")
+    mime = mimetypes.guess_type(user.avatar.name or "")[0] or "application/octet-stream"
+    risposta = FileResponse(user.avatar.open("rb"), content_type=mime)
+    risposta["Cache-Control"] = "private, max-age=86400"
+    return risposta
+
+
 def me_schema(request, user: User) -> MeEstesoSchema:
     from allauth.mfa.utils import is_mfa_enabled
 
@@ -119,6 +140,7 @@ def me_schema(request, user: User) -> MeEstesoSchema:
         impersonato_da=utente_breve(operatore),
         puo_modificare_email=services.puo_modificare_email(user),
         puo_modificare_nome=services.puo_modificare_nome(user),
+        avatar_url=url_avatar(user, "/me/avatar"),
     )
 
 
@@ -153,6 +175,12 @@ def patch_me(request, payload: ProfiloPatchSchema):
                 user.last_name if payload.last_name is None else payload.last_name,
             )
     return me_schema(request, user)
+
+
+@router.get("/me/avatar", response={200: None, 401: ErroreSchema, 404: ErroreSchema},
+            summary="La propria immagine del profilo (da Sestante)")
+def get_mio_avatar(request):
+    return risposta_avatar(request.auth)
 
 
 @router.get("/me/profilo", response={200: ProfiloSchema, 401: ErroreSchema},

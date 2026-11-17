@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from django.conf import settings
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Q, QuerySet
 
@@ -364,6 +365,9 @@ def flag_menu(user: User) -> dict[str, bool]:
         "puo_vedere_helpdesk": True,
         "puo_gestire_helpdesk": staff,
         "puo_usare_admin_django": admin,
+        # Servizi facoltativi: solo se il profilo compose è attivo (settings *_ATTIVO)
+        "puo_usare_flower": admin and settings.FLOWER_ATTIVO,
+        "puo_usare_mailpit": admin and settings.MAILPIT_ATTIVO,
     }
 
 

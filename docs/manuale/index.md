@@ -163,6 +163,10 @@ nomine** e gli **Ultimi accessi**. Chi può farlo trova anche **Modifica email**
 collegato a un socio AGESCI (per esempio lo staff entrato con l'SSO) trova **Modifica nome**, con
 Nome e Cognome; per gli altri il nome viene dall'anagrafica.
 
+Chi entra con **SSO AGESCI Campania** vede anche la propria **immagine del profilo** (nel profilo e
+in fondo al menu laterale): arriva da Sestante e si aggiorna a ogni accesso con l'SSO. Per
+cambiarla o toglierla si usa il proprio profilo su Sestante (link nella pagina).
+
 ![Profilo](screenshots/profilo.png)
 
 ### Password e sicurezza

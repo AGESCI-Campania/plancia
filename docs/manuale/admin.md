@@ -21,12 +21,16 @@ sezione **Sistema**:
 | **Log export** | Storico della generazione di PDF ed Excel, con gli errori |
 | **Aggiornamenti** | Versione del server e aggiornamento dal web |
 | **Pannello admin** | L'amministrazione Django (`/admin/`), per interventi di basso livello |
-| **Flower** | Il monitor dei job in background (Celery), se attivo |
-| **Mailpit** | Le email intercettate in modalità di prova |
+| **Attività in background** | I lavori che Plancia fa dietro le quinte (PDF, email in blocco, export, controllo aggiornamenti): in corso, riusciti, falliti. È il pannello Flower di Celery, in inglese. Compare solo se il servizio è attivo (sotto) |
+| **Mailpit** | Le email intercettate in modalità di prova. Compare solo se il servizio è attivo |
 
 ![Home dell'Admin](screenshots/admin_home.png)
 
-Pannello admin, Flower e Mailpit si aprono in una nuova scheda con la stessa sessione di Plancia
+Attività in background e Mailpit sono servizi facoltativi: si attivano sul server con
+`COMPOSE_PROFILES=flower,mailpit` (uno o tutti e due) nel file `.env`, poi `docker compose up -d`.
+Senza, voci e pulsanti non compaiono.
+
+Pannello admin, Attività in background e Mailpit si aprono in una nuova scheda con la stessa sessione di Plancia
 (senza sessione portano alla pagina di accesso). Usa il Pannello admin solo per emergenze non
 gestibili dall'app.
 
@@ -86,7 +90,7 @@ rinnova da solo.
   misura (JPEG qualità 85); nel PDF entrano a 480 px.
 - **Stato e diagnostica**: **Modalità manutenzione** con il messaggio da mostrare (solo gli Admin
   possono usare Plancia; gli altri vedono il messaggio in cima alla pagina), **Debug toolbar**,
-  **Log diagnostico**; collegamenti a Flower e Mailpit.
+  **Log diagnostico**; collegamenti ad Attività in background e Mailpit.
 - **Strumenti**: collegamenti a Cache PDF, Log export, Google Drive, Aggiornamenti del server e
   Import tracciati.
 

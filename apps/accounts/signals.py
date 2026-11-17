@@ -4,7 +4,7 @@ import ipaddress
 
 from allauth.account.signals import user_logged_in, user_logged_out
 from django.contrib.auth.signals import user_login_failed as auth_login_failed
-from django.db.models.signals import post_save
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
 
@@ -77,3 +77,10 @@ def on_login_failed(sender, credentials, request, **kwargs):
         user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
         esito=EsitoLogin.FALLITO,
     )
+
+
+@receiver(post_delete, sender="accounts.User")
+def elimina_file_avatar(sender, instance, **kwargs):
+    """Il file dell'immagine del profilo non resta orfano su disco."""
+    if instance.avatar:
+        instance.avatar.delete(save=False)

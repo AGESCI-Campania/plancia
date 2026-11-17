@@ -14,6 +14,15 @@ class Ruolo(models.TextChoices):
     CSQ = "csq", "Capo Squadriglia"
 
 
+def _percorso_avatar(instance, filename: str) -> str:
+    """File con nome casuale: l'URL pubblico non esiste (si serve dall'API), ma il nome non
+    deve dire di chi è."""
+    import uuid
+    from pathlib import Path
+
+    return f"avatar/{uuid.uuid4().hex}{Path(filename).suffix.lower()}"
+
+
 class User(AbstractUser):
     """Utente custom. AUTH_USER_MODEL non è modificabile dopo la prima migrazione.
 
@@ -35,6 +44,11 @@ class User(AbstractUser):
         related_name="utente",
         verbose_name="socio collegato",
     )
+    # Immagine del profilo: oggi arriva solo da Sestante (scope `avatar`, `apps.accounts.avatar`).
+    # Servita da `/api/v1/…/avatar`, mai da /media/ (ci sono minorenni).
+    avatar = models.FileField("immagine del profilo", upload_to=_percorso_avatar, blank=True)
+    avatar_sha256 = models.CharField(max_length=64, blank=True)
+    avatar_da_sso = models.BooleanField("immagine arrivata da Sestante", default=False)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username"]

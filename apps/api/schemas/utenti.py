@@ -39,6 +39,7 @@ class UtenteDettaglioSchema(Schema):
     ruoli_nominabili: list[RuoloSchema]
     puo_impersonare: bool
     puo_modificare_nome: bool = False
+    avatar_url: str | None = None
 
 
 class UtenteNomePatchSchema(Schema):

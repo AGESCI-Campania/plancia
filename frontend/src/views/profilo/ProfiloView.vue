@@ -34,6 +34,11 @@ const sessioniOrdinate = computed(() =>
     (a, b) => Number(b.corrente) - Number(a.corrente) || b.ultimo_accesso.localeCompare(a.ultimo_accesso),
   ),
 )
+/** Pagina di Sestante dove l'utente cambia i propri dati e l'immagine del profilo. */
+const SESTANTE_PROFILO = 'https://auth.agescicampania.net/if/user/#/settings'
+const collegatoASestante = computed(() =>
+  (profilo.dati.value?.social_accounts ?? []).some((sa) => sa.provider === 'sestante'),
+)
 const altreSessioni = computed(() => (sessioni.dati.value ?? []).filter((s) => !s.corrente).length)
 
 // --- Email ---------------------------------------------------------------------------------
@@ -157,6 +162,14 @@ onMounted(() => {
         <section class="card g-col-12 md:g-col-6" aria-labelledby="titolo-account">
           <div class="card-body">
             <h2 id="titolo-account" class="h5">Dati account</h2>
+            <div v-if="u.avatar_url || collegatoASestante" class="d-flex align-items-center gap-4 mb-5">
+              <img v-if="u.avatar_url" :src="u.avatar_url" alt="La tua immagine del profilo" class="foto-profilo" />
+              <p v-if="collegatoASestante" class="small fg-2 mb-0">
+                L'immagine del profilo arriva da SSO AGESCI Campania e si aggiorna a ogni accesso con l'SSO.
+                Per cambiarla:
+                <a :href="SESTANTE_PROFILO" target="_blank" rel="noopener">il tuo profilo su Sestante</a>.
+              </p>
+            </div>
             <dl>
               <dt>Nome</dt>
               <dd>{{ u.nome_completo }}</dd>

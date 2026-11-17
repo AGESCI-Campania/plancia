@@ -194,7 +194,10 @@ async function terminaImpersonazione(): Promise<void> {
               :disabled="compressa"
               @click="alternaSezione(s)"
             >
-              {{ sezione.titolo }}<IconaBs :nome="sezioneAperta === s ? 'chevron-up' : 'chevron-down'" />
+              <span class="d-flex align-items-center gap-2">
+                <IconaBs v-if="sezione.icona" :nome="sezione.icona" />{{ sezione.titolo }}
+              </span>
+              <IconaBs :nome="sezioneAperta === s ? 'chevron-up' : 'chevron-down'" />
             </button>
           </li>
           <li v-for="voce in sezione.voci" v-show="sezioneVisibile(s)" :key="voce.to">
@@ -226,7 +229,8 @@ async function terminaImpersonazione(): Promise<void> {
           @click.prevent
         >
           <span class="ag-sidebar__user-avatar" :class="`avatar-${sessione.me.ruolo.chiave}`" aria-hidden="true">
-            {{ iniziale }}
+            <img v-if="sessione.me.avatar_url" :src="sessione.me.avatar_url" alt="" />
+            <template v-else>{{ iniziale }}</template>
           </span>
           <span class="ag-sidebar__label">
             {{ sessione.me.nome_completo }}<br />

@@ -15,6 +15,8 @@ const nessunFlag: Menu = {
   puo_vedere_helpdesk: true,
   puo_gestire_helpdesk: false,
   puo_usare_admin_django: false,
+  puo_usare_flower: false,
+  puo_usare_mailpit: false,
 }
 
 function utente(ruolo: string, flag: Partial<Menu> = {}): Me {
@@ -52,5 +54,14 @@ describe('vociMenu', () => {
   it("le voci di sistema seguono il flag del backend", () => {
     const sezioni = vociMenu(utente('admin', { puo_vedere_impostazioni: true }))
     expect(sezioni.find((s) => s.titolo === 'Sistema')?.voci.length).toBeGreaterThan(0)
+  })
+
+  it('Flower e Mailpit solo se il loro profilo compose è attivo', () => {
+    const percorsi = (flag: Partial<Menu>) =>
+      vociMenu(utente('admin', { puo_usare_admin_django: true, ...flag }))
+        .find((s) => s.titolo === 'Sistema')!
+        .voci.map((v) => v.to)
+    expect(percorsi({})).toEqual(['/admin/'])
+    expect(percorsi({ puo_usare_flower: true, puo_usare_mailpit: true })).toEqual(['/admin/', '/celery/', '/mailadmin/'])
   })
 })

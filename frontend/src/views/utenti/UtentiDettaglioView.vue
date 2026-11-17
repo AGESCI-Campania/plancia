@@ -177,6 +177,7 @@ onMounted(() => {
         <RouterLink to="/utenti" class="btn btn-subtle btn-sm theme-secondary" aria-label="Torna agli utenti">
           <IconaBs nome="arrow-left" />
         </RouterLink>
+        <img v-if="u.avatar_url" :src="u.avatar_url" alt="" class="foto-profilo" />
         <h1 class="h3 mb-0">{{ u.nome_completo }}</h1>
         <UtentiBadgeRuolo :ruolo="u.ruolo" />
         <button

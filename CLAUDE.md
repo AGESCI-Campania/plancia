@@ -144,7 +144,7 @@ PLANCIA_DEMO_PASSWORD=… npm run manuale:schermate [-- gruppo…]   # screensho
 - **Dialog/drawer** Bootstrap 6 sul `<dialog>` nativo (`FinestraDialogo.vue`, sidebar);
   i menu usano la data API di Bootstrap (`import 'bootstrap'` in `main.ts`).
 - Componenti: icone `IconaBs` (sprite di bootstrap-icons), mai `<i class="bi">`.
-- **Sidebar**: sezioni con titolo chiuse di default, una sola aperta alla volta (resta aperta
+- **Sidebar**: sezioni con titolo (e icona, `SezioneMenu.icona` in `layouts/menu.ts`) chiuse di default, una sola aperta alla volta (resta aperta
   quella della pagina corrente; da compressa si vedono tutte le icone): `sezioneAperta` in
   `LayoutApp.vue`.
 - Campi password: `CampoForm` con `tipo="password"` ha già il pulsante mostra/nascondi (come
@@ -153,6 +153,9 @@ PLANCIA_DEMO_PASSWORD=… npm run manuale:schermate [-- gruppo…]   # screensho
   Squadriglia", "Capo Reparto", "Pattuglia GV". Le abbreviazioni restano solo nel codice.
 - **Percorsi del backend** (`/admin/`, `/mailadmin/`, `/celery/`): link con caricamento completo
   della pagina, non rotte del router (l'admin Django manda a `/accesso?next=/admin/…`).
+  Flower ("Attività in background") e Mailpit si mostrano solo con il profilo compose attivo:
+  `COMPOSE_PROFILES` nel `.env` → `settings.FLOWER_ATTIVO/MAILPIT_ATTIVO` (in dev Mailpit sempre)
+  → flag `me.menu.puo_usare_flower/puo_usare_mailpit` (solo Admin).
 - **Offline (Fase 5, `src/offline/`)**: Dexie (`db.ts`: `letture`, `coda`, `meta`). Moduli e foto
   passano da `trasportoOffline`/`inviaFotoOffline` (`coda.ts`): offline o server giù → coda con la
   stessa `Idempotency-Key`, invio alla riconnessione/primo piano/ogni minuto; conflitti (409) e
@@ -302,6 +305,10 @@ Ordine in `MIDDLEWARE`: entrambi **dopo** `CorsMiddleware` e **prima** di `Sessi
   `last_name` (niente cognome indovinato). Vale per i nuovi utenti SSO; chi non ha Socio
   modifica nome e cognome dal profilo (`PATCH /me`, `services.aggiorna_nome`); Admin e Segreteria
   dalla scheda utente (`PATCH /utenti/{id}`, ranghi di `roles.puo_modificare_nome_di`).
+- Immagine del profilo: scope `avatar`, claim `picture` (data-URI solo in `userinfo`) →
+  `User.avatar` con `avatar_sha256`/`avatar_da_sso` (`apps/accounts/avatar.py`, chiamato
+  dall'adapter). Il data-URI va tolto da `extra_data` prima del salvataggio dell'account; si
+  serve solo da `/api/v1/me/avatar` e `/api/v1/utenti/{id}/avatar`, mai da `/media/` (minorenni).
 - `SOCIAL_SESTANTE_SERVER_URL` senza `/` finale (in `base.py` c'è `.rstrip("/")`): allauth aggiunge
   `/.well-known/openid-configuration` e con la doppia barra authentik dà 404 (500 al login SSO).
 - Login rifiutato (senza email, email duplicata): `_rifiuta_login` torna a

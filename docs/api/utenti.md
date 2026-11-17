@@ -17,6 +17,7 @@ esclusività Capo Squadriglia, `can_hijack`), `apps/org/services.py` (ricerca so
 | PATCH | `/me` | autenticato | Campi facoltativi: `email` (solo Capo Squadriglia: aggiorna anche il Socio; unicità, formato), `first_name`/`last_name` (solo utenti senza Socio, `puo_modificare_nome`; nome obbligatorio) |
 | GET | `/me/profilo` | tutti | Pagina profilo: `utente` (come `/me`), `nomine`, ultimi 10 `accessi`, `social_accounts` collegati (lo scollegamento è in allauth headless) |
 | GET | `/me/nomine` | tutti | Storico delle proprie nomine (anche revocate/scadute) |
+| GET | `/me/avatar` | tutti | La propria immagine del profilo (da Sestante), inline; `404` se non c'è. `/me` la indica in `avatar_url` (con `?v=` dall'hash, per la cache) |
 | GET | `/me/accessi` | tutti | Propri `LoginEvent`, paginati (`limit`, `offset`) |
 | POST | `/me/ruolo` | tutti | `{"ruolo"}`: cambia il ruolo attivo (solo tra i ruoli attivi non scaduti); risponde come `/me` |
 | GET | `/me/sessioni` | tutti | Sessioni allauth attive (`corrente` = questa) |
@@ -34,7 +35,8 @@ Flag `menu`: `puo_vedere_diari`, `puo_gestire_edizioni`, `puo_vedere_utenti`, `p
 |---|---|---|---|
 | GET | `/utenti` | staff | Lista paginata; filtri `ruolo` (attivo) e `q` (email, nome o cognome del socio) |
 | GET | `/utenti/opzioni` | staff | Ruoli per i form: `ruoli`, `ruoli_nominabili`, `ruoli_nominabili_da_socio` (senza Capo Squadriglia), `ruoli_staff_creabili`, `puo_impersonare` |
-| GET | `/utenti/{id}` | staff | Dettaglio: socio, ruoli attivi, `nomine` (storico completo con `attiva`/`scaduta`/`da_sso`), ultimi 20 `accessi`, `ruoli_nominabili`, `puo_impersonare` (per questo utente) |
+| GET | `/utenti/{id}` | staff | Dettaglio: socio, ruoli attivi, `nomine` (storico completo con `attiva`/`scaduta`/`da_sso`), ultimi 20 `accessi`, `ruoli_nominabili`, `puo_impersonare` (per questo utente), `avatar_url` |
+| GET | `/utenti/{id}/avatar` | staff | Immagine del profilo dell'utente, inline; `404` se non c'è |
 | POST | `/utenti/staff` | staff (Admin crea Admin/Segreteria/Incaricato; Segreteria crea Incaricato) | `{"email", "first_name", "last_name", "ruolo"}`: utente senza Socio (`nomina_staff_diretto`) + mail per impostare la password; `201` |
 | POST | `/utenti/da-socio` | staff | `{"socio_id", "ruolo"}`: account per un Socio capo + nomina; `201` |
 | PATCH | `/utenti/{id}` | Admin, Segreteria (`roles.puo_modificare_nome_di`) | `{"first_name", "last_name"?}`: nome e cognome di un utente senza Socio; la Segreteria non modifica chi ha una nomina Admin. Risponde come `GET /utenti/{id}` (che espone `puo_modificare_nome`) |

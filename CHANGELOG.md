@@ -4,6 +4,22 @@ Una sezione per release: `## X.Y.Z — AAAA-MM-GG`, dalla più recente. `scripts
 mostra le sezioni tra la versione installata e quella nuova; le note della GitHub Release si
 copiano da qui.
 
+## 3.0.3 — 2026-11-17
+
+- **Immagine del profilo da SSO AGESCI Campania**: chi entra con l'SSO vede la foto caricata su
+  Sestante in fondo al menu laterale, nel profilo e (per lo staff) nella scheda utente. Si
+  aggiorna a ogni accesso con l'SSO; si cambia su Sestante (link nel profilo). Solo JPG, PNG,
+  WebP o GIF fino a 512 KB; servita solo dall'API autenticata, mai come file pubblico. Il
+  Gravatar non si usa. Nuova migrazione `accounts.0003_avatar`, applicata all'avvio.
+- **Menu Sistema**: "Flower" si chiama **Attività in background**. Questa voce e **Mailpit**
+  compaiono (anche nella scheda Sistema delle Impostazioni) solo se il servizio è attivo, cioè
+  se il suo profilo è in `COMPOSE_PROFILES` nel `.env`.
+- **Icone** per le sezioni *Gestione* e *Sistema* del menu laterale.
+
+Server: richiede Sestante con lo scope `avatar` sul provider di Plancia (commit `14fd91b` di
+Sestante). Chi usa Flower o Mailpit verifichi che `COMPOSE_PROFILES` nel `.env` non sia
+commentato, altrimenti le voci spariscono dal menu.
+
 ## 3.0.2 — 2026-11-17
 
 - **Menu laterale a fisarmonica**: le sezioni *Gestione* e *Sistema* sono chiuse; un clic sul

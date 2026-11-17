@@ -10,6 +10,7 @@ import ImpostazioniInterruttore from '@/components/impostazioni/ImpostazioniInte
 import type { Impostazioni } from '@/components/impostazioni/tipi'
 import { conferma } from '@/composables/conferma'
 import { useSalvataggio } from '@/composables/impostazioni-salvataggio'
+import { useSessioneStore } from '@/stores/sessione'
 import { useSitoStore } from '@/stores/sito'
 
 const props = defineProps<{ dati: Impostazioni }>()
@@ -50,6 +51,9 @@ async function salvaDiagnostica(): Promise<void> {
     void sito.carica()
   }
 }
+
+// Collegamenti ai servizi facoltativi solo se il loro profilo compose è attivo (me.menu)
+const menu = useSessioneStore().me?.menu
 </script>
 
 <template>
@@ -120,11 +124,11 @@ async function salvaDiagnostica(): Promise<void> {
           <IconaBs nome="check-lg" class="me-1" />Salva stato e diagnostica
         </button>
       </div>
-      <div class="border-top pt-5 mt-5 d-flex flex-wrap gap-3">
-        <a href="/celery/" target="_blank" rel="noopener" class="btn btn-outline btn-sm theme-secondary">
-          <IconaBs nome="diagram-3" class="me-1" />Flower — dashboard Celery
+      <div v-if="menu?.puo_usare_flower || menu?.puo_usare_mailpit" class="border-top pt-5 mt-5 d-flex flex-wrap gap-3">
+        <a v-if="menu?.puo_usare_flower" href="/celery/" target="_blank" rel="noopener" class="btn btn-outline btn-sm theme-secondary">
+          <IconaBs nome="activity" class="me-1" />Attività in background
         </a>
-        <a href="/mailadmin/" target="_blank" rel="noopener" class="btn btn-outline btn-sm theme-secondary">
+        <a v-if="menu?.puo_usare_mailpit" href="/mailadmin/" target="_blank" rel="noopener" class="btn btn-outline btn-sm theme-secondary">
           <IconaBs nome="envelope-open" class="me-1" />Mailpit — email di debug
         </a>
       </div>

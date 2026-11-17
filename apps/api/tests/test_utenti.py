@@ -59,6 +59,17 @@ def test_me_flag_menu(client_di, ruolo, utenti_, impostazioni, statistiche):
     assert menu["puo_gestire_inviti_crp"] is (ruolo == "crp")
 
 
+@pytest.mark.parametrize(("flower", "mailpit"), [(False, False), (True, False), (False, True)])
+def test_me_flag_servizi_facoltativi(client_di, settings, flower, mailpit):
+    """Attività in background (Flower) e Mailpit: solo Admin e solo con il profilo compose."""
+    settings.FLOWER_ATTIVO, settings.MAILPIT_ATTIVO = flower, mailpit
+    menu = client_di("admin").get("/api/v1/me").json()["menu"]
+    assert (menu["puo_usare_flower"], menu["puo_usare_mailpit"]) == (flower, mailpit)
+    settings.FLOWER_ATTIVO = settings.MAILPIT_ATTIVO = True
+    menu = client_di("segreteria").get("/api/v1/me").json()["menu"]
+    assert (menu["puo_usare_flower"], menu["puo_usare_mailpit"]) == (False, False)
+
+
 def test_me_mfa_richiesta_admin(client_di, utenti, settings):
     from allauth.mfa.models import Authenticator
 

@@ -10,6 +10,8 @@ export interface VoceMenu {
 
 export interface SezioneMenu {
   titolo?: string
+  /** Icona del titolo di sezione (bootstrap-icons). */
+  icona?: string
   voci: VoceMenu[]
 }
 
@@ -48,16 +50,18 @@ export function vociMenu(me: Me): SezioneMenu[] {
     )
   }
   if (flag('puo_usare_admin_django')) {
-    sistema.push(
-      { etichetta: 'Pannello admin', icona: 'shield-lock', to: '/admin/', esterno: true },
-      { etichetta: 'Flower', icona: 'diagram-3', to: '/celery/', esterno: true },
-      { etichetta: 'Mailpit', icona: 'envelope-open', to: '/mailadmin/', esterno: true },
-    )
+    sistema.push({ etichetta: 'Pannello admin', icona: 'shield-lock', to: '/admin/', esterno: true })
+  }
+  if (flag('puo_usare_flower')) {
+    sistema.push({ etichetta: 'Attività in background', icona: 'activity', to: '/celery/', esterno: true })
+  }
+  if (flag('puo_usare_mailpit')) {
+    sistema.push({ etichetta: 'Mailpit', icona: 'envelope-open', to: '/mailadmin/', esterno: true })
   }
 
   return [
     { voci: principali },
-    ...(gestione.length ? [{ titolo: 'Gestione', voci: gestione }] : []),
-    ...(sistema.length ? [{ titolo: 'Sistema', voci: sistema }] : []),
+    ...(gestione.length ? [{ titolo: 'Gestione', icona: 'briefcase', voci: gestione }] : []),
+    ...(sistema.length ? [{ titolo: 'Sistema', icona: 'gear', voci: sistema }] : []),
   ]
 }

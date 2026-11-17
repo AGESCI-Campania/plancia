@@ -1,6 +1,6 @@
 /**
  * Dove andare dopo l'accesso (`?next=`): una rotta della SPA oppure una pagina servita da
- * Django (pannello admin, Mailpit, Flower), che va caricata dal browser, non dal router.
+ * Django (pannello admin, Mailpit, Flower/Attività in background), che va caricata dal browser, non dal router.
  * Solo percorsi interni: niente URL esterni (open redirect).
  */
 import type { Router } from 'vue-router'

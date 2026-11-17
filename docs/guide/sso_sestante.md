@@ -75,10 +75,23 @@ sessione**: il criterio è `sessione_da_sestante(request)`, cioè
 l'esistenza di un `SocialAccount` collegato: un utente collegato che entra con la password
 locale deve restare soggetto alla MFA di Plancia.
 
+**Immagine del profilo** (scope `avatar`, `apps/accounts/avatar.py`, contratto § 5.1 e § 6 punto 7):
+- `pre_social_login` legge `picture` da `extra_data["userinfo"]` e **toglie il data-URI** prima
+  che allauth salvi l'account (gli URL restano); `allinea_avatar` per gli utenti esistenti (anche
+  appena collegati per email), `save_user` per i nuovi.
+- data-URI `image/jpeg|png|webp|gif`, ≤ 512 KB, verificato con Pillow (il formato deve
+  corrispondere al tipo) → `User.avatar` (file in `media/avatar/`, nome casuale),
+  `avatar_sha256` per riscriverlo solo se cambia, `avatar_da_sso=True`.
+- URL (Gravatar) o `picture` assente → si toglie la foto solo se `avatar_da_sso`; gli URL non si
+  scaricano. Senza `userinfo` (solo `id_token`) non si tocca niente.
+- Un errore sulla foto va nel log (`apps.accounts.avatar`) e non blocca il login.
+- Si serve solo dall'API autenticata (`/api/v1/me/avatar`, `/api/v1/utenti/{id}/avatar` per lo
+  staff), mai da `/media/`. In Plancia non si carica: il profilo rimanda a Sestante.
+
 **Logout**: chiude solo la sessione di Plancia (quella su Sestante resta). Un logout globale via
 `end-session` si implementa solo se l'utente lo chiede.
 
-Test: `apps/accounts/tests/test_sso_sestante.py`.
+Test: `apps/accounts/tests/test_sso_sestante.py`, `test_avatar.py`, `apps/api/tests/test_avatar.py`.
 
 ## Cosa NON fare
 

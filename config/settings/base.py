@@ -259,7 +259,8 @@ if _SESTANTE_CLIENT_ID:
                     "client_id": _SESTANTE_CLIENT_ID,
                     "secret":    _SESTANTE_CLIENT_SECRET,
                 },
-                "SCOPE": ["openid", "profile", "email"],
+                # avatar: immagine del profilo (claim `picture` in userinfo, apps.accounts.avatar)
+                "SCOPE": ["openid", "profile", "email", "avatar"],
             }
         ]
     }
@@ -386,6 +387,11 @@ MAILPIT_INTERNAL_URL = env.str("MAILPIT_INTERNAL_URL", default="http://mailpit:8
 FLOWER_INTERNAL_URL = env.str("FLOWER_INTERNAL_URL", default="http://flower:5555")
 MAILPIT_SMTP_HOST = env.str("MAILPIT_SMTP_HOST", default="mailpit")
 MAILPIT_SMTP_PORT = env.int("MAILPIT_SMTP_PORT", default=1025)
+# Servizi facoltativi attivi: i profili compose in COMPOSE_PROFILES (.env, letto anche dal
+# container web). Senza il profilo la SPA non mostra la voce di menu né il pulsante.
+_PROFILI_COMPOSE = {p.strip() for p in env.list("COMPOSE_PROFILES", default=[]) if p.strip()}
+FLOWER_ATTIVO = "flower" in _PROFILI_COMPOSE
+MAILPIT_ATTIVO = "mailpit" in _PROFILI_COMPOSE
 
 # --- Anymail (provider transazionale) ---------------------------------------
 # I valori vengono sovrascritti a runtime dalla PlanciaEmailBackend che legge da DB.

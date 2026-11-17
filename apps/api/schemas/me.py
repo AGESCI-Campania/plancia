@@ -55,6 +55,8 @@ class MenuSchema(Schema):
     puo_vedere_helpdesk: bool
     puo_gestire_helpdesk: bool
     puo_usare_admin_django: bool
+    puo_usare_flower: bool = False
+    puo_usare_mailpit: bool = False
 
 
 class MeEstesoSchema(Schema):
@@ -78,6 +80,7 @@ class MeEstesoSchema(Schema):
     impersonato_da: UtenteBreveSchema | None = None
     puo_modificare_email: bool = False
     puo_modificare_nome: bool = False
+    avatar_url: str | None = None
 
 
 class ProfiloPatchSchema(Schema):

@@ -245,9 +245,13 @@ class PlanciaSocialAccountAdapter(DefaultSocialAccountAdapter):
 
     def pre_social_login(self, request, sociallogin):
         """Collega per email gli utenti esistenti; sincronizza ruoli globali per Sestante."""
+        from apps.accounts.avatar import allinea_avatar, estrai_picture
+
         da_sestante = sociallogin.account.provider == PROVIDER_SESTANTE
         email = sociallogin.email_addresses[0].email if sociallogin.email_addresses else None
         if da_sestante:
+            # Prima di ogni salvataggio dell'account: il data-URI non va in extra_data
+            sociallogin.picture_sestante = estrai_picture(sociallogin.account.extra_data)
             if not email:
                 _rifiuta_login(
                     request,
@@ -273,10 +277,16 @@ class PlanciaSocialAccountAdapter(DefaultSocialAccountAdapter):
         if da_sestante and sociallogin.is_existing:
             groups = _sestante_groups(sociallogin.account.extra_data)
             _sync_ruoli_globali(sociallogin.user, groups)
+            allinea_avatar(sociallogin.user, sociallogin.picture_sestante)
 
     def save_user(self, request, sociallogin, form=None):
-        """Nuovi utenti da Sestante: ruoli globali dal claim groups appena creati."""
+        """Nuovi utenti da Sestante: ruoli globali dal claim groups e immagine del profilo."""
+        from apps.accounts.avatar import allinea_avatar, estrai_picture
+
+        if sociallogin.account.provider == PROVIDER_SESTANTE and not hasattr(sociallogin, "picture_sestante"):
+            sociallogin.picture_sestante = estrai_picture(sociallogin.account.extra_data)
         user = super().save_user(request, sociallogin, form=form)
         if sociallogin.account.provider == PROVIDER_SESTANTE:
             _sync_ruoli_globali(user, _sestante_groups(sociallogin.account.extra_data))
+            allinea_avatar(user, sociallogin.picture_sestante)
         return user

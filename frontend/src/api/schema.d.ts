@@ -1872,6 +1872,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/avatar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** La propria immagine del profilo (da Sestante) */
+        get: operations["apps_api_routers_me_get_mio_avatar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/impersonazione/termina": {
         parameters: {
             query?: never;
@@ -2307,6 +2324,23 @@ export interface paths {
         head?: never;
         /** Modifica nome e cognome (Admin, Segreteria; utenti senza Socio) */
         patch: operations["apps_api_routers_utenti_modifica_nome"];
+        trace?: never;
+    };
+    "/api/v1/utenti/{utente_id}/avatar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Immagine del profilo di un utente (staff) */
+        get: operations["apps_api_routers_utenti_avatar_utente"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/utenti/{utente_id}/impersona": {
@@ -3681,6 +3715,8 @@ export interface components {
          * @description `GET /me`: campi storici + dati per il layout della SPA.
          */
         MeEstesoSchema: {
+            /** Avatar Url */
+            avatar_url?: string | null;
             /** Email */
             email: string;
             /**
@@ -3761,6 +3797,16 @@ export interface components {
             puo_importare: boolean;
             /** Puo Usare Admin Django */
             puo_usare_admin_django: boolean;
+            /**
+             * Puo Usare Flower
+             * @default false
+             */
+            puo_usare_flower: boolean;
+            /**
+             * Puo Usare Mailpit
+             * @default false
+             */
+            puo_usare_mailpit: boolean;
             /** Puo Vedere Diari */
             puo_vedere_diari: boolean;
             /** Puo Vedere Helpdesk */
@@ -4899,6 +4945,8 @@ export interface components {
         UtenteDettaglioSchema: {
             /** Accessi */
             accessi: components["schemas"]["LoginEventSchema"][];
+            /** Avatar Url */
+            avatar_url?: string | null;
             /** Email */
             email: string;
             /** First Name */
@@ -11378,6 +11426,42 @@ export interface operations {
             };
         };
     };
+    apps_api_routers_me_get_mio_avatar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroreSchema"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroreSchema"];
+                };
+            };
+        };
+    };
     apps_api_routers_me_termina_impersonazione: {
         parameters: {
             query?: never;
@@ -12465,6 +12549,62 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["UtenteDettaglioSchema"];
                 };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroreSchema"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroreSchema"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroreSchema"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroreValidazioneSchema"];
+                };
+            };
+        };
+    };
+    apps_api_routers_utenti_avatar_utente: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                utente_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unauthorized */
             401: {

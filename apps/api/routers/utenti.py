@@ -22,8 +22,10 @@ from apps.api.routers.me import (
     me_schema,
     nomina_schema,
     nomine_di,
+    risposta_avatar,
     ruolo_schema,
     socio_schema,
+    url_avatar,
 )
 from apps.api.schemas.me import MeEstesoSchema, NominaSchema, RuoloSchema
 from apps.api.schemas.utenti import (
@@ -74,6 +76,7 @@ def _dettaglio(attore, u) -> UtenteDettaglioSchema:
         ruoli_nominabili=_ruoli(services.ruoli_nominabili(attore)),
         puo_impersonare=puo_impersonare(attore, u),
         puo_modificare_nome=puo_modificare_nome_di(attore, u),
+        avatar_url=url_avatar(u, f"/utenti/{u.pk}/avatar"),
     )
 
 
@@ -168,6 +171,13 @@ def crea_da_socio(request, payload: UtenteDaSocioCreaSchema):
 def dettaglio(request, utente_id: int):
     richiedi_staff(request.auth)
     return _dettaglio(request.auth, _get_utente(utente_id))
+
+
+@router.get("/{utente_id}/avatar", response={200: None, **_ERRORI},
+            summary="Immagine del profilo di un utente (staff)")
+def avatar_utente(request, utente_id: int):
+    richiedi_staff(request.auth)
+    return risposta_avatar(_get_utente(utente_id))
 
 
 @router.patch("/{utente_id}", response={200: UtenteDettaglioSchema, **_ERRORI},

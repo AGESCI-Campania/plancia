@@ -15,6 +15,7 @@ MAILERS = {"default": _MAILPIT, "standard": _MAILPIT, "massivo": _MAILPIT}
 MAILPIT_INTERNAL_URL = "http://localhost:8025"
 MAILPIT_SMTP_HOST = "localhost"
 MAILPIT_SMTP_PORT = 1025
+MAILPIT_ATTIVO = True  # sempre nel compose di sviluppo
 
 # In dev non bloccare il login con la verifica email
 ACCOUNT_EMAIL_VERIFICATION = "none"
