@@ -37,7 +37,7 @@ Il foglio ha un'unica riga per diario. Le colonne sono nell'ordine:
 5. **Membri**: lista concatenata `nome (ruolo, sentiero, spec_ind, brevetto)` separata da ` | `
 6. **Impresa 1**: titolo, data inizio, data fine, perché, come, cosa abbiamo imparato, link, posti d'azione (concat `chi — cosa`), esiti (concat)
 7. **Impresa 2**: stesse colonne (vuote se assente o tipo Rinnovo senza impresa 2)
-8. **Missione**: titolo, data, descrizione, posti d'azione (concat descrizione), esiti (concat)
+8. **Missione**: titolo, data, descrizione
 9. **Relazione finale** *(CRP — omessa per CSQ)*: sintesi impresa 1, sintesi impresa 2, sintesi missione, considerazioni CRP, specialità conquistata (Sì/No)
 10. **Valutazione** *(solo se autorizzato e pubblicata)*: esito, note, pubblicata il
 11. **Drive**: link cartella diario su Google Drive (se configurata)

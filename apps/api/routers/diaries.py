@@ -46,7 +46,6 @@ from apps.api.schemas.diaries import (
     OpzioniModuliDiarioSchema,
     PdfStatoSchema,
     PermessiDiarioSchema,
-    PostoAzioneMissioneSchema,
     PostoAzioneSchema,
     PresentazioneModuloSchema,
     PresentazioneResponseSchema,
@@ -254,7 +253,6 @@ def _missione_schema(missione) -> MissioneSchema:
         titolo=data["titolo"],
         data=missione.data,
         descrizione_svolgimento=data["descrizione_svolgimento"],
-        posti_azione=[PostoAzioneMissioneSchema(**p) for p in data["posti_azione"]],
     )
 
 
@@ -500,7 +498,7 @@ def get_diario(request, diario_id: int):
             "anagrafica", "presentazione", "missione", "relazione_finale", "valutazione",
         ).prefetch_related(
             "presentazione__membri", "imprese__posti_azione", "imprese__esiti_specialita",
-            "missione__posti_azione", "allegati",
+            "allegati",
         ).get(pk=diario_id)
     except Diario.DoesNotExist:
         raise HttpError(404, "Diario non trovato") from None
@@ -887,7 +885,6 @@ def get_missione(request, diario_id: int):
     summary="Aggiorna missione",
 )
 def put_missione(request, diario_id: int, payload: VersionedPutSchema):
-    """`posti_azione` (`[{id?, descrizione}]`) è facoltativo: se assente i posti non cambiano."""
     return _idempotente(request, lambda: _put_missione(request, diario_id, payload))
 
 
@@ -895,15 +892,8 @@ def _put_missione(request, diario_id: int, payload: VersionedPutSchema):
     from django.core.exceptions import ValidationError
     from django.db import transaction
 
-    from apps.diaries.models import Missione, PostoAzioneMissione
-    from apps.diaries.serialization import (
-        _apply_posto_missione,
-        _date_field,
-        _str_field,
-        _sync_nested,
-        _validate_nested,
-        _validate_posto_missione,
-    )
+    from apps.diaries.models import Missione
+    from apps.diaries.serialization import _date_field, _str_field
     from apps.diaries.service import inizia_se_necessario
 
     d = _carica_diario(diario_id)
@@ -923,13 +913,6 @@ def _put_missione(request, diario_id: int, payload: VersionedPutSchema):
     data_missione = collect("data", _date_field)
     descrizione = collect("descrizione_svolgimento", _str_field, 10000) or ""
 
-    posti = None
-    if "posti_azione" in data:
-        if not isinstance(data["posti_azione"], list):
-            raise HttpError(400, "posti_azione deve essere una lista")
-        posti, errs = _validate_nested(data["posti_azione"], _validate_posto_missione)
-        if errs:
-            errors["posti_azione"] = errs
     if errors:
         return Status(400, ValidationErrorResponseSchema(error="validation", errors=errors))
 
@@ -949,10 +932,6 @@ def _put_missione(request, diario_id: int, payload: VersionedPutSchema):
         missione.descrizione_svolgimento = descrizione
         missione.version = payload.version + 1
         missione.save()
-        if posti is not None:
-            _sync_nested(qs=missione.posti_azione.all(), cleaned_items=posti,
-                         model_class=PostoAzioneMissione, apply_fn=_apply_posto_missione,
-                         missione=missione)
 
     return Status(200, MissioneResponseSchema(version=missione.version, data=_missione_schema(missione)))
 

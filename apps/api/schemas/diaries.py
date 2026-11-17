@@ -11,11 +11,6 @@ class PostoAzioneSchema(Schema):
     cosa: str
 
 
-class PostoAzioneMissioneSchema(Schema):
-    id: int | None = None
-    descrizione: str
-
-
 class EsitoSpecialitaSchema(Schema):
     id: int
     tipo: str
@@ -72,7 +67,6 @@ class MissioneSchema(Schema):
     titolo: str
     data: date | None
     descrizione_svolgimento: str
-    posti_azione: list[PostoAzioneMissioneSchema]
 
 
 class RelazioneFinaleSchema(Schema):

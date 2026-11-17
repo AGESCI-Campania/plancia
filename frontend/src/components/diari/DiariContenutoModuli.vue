@@ -260,14 +260,6 @@ const statiPrimaRelazione = new Set(['non_iniziato', 'in_compilazione'])
           <p class="text-uppercase fw-semibold fg-2 mb-1">Svolgimento</p>
           <p class="mb-3 plancia-diari-testo">{{ d.missione.descrizione_svolgimento }}</p>
         </template>
-        <template v-if="d.missione.posti_azione.length">
-          <p class="text-uppercase fw-semibold fg-2 mb-1">Posti d'azione</p>
-          <ul class="list-unstyled mb-0">
-            <li v-for="(p, i) in d.missione.posti_azione" :key="p.id ?? i">
-              <IconaBs nome="geo-alt" class="fg-primary me-1" />{{ p.descrizione }}
-            </li>
-          </ul>
-        </template>
         <DiariAllegatiModulo :diario="d" modulo="missione" @eliminato="$emit('aggiorna')" />
       </div>
       <div v-else class="card-body fg-2 fst-italic">Non ancora compilato.</div>

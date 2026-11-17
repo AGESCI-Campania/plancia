@@ -32,6 +32,8 @@ installa da zero (database vuoto, migrazioni ripartite da capo) sul nuovo server
 - **Login con email o codice socio**; rate limit dell'API per sessione invece che per IP (con l'IP
   reale dietro i proxy); immagini dei template email servite; email "imposta la password" per i
   nuovi utenti di staff funzionante.
+- **Missione senza posti d'azione** (non è un'impresa): niente modello, campo API, colonna
+  nell'export né sezione nella pagina del diario.
 - **Manuale d'uso** riscritto per la nuova interfaccia, screenshot generati con Playwright su dati
   demo (`manage.py popola_demo`).
 

@@ -243,7 +243,8 @@ identificato dal **codice socio**; il CRP dai **campi referente**. `crp_nome`, `
 **`link_esterno`** (URL opzionale a video/materiale), `PostoAzione`, `EsitoSpecialita`
 (stato `conquistata`/`non_conquistata`/`in_cammino`).
 
-**`Missione`** (0/1): `titolo`, `data`, `descrizione_svolgimento`, posti d'azione, esiti.
+**`Missione`** (0/1): `titolo`, `data`, `descrizione_svolgimento`. Niente posti d'azione: la
+missione non è un'impresa.
 
 **`RelazioneFinale`** (0/1): sintesi 1ª/2ª impresa, sintesi missione, considerazioni finali,
 `specialita_conquistata` (Sì/No). Compilabile dal CRP **solo dopo** che la parte CSQ è completa.

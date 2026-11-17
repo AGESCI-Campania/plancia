@@ -56,11 +56,6 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='posti_azione', to='diaries.impresa'),
         ),
         migrations.AddField(
-            model_name='postoazionemissione',
-            name='missione',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='posti_azione', to='diaries.missione'),
-        ),
-        migrations.AddField(
             model_name='presentazione',
             name='diario',
             field=models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='presentazione', to='diaries.diario'),

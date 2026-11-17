@@ -149,8 +149,8 @@ La 2ª impresa ha la stessa struttura; per il Rinnovo è segnata *(facoltativo)*
 ### Modulo 5 — Missione
 
 **Titolo**, **Data** e **Descrizione e svolgimento**: gli obiettivi che vi sono stati dati, le
-tecniche usate, le competenze richieste, come vi siete divisi i posti d'azione, gli eventuali
-problemi. In fondo le **Foto** della missione.
+tecniche usate, le competenze richieste, gli eventuali problemi. La missione non ha posti
+d'azione: sono solo delle imprese. In fondo le **Foto** della missione.
 
 ![Modulo Missione](screenshots/csq_missione.png)
 

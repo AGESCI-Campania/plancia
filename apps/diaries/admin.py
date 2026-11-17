@@ -12,7 +12,6 @@ from apps.diaries.models import (
     MembroSq,
     Missione,
     PostoAzione,
-    PostoAzioneMissione,
     Presentazione,
     RelazioneFinale,
     StatoDiario,
@@ -129,17 +128,11 @@ class PresentazioneAdmin(admin.ModelAdmin):
     inlines = [MembroSqInline]
 
 
-class PostoAzioneMissioneInline(admin.TabularInline):
-    model = PostoAzioneMissione
-    extra = 1
-
-
 @admin.register(Missione)
 class MissioneAdmin(admin.ModelAdmin):
     list_display = ("diario", "titolo", "data")
     search_fields = ("titolo", "diario__squadriglia__nome")
     raw_id_fields = ["diario"]
-    inlines = [PostoAzioneMissioneInline]
 
 
 @admin.register(RelazioneFinale)

@@ -25,8 +25,8 @@ un diario non visibile dà 403, inesistente 404.
 | PUT | `/diari/{id}/presentazione` | come anagrafica | Membri sincronizzati per `id` (senza id = nuovo, assente = eliminato) |
 | GET | `/diari/{id}/imprese/{1\|2}` | visibile | Moduli 3–4 con posti d'azione (`chi`/`cosa`), specialità e brevetti (`chi`). 404 se numero ≠ 1, 2 |
 | PUT | `/diari/{id}/imprese/{1\|2}` | come anagrafica | Idem, sincronizzazione per `id` |
-| GET | `/diari/{id}/missione` | visibile | Modulo 5 con posti d'azione `{id, descrizione}` |
-| PUT | `/diari/{id}/missione` | come anagrafica | `data.posti_azione` facoltativo: se assente i posti non cambiano |
+| GET | `/diari/{id}/missione` | visibile | Modulo 5: titolo, data, descrizione e svolgimento (la missione non ha posti d'azione) |
+| PUT | `/diari/{id}/missione` | come anagrafica | Stessi campi |
 | GET | `/diari/{id}/relazione-finale` | visibile, non Capo Squadriglia | Modulo 6 `{version, data}` |
 | PUT | `/diari/{id}/relazione-finale` | Staff; CRP del diario in RELAZIONE_FINALE (422 negli altri stati) | `{version?, data}`: con `version` 409 sui conflitti, senza (app mobile) nessun controllo. `specialita_conquistata` può essere `null` |
 | GET | `/diari/{id}/allegati` | visibile | Elenco foto (`?modulo=impresa_1\|impresa_2\|missione`) con `anteprima_url`, `miniatura_url`, `download_url` |

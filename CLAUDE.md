@@ -168,7 +168,8 @@ PLANCIA_DEMO_PASSWORD=… npm run manuale:schermate [-- gruppo…]   # screensho
   `cell_contatto`. `tipo_diario` non è un campo di Anagrafica: sta su `Diario.tipo` (l'API lo
   accetta nel modulo anagrafica e lo salva sul diario).
 - **`PostoAzione`** (imprese): campi `chi` (max 200) e `cosa` (max 300); il vecchio `descrizione` è stato
-  rimosso in 3.0. I posti d'azione della **missione** (`PostoAzioneMissione`) hanno invece `descrizione`.
+  rimosso in 3.0. La **missione** non ha posti d'azione (non è un'impresa): `PostoAzioneMissione`
+  è stato eliminato in 3.0, non reintrodurlo.
 - **`EsitoSpecialita`**: ha il campo `chi` (max 120, blank=True) per indicare il membro della
   squadriglia a cui è associata la specialità o il brevetto.
 - **`MembroSq`**: `cognome` è blank=True/default="" — l'UI usa solo `nome` (campo unico "Nome e

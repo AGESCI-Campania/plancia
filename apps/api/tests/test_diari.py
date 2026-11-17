@@ -20,7 +20,6 @@ from apps.diaries.models import (
     Diario,
     Impresa,
     Missione,
-    PostoAzioneMissione,
     RelazioneFinale,
     StatoDiario,
     TipoDiario,
@@ -372,20 +371,16 @@ def test_impresa_get_e_put_con_posti_e_specialita(client_di, diario):
     assert body["data"]["brevetti"][0]["nome"] == "Pioniere"
 
 
-def test_missione_posti_azione_sync(client_di, diario):
-    m = Missione.objects.create(diario=diario, version=1)
-    p = PostoAzioneMissione.objects.create(missione=m, descrizione="Vecchio")
+def test_missione_senza_posti_azione(client_di, diario):
+    """La missione non è un'impresa: niente posti d'azione (un client vecchio che li invia
+    ancora non riceve errori, il campo si ignora)."""
+    Missione.objects.create(diario=diario, version=1)
     c = client_di("csq")
-    # Senza posti_azione nel corpo i posti non cambiano
-    r = c.put(_url(diario, "/missione"), **json_body({"version": 1, "data": {"titolo": "Faro"}}))
-    assert r.status_code == 200 and [x["descrizione"] for x in r.json()["data"]["posti_azione"]] == ["Vecchio"]
-    data = {"titolo": "Faro", "posti_azione": [{"id": p.pk, "descrizione": "Aggiornato"},
-                                              {"descrizione": "Nuovo"}]}
-    r = c.put(_url(diario, "/missione"), **json_body({"version": 2, "data": data}))
-    assert sorted(x["descrizione"] for x in r.json()["data"]["posti_azione"]) == ["Aggiornato", "Nuovo"]
-    r = c.put(_url(diario, "/missione"),
-              **json_body({"version": 3, "data": {"posti_azione": [{"descrizione": ""}]}}))
-    assert r.status_code == 400
+    data = {"titolo": "Faro", "posti_azione": [{"descrizione": "Cartografia"}]}
+    r = c.put(_url(diario, "/missione"), **json_body({"version": 1, "data": data}))
+    assert r.status_code == 200
+    assert r.json()["data"]["titolo"] == "Faro"
+    assert "posti_azione" not in r.json()["data"]
 
 
 def test_salvataggio_incrementa_version(client_di, diario):

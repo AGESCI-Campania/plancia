@@ -460,18 +460,6 @@ class Missione(models.Model):
         return f"Missione — {self.diario}"
 
 
-class PostoAzioneMissione(models.Model):
-    missione = models.ForeignKey(Missione, on_delete=models.CASCADE, related_name="posti_azione")
-    descrizione = models.CharField(max_length=300)
-
-    class Meta:
-        verbose_name = "posto d'azione (missione)"
-        verbose_name_plural = "posti d'azione (missione)"
-
-    def __str__(self) -> str:
-        return self.descrizione[:60]
-
-
 # ---------------------------------------------------------------------------
 # Modulo 6 — Relazione finale CRP
 # ---------------------------------------------------------------------------
