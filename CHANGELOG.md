@@ -4,6 +4,13 @@ Una sezione per release: `## X.Y.Z — AAAA-MM-GG`, dalla più recente. `scripts
 mostra le sezioni tra la versione installata e quella nuova; le note della GitHub Release si
 copiano da qui.
 
+## 3.0.1 — non rilasciata
+
+- **Missione senza posti d'azione**: la missione non è un'impresa. Rimossi il modello
+  `PostoAzioneMissione` (migrazione `diaries.0003`; la tabella era sempre vuota), il campo
+  `posti_azione` del modulo missione nell'API (se un'app non aggiornata lo invia viene
+  ignorato), la colonna nell'export dei diari e la sezione nella pagina del diario.
+
 ## 3.0.0 — 2026-11-17
 
 **Prima versione in produzione.** Le versioni 1.x e 2.x sono state una sperimentazione su larga

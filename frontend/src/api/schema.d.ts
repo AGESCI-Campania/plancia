@@ -445,10 +445,7 @@ export interface paths {
         };
         /** Leggi missione (modulo 5) */
         get: operations["apps_api_routers_diaries_get_missione"];
-        /**
-         * Aggiorna missione
-         * @description `posti_azione` (`[{id?, descrizione}]`) è facoltativo: se assente i posti non cambiano.
-         */
+        /** Aggiorna missione */
         put: operations["apps_api_routers_diaries_put_missione"];
         post?: never;
         delete?: never;
@@ -3787,8 +3784,6 @@ export interface components {
             data: string | null;
             /** Descrizione Svolgimento */
             descrizione_svolgimento: string;
-            /** Posti Azione */
-            posti_azione: components["schemas"]["PostoAzioneMissioneSchema"][];
             /** Titolo */
             titolo: string;
         };
@@ -4090,13 +4085,6 @@ export interface components {
             provvisorio: boolean;
             /** Socio Id */
             socio_id: number;
-        };
-        /** PostoAzioneMissioneSchema */
-        PostoAzioneMissioneSchema: {
-            /** Descrizione */
-            descrizione: string;
-            /** Id */
-            id?: number | null;
         };
         /** PostoAzioneSchema */
         PostoAzioneSchema: {

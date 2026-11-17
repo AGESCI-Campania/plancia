@@ -256,7 +256,6 @@ def _header_export_diari() -> list[str]:
         "Impresa 2 — Posti d'azione", "Impresa 2 — Esiti specialità",
         # Missione
         "Missione — Titolo", "Missione — Data", "Missione — Descrizione",
-        "Missione — Posti d'azione",
         # Relazione finale (CRP)
         "RF — Sintesi 1ª impresa", "RF — Sintesi 2ª impresa",
         "RF — Sintesi missione", "RF — Considerazioni", "RF — Specialità conquistata",
@@ -283,9 +282,7 @@ def _riga_export_diario(diario, mostra_valutazione: bool) -> list:
     def _posti_azione(qs) -> str:
         parts = []
         for p in qs.all():
-            chi = getattr(p, "chi", "")
-            # Posti d'azione delle imprese (chi/cosa) e della missione (descrizione)
-            cosa = getattr(p, "cosa", "") or getattr(p, "descrizione", "")
+            chi, cosa = p.chi, p.cosa
             if chi and cosa:
                 parts.append(f"{chi}: {cosa}")
             elif cosa:
@@ -361,7 +358,6 @@ def _riga_export_diario(diario, mostra_valutazione: bool) -> list:
         (missione.titolo if missione else ""),
         _d(missione.data) if missione else "",
         (missione.descrizione_svolgimento if missione else ""),
-        _posti_azione(missione.posti_azione) if missione else "",
         # Relazione finale
         (rf.sintesi_impresa_1 if rf else ""),
         (rf.sintesi_impresa_2 if rf else ""),
@@ -396,7 +392,6 @@ def costruisci_tabella_diari(qs, user) -> tuple[list[str], list[list]]:
             "presentazione__membri",
             "imprese__posti_azione",
             "imprese__esiti_specialita",
-            "missione__posti_azione",
         )
     )
 

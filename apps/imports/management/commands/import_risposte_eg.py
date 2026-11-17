@@ -177,7 +177,6 @@ def _import_riga_eg(row: tuple, edizione, dry_run: bool, verbosity: int) -> tupl
         Anagrafica,
         MembroSq,
         Missione,
-        PostoAzioneMissione,
         Presentazione,
         StatoDiario,
         TipoDiario,
@@ -252,7 +251,6 @@ def _import_riga_eg(row: tuple, edizione, dry_run: bool, verbosity: int) -> tupl
                 miss.data                    = _date(row, 44)
                 miss.descrizione_svolgimento = _val(row, 45)
                 miss.save()
-                PostoAzioneMissione.objects.filter(missione=miss).delete()
 
             # --- Transizione stato ---
             if diario.stato == StatoDiario.NON_INIZIATO:

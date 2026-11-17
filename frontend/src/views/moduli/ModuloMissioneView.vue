@@ -57,7 +57,7 @@ const facoltativa = computed(() => diario.value?.stato_moduli?.missione_obbligat
             :righe="6"
             :maxlength="10000"
             etichetta="Descrizione e svolgimento"
-            segnaposto="Descrizione e svolgimento della Missione; che obiettivi vi sono stati dati; quali le tecniche usate; quali competenze ha richiesto la missione e come vi siete divisi i posti d'azione; eventuali problemi, ecc."
+            segnaposto="Descrizione e svolgimento della Missione; che obiettivi vi sono stati dati; quali le tecniche usate; quali competenze ha richiesto la missione; eventuali problemi, ecc."
             :errori="modulo.erroriDi('descrizione_svolgimento')"
             :sola-lettura="solaLettura"
           />

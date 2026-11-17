@@ -199,11 +199,6 @@ def _missione_data(missione) -> dict:
         "titolo": missione.titolo,
         "data": missione.data.isoformat() if missione.data else None,
         "descrizione_svolgimento": missione.descrizione_svolgimento,
-        # Missione() non ancora salvata (GET di un modulo vuoto): nessun posto d'azione
-        "posti_azione": [
-            {"id": p.pk, "descrizione": p.descrizione}
-            for p in (missione.posti_azione.all() if missione.pk else [])
-        ],
     }
 
 
@@ -287,28 +282,6 @@ def _validate_posto_azione(item: dict) -> dict:
 def _apply_posto_azione(obj, fields: dict) -> None:
     obj.chi = fields["chi"]
     obj.cosa = fields["cosa"]
-
-
-def _validate_posto_missione(item: dict) -> dict:
-    errors: dict[str, list] = {}
-    out: dict = {}
-    try:
-        out["id"] = _opt_int_field(item, "id")
-    except ValidationError as e:
-        errors.update(e.message_dict)
-    try:
-        out["descrizione"] = _str_field(item, "descrizione", 300).strip()
-        if not out["descrizione"]:
-            errors["descrizione"] = ["campo obbligatorio"]
-    except ValidationError as e:
-        errors.update(e.message_dict)
-    if errors:
-        raise ValidationError(errors)
-    return out
-
-
-def _apply_posto_missione(obj, fields: dict) -> None:
-    obj.descrizione = fields["descrizione"]
 
 
 def _validate_esito(choices: list[str]):
