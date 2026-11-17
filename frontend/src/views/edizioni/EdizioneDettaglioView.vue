@@ -202,9 +202,9 @@ async function pubblica(): Promise<void> {
           </p>
           <fieldset>
             <legend class="form-label">Diari da pubblicare</legend>
-            <div v-for="o in [{ v: '', l: 'Tutti' }, { v: 'prima', l: 'Solo 1ª scadenza' }, { v: 'seconda', l: 'Solo 2ª scadenza' }]" :key="o.v" class="form-check">
-              <input :id="`${idDialogo}-s-${o.v || 'tutti'}`" v-model="scadenza" class="form-check-input" type="radio" name="scadenza" :value="o.v" />
-              <label :for="`${idDialogo}-s-${o.v || 'tutti'}`" class="form-check-label">{{ o.l }}</label>
+            <div v-for="o in [{ v: '', l: 'Tutti' }, { v: 'prima', l: 'Solo 1ª scadenza' }, { v: 'seconda', l: 'Solo 2ª scadenza' }]" :key="o.v" class="form-field mb-2">
+              <input :id="`${idDialogo}-s-${o.v || 'tutti'}`" v-model="scadenza" class="radio" type="radio" name="scadenza" :value="o.v" />
+              <label :for="`${idDialogo}-s-${o.v || 'tutti'}`">{{ o.l }}</label>
             </div>
           </fieldset>
         </form>

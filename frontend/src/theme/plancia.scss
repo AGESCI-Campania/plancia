@@ -42,6 +42,12 @@
   &.avatar-crp { border-color: #ffc107; background: rgb(255 193 7 / 30%); }
   &.avatar-pgv { border-color: #0dcaf0; background: rgb(13 202 240 / 30%); }
 }
+// Nome e ruolo sotto l'avatar vanno a capo invece di essere tagliati ("Membro Pattuglia
+// Guidoncini Verdi"); da collassata l'etichetta resta nascosta dal tema.
+.ag-sidebar:not(.ag-sidebar--collapsed) .ag-sidebar__user-toggle {
+  white-space: normal;
+  .ag-sidebar__label { white-space: normal; min-width: 0; line-height: 1.25; }
+}
 .ag-sidebar--collapsed .ag-sidebar__section-title {
   font-size: 0;
   padding: .25rem .5rem;

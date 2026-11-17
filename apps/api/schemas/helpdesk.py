@@ -16,7 +16,7 @@ class UtenteTicketSchema(Schema):
 
     @staticmethod
     def resolve_nome(obj) -> str:
-        return obj.get_full_name() or obj.email
+        return obj.nome_completo
 
 
 class DiarioBreveSchema(Schema):

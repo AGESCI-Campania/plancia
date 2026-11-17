@@ -47,7 +47,7 @@ def _ha_ruolo(user, ruoli) -> bool:
 
 
 def _nome(u) -> str | None:
-    return (u.get_full_name() or u.email) if u else None
+    return u.nome_completo if u else None
 
 
 def _azioni(val, user) -> AzioniValutazioneSchema:
@@ -94,7 +94,7 @@ def _val_schema(val, user=None) -> ValutazioneApiSchema:
         pubblicata=val.pubblicata,
         assegnazioni=[
             AssegnazionePGVApiSchema(
-                pgv_pk=a.pgv_id, pgv_nome=a.pgv.get_full_name() or a.pgv.email,
+                pgv_pk=a.pgv_id, pgv_nome=a.pgv.nome_completo,
                 pgv_email=a.pgv.email,
             )
             for a in val.assegnazioni_pgv.select_related("pgv")

@@ -367,13 +367,13 @@ onMounted(() => {
 
   <FinestraDialogo v-model:aperta="dialogoDiario" :titolo="`Inviti di ${rigaInvio?.squadriglia ?? ''}`">
     <p class="mb-4">Invia un invito per questo diario a:</p>
-    <div class="form-check mb-2">
-      <input id="invio-diario-csq" v-model="ruoliDiario" class="form-check-input" type="checkbox" value="csq" />
-      <label for="invio-diario-csq" class="form-check-label">Capo Squadriglia</label>
+    <div class="form-field mb-2">
+      <input id="invio-diario-csq" v-model="ruoliDiario" class="check" type="checkbox" value="csq" />
+      <label for="invio-diario-csq">Capo Squadriglia</label>
     </div>
-    <div class="form-check mb-4">
-      <input id="invio-diario-crp" v-model="ruoliDiario" class="form-check-input" type="checkbox" value="crp" />
-      <label for="invio-diario-crp" class="form-check-label">Capo Reparto</label>
+    <div class="form-field mb-4">
+      <input id="invio-diario-crp" v-model="ruoliDiario" class="check" type="checkbox" value="crp" />
+      <label for="invio-diario-crp">Capo Reparto</label>
     </div>
     <p class="small fg-2 mb-0">
       Serve un account già collegato al socio. A chi ha già ricevuto un invito conviene "Reinvia", che

@@ -57,6 +57,16 @@ const totale = computed(() => elenco.dati.value?.count ?? 0)
 const filtriAttivi = computed(() =>
   Boolean(q.value || zona.value || gruppo.value || specialita.value || stato.value || tipo.value),
 )
+// Con pochi diari (il Capo Squadriglia ne vede uno) i filtri sono solo rumore: compaiono
+// quando l'elenco senza filtri supera la pagina più piccola.
+const totaleSenzaFiltri = ref<number | null>(null)
+watch(
+  () => elenco.dati.value,
+  (dati) => {
+    if (dati && !filtriAttivi.value) totaleSenzaFiltri.value = dati.count
+  },
+)
+const mostraFiltri = computed(() => filtriAttivi.value || (totaleSenzaFiltri.value ?? 0) > PER_PAGINA[0]!)
 
 onMounted(() => {
   void filtri.esegui()
@@ -75,6 +85,7 @@ watch(offset, () => void elenco.esegui())
 watch(
   () => props.edizioneId,
   () => {
+    totaleSenzaFiltri.value = null
     void filtri.esegui()
     ricarica()
   },
@@ -128,7 +139,7 @@ const COLONNE = [
   <section aria-labelledby="titolo-diari">
     <h2 id="titolo-diari" class="h4 mb-4">Diari di bordo</h2>
 
-    <form class="row g-3 mb-5 align-items-end" role="search" aria-label="Filtri dei diari" @submit.prevent>
+    <form v-if="mostraFiltri" class="row g-3 mb-5 align-items-end" role="search" aria-label="Filtri dei diari" @submit.prevent>
       <div class="col-12 md:col-4">
         <label for="diari-cerca" class="form-label d-block small fw-semibold">Cerca Capo Reparto / Capo Squadriglia</label>
         <input id="diari-cerca" v-model="q" type="search" class="form-control form-control-sm" placeholder="Cognome o nome…" autocomplete="off" />
@@ -257,7 +268,7 @@ const COLONNE = [
         </table>
       </div>
       <PaginazioneElenco v-if="limite !== TUTTI" v-model:offset="offset" :totale="totale" :limite="limite" />
-      <p v-else class="small fg-2">{{ totale }} diari</p>
+      <p v-else-if="totale > 1" class="small fg-2">{{ totale }} diari</p>
     </StatoCaricamento>
   </section>
 </template>

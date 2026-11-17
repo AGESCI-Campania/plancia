@@ -46,7 +46,8 @@ class User(AbstractUser):
     def nome_completo(self) -> str:
         if self.socio:
             return f"{self.socio.cognome} {self.socio.nome}"
-        return self.get_full_name() or self.email
+        # Stesso ordine dei soci (Cognome Nome) in tutta l'interfaccia.
+        return f"{self.last_name} {self.first_name}".strip() or self.email
 
     def ha_ruolo(self, *ruoli: str) -> bool:
         return self.ruolo in ruoli

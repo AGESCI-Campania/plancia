@@ -180,7 +180,7 @@ def _dilazione_schema(d) -> DilazioneSchema:
         squadriglia=d.diario.squadriglia.nome,
         nuova_scadenza=d.nuova_scadenza,
         motivazione=d.motivazione,
-        concessa_da=(d.concessa_da.get_full_name() or d.concessa_da.email) if d.concessa_da else None,
+        concessa_da=d.concessa_da.nome_completo if d.concessa_da else None,
         creata_at=d.creata_at,
     )
 
