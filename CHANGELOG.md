@@ -4,6 +4,18 @@ Una sezione per release: `## X.Y.Z — AAAA-MM-GG`, dalla più recente. `scripts
 mostra le sezioni tra la versione installata e quella nuova; le note della GitHub Release si
 copiano da qui.
 
+## 3.0.5 — 2026-11-17
+
+- **Aggiornamento non riuscito con il database cambiato**: se la versione nuova migra il database
+  e poi non parte, `scripts/aggiorna.sh` rimette anche le immagini della versione precedente (prima
+  restavano quelle rotte e un riavvio le rimetteva in piedi), ferma `web`, `worker`, `beat` e
+  `flower` e lascia acceso `nginx`: la SPA si carica e i percorsi di Django mostrano la pagina di
+  servizio non disponibile, invece del 502 di Caddy. La procedura per ripristinare il backup e
+  ripartire è nel README («Aggiornamento non riuscito con il database cambiato»).
+
+Server: la correzione vale per gli aggiornamenti che partono dalla 3.0.5 (lo script che gira è
+quello della versione installata). Installarla prima di una release con migrazioni.
+
 ## 3.0.4 — 2026-11-17
 
 - **Immagine del profilo da SSO AGESCI Campania**: con la 3.0.3 non arrivava. La configurazione

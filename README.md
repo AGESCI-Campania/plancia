@@ -127,6 +127,22 @@ database (`backups/`, ultimi 10), costruisce le immagini tenendo quelle in uso c
 precedente (senza ricostruire); se il database era già stato migrato resta in manutenzione e
 indica il backup da ripristinare. Mai lanciarlo con `sudo` o da root.
 
+**Aggiornamento non riuscito con il database cambiato:** `aggiorna.sh` ha già rimesso il codice
+e le immagini della versione precedente, fermato `web`, `worker`, `beat` (e `flower`) e lasciato
+acceso `nginx` (la SPA si carica, le API rispondono con la pagina di servizio non disponibile).
+Non riavviare i servizi prima di aver ripristinato il backup indicato nel messaggio
+(`backups/plancia-db-…-pre-<versione>.sql.gz`):
+```bash
+sudo -iu agesci
+cd /opt/plancia
+docker compose exec -T db sh -c 'dropdb -U "$POSTGRES_USER" "$POSTGRES_DB" && createdb -U "$POSTGRES_USER" "$POSTGRES_DB"'
+gunzip -c backups/<file indicato> | docker compose exec -T db sh -c 'psql -q -U "$POSTGRES_USER" "$POSTGRES_DB"'
+docker compose up -d --wait
+docker compose exec -T web uv run python manage.py manutenzione disattiva
+```
+Il backup è stato fatto con la manutenzione già attiva: l'ultimo comando serve sempre. Poi
+segnalare il problema della release con il log dell'aggiornamento.
+
 **Rilascio di una versione** (dal Mac, *prima* dell'aggiornamento del server): versione in
 `pyproject.toml`, sezione in `CHANGELOG.md`, commit su `main`, poi `git tag vX.Y.Z && git push
 origin vX.Y.Z` e `gh release create vX.Y.Z` con le note della sezione del changelog.

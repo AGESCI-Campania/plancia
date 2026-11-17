@@ -411,7 +411,10 @@ In sintesi:
 - `aggiorna.sh [vX.Y.Z]` — passa a una release (tag; repo in detached HEAD): albero pulito,
   novità dal `CHANGELOG.md`, controllo variabili nuove, manutenzione, **backup DB** in
   `backups/`, checkout del tag, build, `up -d`, attesa `healthy`, ritorno automatico alla
-  versione precedente se la nuova non risponde, unit systemd aggiornate.
+  versione precedente se la nuova non risponde, unit systemd aggiornate. Se intanto il DB è
+  stato migrato: immagini precedenti, `web/worker/beat/flower` fermi, `nginx` acceso con
+  `--no-deps` (dipende da `web` healthy: senza, Caddy dà 502), manutenzione attiva; ripristino
+  nel README («Aggiornamento non riuscito con il database cambiato»).
 - `backup.sh` — DB + `.env` + media in un archivio; timer `plancia-backup.timer` alle 02:30.
 - `_comune.sh` è una **copia identica** di quello di `agesci-campania-web-frontend` (e di
   Sestante): non modificarlo qui, riallinearlo copiandolo. Funzioni Plancia in `_plancia.sh`.
