@@ -44,3 +44,8 @@ memory/
 
 # Backup del database e archivi creati da scripts/aggiorna.sh e scripts/backup.sh
 backups/
+
+# Worktree degli agenti di Claude Code
+.claude/worktrees/
+# Richieste/stato degli aggiornamenti dal web (bind mount, scritti a runtime)
+/aggiornamenti/

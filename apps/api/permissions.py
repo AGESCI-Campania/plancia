@@ -1,7 +1,9 @@
 # apps/api/permissions.py
 """Helper di permesso usati dai router API.
 
-Replicano le regole di visibilità delle view web — non delegano a quelle view.
+Le regole di visibilità stanno in `apps.diaries.visibility`, quelle sulle azioni FSM e di
+valutazione in `apps.evaluations.actions`, quelle sui diari (moduli, allegati, PDF) in
+`apps.diaries.permessi`: qui solo i controlli d'accesso per ruolo.
 """
 from __future__ import annotations
 
@@ -16,38 +18,33 @@ def is_staff_plancia(user: User) -> bool:
     return user.is_staff_plancia or user.is_superuser
 
 
+def richiedi_ruolo(user: User, *ruoli: str) -> None:
+    """403 se il ruolo attivo non è tra `ruoli` (il superuser passa sempre)."""
+    from django.core.exceptions import PermissionDenied
+
+    if not (user.is_superuser or user.ruolo in ruoli):
+        raise PermissionDenied("Il tuo ruolo non consente questa operazione.")
+
+
+def richiedi_staff(user: User) -> None:
+    """403 se l'utente non è Admin, Segreteria o Incaricato EG."""
+    from django.core.exceptions import PermissionDenied
+
+    if not is_staff_plancia(user):
+        raise PermissionDenied("Operazione riservata alla gestione della piattaforma.")
+
+
+def richiedi_admin(user: User) -> None:
+    from apps.accounts.models import Ruolo
+
+    richiedi_ruolo(user, Ruolo.ADMIN)
+
+
 def puo_vedere_diario(user: User, diario: Diario) -> bool:
-    """Replica la logica di EdizioneDetailView._diari_visibili."""
-    if is_staff_plancia(user):
-        return True
-    if user.ruolo == "pgv":
-        return True
-    if user.ruolo == "crp" and user.socio:
-        return diario.crp_id == user.socio.pk
-    if user.ruolo == "csq" and user.socio:
-        return diario.csq_id == user.socio.pk
-    return False
+    """Il diario è tra quelli di `diari_visibili` (unica fonte di verità della visibilità)."""
+    from apps.diaries.visibility import diari_visibili
 
-
-def puo_editare_diario(user: User, diario: Diario) -> bool:
-    """Replica _puo_editare dei moduli CSQ: stato ∈ {NON_INIZIATO, IN_COMPILAZIONE} e ruolo CSQ."""
-    from apps.diaries.models import StatoDiario
-
-    if user.ruolo != "csq" or not user.socio:
-        return False
-    if diario.csq_id != user.socio.pk:
-        return False
-    return diario.stato in (StatoDiario.NON_INIZIATO, StatoDiario.IN_COMPILAZIONE)
-
-
-def puo_editare_relazione_finale(user: User, diario: Diario) -> bool:
-    from apps.diaries.models import StatoDiario
-
-    if user.ruolo != "crp" or not user.socio:
-        return False
-    if diario.crp_id != user.socio.pk:
-        return False
-    return diario.stato == StatoDiario.RELAZIONE_FINALE
+    return diari_visibili(user).filter(pk=diario.pk).exists()
 
 
 def puo_vedere_valutazione(user: User, diario: Diario) -> bool:

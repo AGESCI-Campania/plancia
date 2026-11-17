@@ -100,6 +100,75 @@ def crea_cartella(
     return folder["id"]
 
 
+def elenca_cartelle(
+    credenziali: DriveCredenziali, q: str = "", parent_id: str | None = None
+) -> list[dict]:
+    """Prime 20 cartelle (non cestinate) dell'account, filtrate per nome: `[{id, name}]`.
+
+    Con `parent_id` solo le sottocartelle dirette di quella cartella (navigazione nel picker).
+    """
+    service = _build_drive_service(credenziali)
+    query = "mimeType='application/vnd.google-apps.folder' and trashed=false"
+    q = (q or "").strip().replace("'", "")
+    if q:
+        query += f" and name contains '{q}'"
+    parent = (parent_id or "").strip().replace("'", "")
+    if parent:
+        query += f" and '{parent}' in parents"
+    results = (
+        service.files()
+        .list(q=query, pageSize=20, fields="files(id,name)", orderBy="name")
+        .execute()
+    )
+    return results.get("files", [])
+
+
+def info_cartella(credenziali: DriveCredenziali, folder_id: str) -> dict:
+    """Nome e link (`webViewLink`) di una cartella Drive: `{name, url}`."""
+    service = _build_drive_service(credenziali)
+    meta = service.files().get(fileId=folder_id, fields="id,name,webViewLink").execute()
+    return {"name": meta.get("name", ""), "url": meta.get("webViewLink", "")}
+
+
+def configura_cartelle_edizione(
+    edizione, allegati_id: str, output_id: str, formato: str = ""
+) -> bool:
+    """Salva cartelle Drive e formato nome dell'edizione; ritorna `cartelle_configurate`.
+
+    Rifiuta (`StatoNonValido`) se la configurazione è già bloccata: una volta valorizzati
+    cartella allegati, cartella output e formato, non si possono più modificare.
+    Un formato non valido solleva `ValidationError` sul campo `cartella_diario_format`.
+    Formato vuoto = si mantiene quello attuale.
+    """
+    from django.core.exceptions import ValidationError
+
+    from apps.diaries.service import valida_formato_cartella
+    from apps.evaluations.actions import StatoNonValido
+
+    if edizione.cartelle_configurate:
+        raise StatoNonValido(
+            "Configurazione cartelle Drive bloccata: le cartelle e il formato "
+            "non possono essere modificati dopo la prima configurazione."
+        )
+    formato = (formato or "").strip()
+    errore = valida_formato_cartella(formato) if formato else None
+    if errore:
+        raise ValidationError({"cartella_diario_format": [f"Formato non valido: {errore}"]})
+
+    edizione.drive_folder_allegati_id = (allegati_id or "").strip()
+    edizione.drive_folder_output_id = (output_id or "").strip()
+    if formato:
+        edizione.cartella_diario_format = formato
+    edizione.save(
+        update_fields=[
+            "drive_folder_allegati_id",
+            "drive_folder_output_id",
+            "cartella_diario_format",
+        ]
+    )
+    return edizione.cartelle_configurate
+
+
 def carica_allegato_drive(allegato) -> None:
     """Carica un Allegato su Drive nella sottocartella del diario e aggiorna stato_sync.
 

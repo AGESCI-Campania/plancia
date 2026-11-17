@@ -1,0 +1,37 @@
+// =============================================================
+//  _forms.scss — validazione form e label (override deliberati)
+// =============================================================
+
+// I nostri div di errore (django/forms/errors/list/default.html,
+// vedi agesci_theme.forms.AgesciFormRenderer) vengono renderizzati SOLO
+// quando il campo ha davvero un errore: non serve quindi il meccanismo di
+// Bootstrap che nasconde .invalid-feedback finché non è preceduto da un
+// fratello .is-invalid nello stesso genitore. Questo permette anche di
+// avvolgere un campo (es. il toggle password in .input-group) senza perdere
+// la visualizzazione dell'errore, che altrimenti non sarebbe più fratello
+// diretto dell'input. NON rimuovere questa regola pensando sia superflua:
+// senza, gli errori spariscono silenziosamente ogni volta che il campo è
+// avvolto in un wrapper.
+.invalid-feedback {
+  display: block;
+}
+
+// Bootstrap 6: in .form-field le label di Django (label_tag, senza .form-label)
+// prendono lo stesso peso delle .form-label; quelle dei checkbox stanno in
+// .form-field-content e non sono figlie dirette, quindi restano normali.
+// Escluse le label che fanno da bordo del campo (form adorn: label.form-control).
+.form-field > label:not(.form-label, .form-control) {
+  font-weight: 500;
+}
+
+// Il multiselect (button.form-control + .menu) e' un wrapper: il menu si
+// posiziona rispetto a lui.
+.ag-multiselect {
+  position: relative;
+}
+
+// Chip input (widget InputChip): Bootstrap 6 colora di rosso il bordo di
+// .form-control.is-invalid, ma .chip-input non e' un .form-control.
+.chip-input.is-invalid {
+  --bs-control-border-color: var(--bs-danger-border);
+}

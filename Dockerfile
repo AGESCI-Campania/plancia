@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM python:3.14-slim AS base
+FROM python:3.14.10-slim-trixie AS base
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -16,6 +16,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # reinstallare a runtime le dipendenze di sviluppo)
 COPY --from=ghcr.io/astral-sh/uv:0.13.8 /uv /uvx /bin/
 
+# Utente non root con uid/gid del proprietario del repo sull'host (agesci), passati dagli
+# script: i file scritti nei bind mount (logs/, aggiornamenti/) restano suoi.
+ARG APP_UID=1000
+ARG APP_GID=1000
+RUN groupadd --non-unique --gid "$APP_GID" plancia \
+    && useradd --non-unique --uid "$APP_UID" --gid "$APP_GID" --home-dir /home/plancia --create-home plancia
+
 WORKDIR /app
 
 # Dipendenze (layer cache)
@@ -29,7 +36,11 @@ COPY . .
 RUN uv run python manage.py collectstatic --noinput
 
 COPY deploy/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh \
+    && mkdir -p /app/logs/email /app/media \
+    && chown -R plancia:plancia /app/logs /app/media
+
+USER plancia
 
 EXPOSE 8000
 ENTRYPOINT ["/entrypoint.sh"]

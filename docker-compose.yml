@@ -22,6 +22,7 @@ x-app: &app
   volumes:
     - ./logs:/app/logs              # log Django persistenti sull'host
     - plancia_media:/app/media
+    - ./aggiornamenti:/app/aggiornamenti   # richieste/stato degli aggiornamenti dal web (runner sull'host)
   depends_on:
     db:
       condition: service_healthy
@@ -32,7 +33,11 @@ x-app: &app
 services:
   web:
     <<: *app
-    build: .
+    build:
+      context: .
+      args:
+        APP_UID: ${APP_UID:-1000}     # esportati da scripts/_plancia.sh (uid/gid di agesci)
+        APP_GID: ${APP_GID:-1000}
     environment:
       <<: *app-env
       ESEGUI_MIGRAZIONI: "1"        # solo il web applica le migrazioni all'avvio (entrypoint)
@@ -54,7 +59,7 @@ services:
 
   worker:
     <<: *app
-    command: uv run celery -A config worker -l info
+    command: uv run celery -A config worker -l info --concurrency 2   # memoria: 2 processi bastano
     healthcheck:
       test: ["CMD-SHELL", "uv run celery -A config inspect ping -d celery@$$(hostname) --timeout 10"]
       interval: 60s
@@ -69,11 +74,16 @@ services:
       - ./logs:/app/logs
 
   nginx:
-    image: nginx:1.30-alpine
+    # SPA costruita + proxy verso Django (frontend/Dockerfile, deploy/nginx/default.conf.template)
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    image: plancia-nginx:locale
+    pull_policy: never
     environment:
       NGINX_ENTRYPOINT_LOCAL_RESOLVERS: "1"   # vedi deploy/nginx/default.conf.template
     volumes:
-      - ./deploy/nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - plancia_media:/srv/media:ro          # solo /media/mail_images/ è servito
     depends_on:
       web:
         condition: service_healthy
@@ -83,20 +93,21 @@ services:
         aliases:
           - plancia-nginx
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/nginx-health"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/nginx-health && wget -q -O /dev/null http://127.0.0.1/index.html"]
       interval: 30s
       timeout: 5s
       retries: 3
     restart: unless-stopped
 
   db:
-    image: postgres:17
+    image: postgres:18.7-trixie
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-plancia}
       POSTGRES_USER: ${POSTGRES_USER:-plancia}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD mancante in .env}
     volumes:
-      - plancia_db:/var/lib/postgresql/data
+      # Dalla 18 i dati stanno in /var/lib/postgresql/18/docker (PGDATA): si monta la cartella sopra
+      - plancia_db:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
       interval: 10s
@@ -106,7 +117,7 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:8.8-alpine
+    image: redis:8.8.4-alpine
     volumes:
       - plancia_redis:/data
     healthcheck:
@@ -117,7 +128,7 @@ services:
     restart: unless-stopped
 
   mailpit:
-    image: axllent/mailpit:v1.33
+    image: axllent/mailpit:v1.33.1
     # SMTP interno + web UI su /mailadmin/ tramite proxy Django (solo Admin).
     # Da usare solo con la modalità debug Mailpit in Impostazioni.
     profiles: ["mailpit"]

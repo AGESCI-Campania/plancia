@@ -50,3 +50,6 @@ class RigaImportazione(models.Model):
         "org.Socio", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )
     note = models.CharField(max_length=255, blank=True)
+
+    def __str__(self) -> str:
+        return f"Riga {self.numero} ({self.get_stato_match_display()})"

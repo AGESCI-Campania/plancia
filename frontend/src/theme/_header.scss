@@ -1,0 +1,128 @@
+// =============================================================
+//  _header.scss — Header a due barre v2
+// =============================================================
+
+// ── Barra superiore (sfondo primario) ────────────────────────────────────────
+.ag-header-top {
+  background-color: var(--ag-primary);
+  color: var(--ag-on-primary);
+
+  .ag-header-brand {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    color: var(--ag-on-primary);
+    text-decoration: none;
+    margin-right: auto;
+
+    &:hover { opacity: .9; }
+    img { height: 40px; width: auto; }
+  }
+
+  .ag-header-nav {
+    .nav-link {
+      color: var(--ag-on-primary);
+      opacity: .85;
+      font-size: .8rem;
+      text-align: center;
+      padding: .4rem .75rem;
+
+      // :focus e .show: Bootstrap 6 da' lo sfondo chiaro a .nav-link:focus, che
+      // resterebbe sotto il testo bianco (es. il pulsante "Altro" del nav overflow).
+      &:hover,
+      &:focus,
+      &.active,
+      &.show {
+        opacity: 1;
+        background-color: rgba(0, 0, 0, .12);
+        border-radius: .375rem;
+      }
+
+      .ag-nav-icon {
+        display: block;
+        margin: 0 auto .2rem;
+      }
+    }
+  }
+
+  // AGESCI_THEME_HEADER_NAV_OVERFLOW: il wrapper .nav-overflow di Bootstrap 6
+  // prende tutto lo spazio libero (flex: 1 1 0) e la nav resta allineata a
+  // destra, come senza overflow.
+  .ag-header-nav-overflow > .ag-header-nav {
+    justify-content: flex-end;
+  }
+
+  .ag-header-toggler {
+    background: none;
+    border: 1px solid rgba(255, 255, 255, .35);
+    border-radius: .375rem;
+    padding: .375rem .5rem;
+    color: var(--ag-on-primary);
+    cursor: pointer;
+    line-height: 1;
+
+    &:focus { outline: none; box-shadow: 0 0 0 .2rem rgba(255, 255, 255, .25); }
+  }
+}
+
+// ── Barra inferiore (ricerca + azioni) ────────────────────────────────────────
+.ag-header-bottom {
+  background-color: var(--bs-bg-body, #fff);
+  border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+}
+
+// ── Drawer mobile (Bootstrap 6: <dialog class="drawer">) ───────────────────────
+#agOffcanvas {
+  // BS6 lo rende un pannello "floating" (inset + angoli): qui a tutta altezza, come prima
+  --bs-drawer-inset: 0;
+  --bs-drawer-border-radius: 0;
+  overflow: hidden;
+
+  .ag-offcanvas-header {
+    background-color: var(--ag-primary);
+    color: var(--ag-on-primary);
+    padding: .75rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    .ag-offcanvas-title {
+      font-weight: 700;
+      font-size: 1rem;
+      margin: 0;
+      color: var(--ag-on-primary);
+
+      img { height: 32px; width: auto; margin-right: .5rem; vertical-align: middle; }
+    }
+
+    .ag-offcanvas-close {
+      background: none;
+      border: none;
+      color: var(--ag-on-primary);
+      cursor: pointer;
+      padding: .25rem;
+      line-height: 1;
+      border-radius: .25rem;
+
+      &:focus { outline: none; box-shadow: 0 0 0 .2rem rgba(255, 255, 255, .25); }
+    }
+  }
+
+  .drawer-body {
+    padding-top: .5rem;
+
+    .nav-link {
+      color: var(--bs-fg-body, #212529);
+      padding: .6rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      border-radius: .375rem;
+
+      &:hover, &.active {
+        background-color: var(--ag-primary-subtle);
+        color: var(--ag-primary);
+      }
+    }
+  }
+}

@@ -73,7 +73,7 @@ def leggi_csv(path: str, delimiter: str | None = None) -> list[dict]:
 
     header_row = all_rows[0]
     return [
-        {k: v for k, v in zip(header_row, row) if k is not None and k.strip() != ""}
+        {k: v for k, v in zip(header_row, row, strict=False) if k is not None and k.strip() != ""}
         for row in all_rows[1:]
         if any(v.strip() for v in row if v)
     ]

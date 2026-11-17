@@ -10,8 +10,16 @@ class EsitoValutazione(models.TextChoices):
 
 class StatoValutazione(models.TextChoices):
     ASSEGNATA = "assegnata", "Assegnata"
-    IN_REVISIONE = "in_revisione", "In revisione (proposta PGV)"
+    IN_REVISIONE = "in_revisione", "In revisione (proposta della Pattuglia GV)"
     CONFERMATA = "confermata", "Confermata"
+
+
+#: Esito della valutazione → stato del diario corrispondente (valori di `StatoDiario`).
+_STATO_DA_ESITO: dict[str, str] = {
+    EsitoValutazione.APPROVATA: "approvato",
+    EsitoValutazione.NON_APPROVATA: "non_approvato",
+    EsitoValutazione.MAGGIORI_INFO: "maggiori_info",
+}
 
 
 class Valutazione(models.Model):
@@ -27,7 +35,8 @@ class Valutazione(models.Model):
     diario = models.OneToOneField(
         "diaries.Diario", on_delete=models.CASCADE, related_name="valutazione"
     )
-    esito = models.CharField(
+    # NULL = nessun esito ancora (le regole e le query usano `is None` / `__isnull`)
+    esito = models.CharField(  # noqa: DJ001
         max_length=20, choices=EsitoValutazione.choices, null=True, blank=True
     )
     stato = models.CharField(
@@ -47,7 +56,7 @@ class Valutazione(models.Model):
         blank=True,
         related_name="valutazioni_confermate",
     )
-    proposta_esito = models.CharField(
+    proposta_esito = models.CharField(  # noqa: DJ001 — NULL = nessuna proposta
         max_length=20,
         choices=EsitoValutazione.choices,
         null=True,
@@ -83,9 +92,14 @@ class Valutazione(models.Model):
         elif self.esito == EsitoValutazione.MAGGIORI_INFO:
             if d.stato not in (StatoDiario.MAGGIORI_INFO,):
                 d.richiedi_info()
-        elif self.stato == StatoValutazione.IN_REVISIONE and self.proposta_esito is not None:
-            if d.stato != StatoDiario.IN_REVISIONE:
-                d.proponi(self.proposta_esito)
+        elif (
+            self.stato == StatoValutazione.IN_REVISIONE
+            and self.proposta_esito is not None
+            and d.stato != StatoDiario.IN_REVISIONE
+        ):
+            # Diario.proponi si aspetta lo stato di destinazione (approvato/non_approvato),
+            # non l'esito della valutazione (approvata/non_approvata).
+            d.proponi(_STATO_DA_ESITO.get(self.proposta_esito, self.proposta_esito))
 
     # --- Azioni ---------------------------------------------------------------
 
@@ -135,6 +149,14 @@ class Valutazione(models.Model):
         """Incaricato modifica l'esito fino alla pubblicazione (docs sez. 6 r.4)."""
         if self.pubblicata:
             raise ValueError("Non è possibile modificare un esito già pubblicato.")
+        from apps.diaries.models import StatoDiario
+
+        # Rettifica di un esito già espresso (non pubblicato): il diario torna "in valutazione"
+        # così che la sincronizzazione applichi la transizione verso il nuovo esito.
+        if self.diario.stato in (
+            StatoDiario.APPROVATO, StatoDiario.NON_APPROVATO, StatoDiario.MAGGIORI_INFO,
+        ):
+            self.diario.stato = StatoDiario.IN_VALUTAZIONE
         self.esito = esito
         self.stato = StatoValutazione.CONFERMATA
         self.confermata_da = incaricato

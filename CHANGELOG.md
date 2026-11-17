@@ -1,0 +1,380 @@
+# Changelog di Plancia
+
+Una sezione per release: `## X.Y.Z — AAAA-MM-GG`, dalla più recente. `scripts/aggiorna.sh`
+mostra le sezioni tra la versione installata e quella nuova; le note della GitHub Release si
+copiano da qui.
+
+## 3.0.0 — 2026-11-17
+
+**Prima versione in produzione.** Le versioni 1.x e 2.x sono state una sperimentazione su larga
+scala, senza dati reali: le loro release restano su GitHub come *pre-release*. Plancia 3.0 si
+installa da zero (database vuoto, migrazioni ripartite da capo) sul nuovo server
+`*.agescicampania.net`; non c'è un percorso di aggiornamento dalla 2.x.
+
+### Plancia 3
+- **Interfaccia nuova**: SPA Vue 3 + Bootstrap 6 (`frontend/`), installabile come PWA con icona
+  "Diario di bordo"; tutto passa dall'API `/api/v1` (django-ninja), login e MFA compresi
+  (allauth headless). Versione dell'app e del server nel footer, avviso quando la PWA va aggiornata.
+- **Aggiornamenti**: `scripts/aggiorna.sh` sulle release (tag), con novità, manutenzione, backup e
+  ritorno automatico alla versione precedente; aggiornamento avviabile dagli Admin da
+  Impostazioni → Aggiornamenti (unit `plancia-aggiorna.path` sull'host).
+- **Dipendenze** alla latest (Django 6.1, PostgreSQL 18, …); email sui `MAILERS` di Django 6.1;
+  container non root.
+- **Sicurezza**: controlli di ruolo delle viste prima dell'esecuzione; Pattuglia GV limitata ai
+  diari assegnati; MFA obbligatoria anche sull'API; il link dell'invito non apre più la sessione
+  ad account con credenziali proprie.
+- **Offline**: moduli e foto compilabili senza rete, coda sul dispositivo con invio automatico
+  alla riconnessione e risoluzione dei conflitti dalla pagina del modulo.
+- **Backend solo API**: rimosse viste e template Django, gli endpoint PWA 2.x `/api/diari/` e
+  `/api/soci/`, i pacchetti del tema, django-pwa e TinyMCE; allauth `HEADLESS_ONLY`; l'admin Django
+  si apre dal login della SPA (password + MFA); pagine d'errore autonome; CSP finalmente inviata
+  in produzione; migrazioni ripartite da zero (installazione con database vuoto).
+- **Login con email o codice socio**; rate limit dell'API per sessione invece che per IP (con l'IP
+  reale dietro i proxy); immagini dei template email servite; email "imposta la password" per i
+  nuovi utenti di staff funzionante.
+- **Manuale d'uso** riscritto per la nuova interfaccia, screenshot generati con Playwright su dati
+  demo (`manage.py popola_demo`).
+
+### Nuova installazione su `*.agescicampania.net` (preparata in 2.x)
+
+- **Deploy**: stack dietro il Caddy di `agesci-campania-web-frontend` (rete `agesci-proxy`, alias
+  `plancia-nginx`, nginx interno solo HTTP, nessuna porta pubblicata), healthcheck e
+  `restart: unless-stopped` su tutti i servizi, `.env` + `.env.template` al posto di `.env.prod`.
+- **Script** `scripts/installa.sh`, `scripts/aggiorna.sh`, `scripts/backup.sh`; avvio al boot con
+  la unit systemd `plancia.service` e backup notturno con `plancia-backup.timer`. Rimossi
+  `deploy/configure-prod.sh`, `configure-staging.sh`, i template vhost Apache/nginx, lo stack di
+  staging e il backup via cron.
+- **Immagine**: statici generati nel `Dockerfile` (WhiteNoise, niente bind mount
+  `staticfiles/`), `.dockerignore` (niente `.env` né `.venv` nell'immagine), uv fissato, migrazioni
+  solo dal container `web`, endpoint `/healthz/`.
+- **SSO Sestante** su `auth.agescicampania.net`, callback `/accounts/oidc/sestante/login/callback/`;
+  ruoli globali come `Nomina` con `da_sso=True` (revocabili senza toccare i ruoli locali); MFA
+  saltata solo per le sessioni aperte via Sestante (non più per chiunque abbia l'account
+  collegato); login rifiutato per utenti senza email o con email duplicata.
+- **Social login**: pulsanti Google/Microsoft/Apple/Sestante mostrati solo se le credenziali
+  sono configurate.
+- **django-axes**: IP del client letto da `X-Forwarded-For` dietro Caddy + nginx (prima tutti
+  gli utenti avevano l'IP del proxy e un blocco li avrebbe colpiti tutti).
+- Dominio `agescicampania.org` → `agescicampania.net` (host, email, documentazione).
+- **Fix missione**: i posti d'azione della missione erano letti da un accessor inesistente
+  (`posti_azione_missione`): andavano in errore l'API PWA del modulo missione, il dettaglio
+  diario di `/api/v1/diari/<id>` e l'export riassuntivo diari con almeno una missione.
+
+## 2.4.1 — 2026-07-03
+- **Fix MFA pipeline SSO**: `PlanciaMFAAdapter.is_mfa_enabled()` restituisce `False` durante la pipeline di login quando il provider è Sestante. Risolve il doppio TOTP (allauth ≥65 invoca `AuthenticateStage` anche dopo social login se l'utente ha TOTP configurato).
+
+## 2.4.0 — 2026-07-02
+- **SSO Sestante (Fase 1)**: integrazione OIDC con `auth.agescicampania.org` (Authentik). Login con account AGESCI Campania via `allauth.socialaccount.providers.openid_connect`. Auto-provisioning per nuovi utenti; sincronizzazione bidirezionale dei ruoli globali (`admin-multipiattaforma` → Admin, `segreteria` → Segreteria) ad ogni login tramite claim `groups`. Il login locale (email/password/MFA) rimane attivo in parallelo.
+- **Bypass MFA per utenti SSO**: `MFAEnforcementMiddleware` non richiede TOTP agli utenti autenticati tramite Sestante (la MFA è già garantita dall'IdP).
+- **Fix**: lettura del claim `groups` da `extra_data["userinfo"]` anziché da root (struttura allauth ≥65.11).
+- **Documentazione**: `docs/guide/sso_sestante.md` — guida architettura, stato implementazione e vincoli.
+
+## 2.3.1 — 2026-07-01
+- **Documentazione**: `docs/api/overview.md` aggiornato con sezioni rate limiting e app version control; `docs/api/endpoints.md` aggiornato con endpoint `GET /api/v1/app-status`; `CLAUDE.md` aggiornato con router `system` e i due nuovi middleware API.
+
+## 2.3.0 — 2026-07-01
+- **Rate limiting API** (`ApiRateLimitMiddleware`): fixed-window Redis su `/api/v1/`, limiti per minuto e per ora configurabili in Impostazioni → API. Identifica il client tramite `X-Session-Token` o IP; risponde `429` con header `Retry-After`.
+- **App version control** (`AppVersionMiddleware`): legge l'header `X-App-Version` su ogni chiamata `/api/v1/`; restituisce `426 Upgrade Required` se la versione è inferiore a `app_versione_minima`; aggiunge `X-App-Upgrade-Warning: true` se è inferiore a `app_versione_deprecata`.
+- **`GET /api/v1/app-status`**: endpoint pubblico (no auth) per il controllo di compatibilità al lancio dell'app; restituisce `upgrade_required`, `upgrade_available`, `versione_minima`, `funzioni_limitate` e `messaggio`.
+- **`Impostazioni`**: nuovi campi rate limiting (`api_ratelimit_abilitato`, `api_ratelimit_per_minuto`, `api_ratelimit_per_ora`) e version control (`app_versione_minima`, `app_versione_deprecata`, `app_messaggio_aggiornamento`, `app_funzioni_limitate`).
+- **Fix**: `Valutazione.applica_esito` non transita più il diario a `IN_REVISIONE` quando `proposta_esito` è `None`.
+
+## 2.2.0 — 2026-06-29
+- **REST API v1** (`/api/v1/`): endpoint completi per lettura, scrittura moduli, transizioni
+  FSM e azioni di valutazione. Autenticazione via sessione web o `X-Session-Token` (allauth
+  headless). Schema OpenAPI interattivo su `/api/v1/docs`. Optimistic locking sui moduli
+  CSQ (campo `version`, risposta `409` su conflitto). CORS configurabile via env.
+- **`apps/evaluations/actions.py`** (nuovo): service layer condiviso tra view web e API per
+  tutte le azioni di valutazione e transizioni FSM; le view web sono state refactorate per
+  delegare a questo layer — nessun cambio di comportamento esterno.
+- **Export riassuntivo diari** (`GET /edizioni/<pk>/export-diari/?formato=xlsx|ods|csv`):
+  foglio unico con tutti i moduli, visibilità filtrata per ruolo, async ibrido a soglia
+  (`EXPORT_DIARI_SOGLIA_ASYNC`, default 50). Aggiunto formato ODS (`odfpy`).
+- **`diari_visibili(user)`** in `apps/diaries/visibility.py`: funzione condivisa tra list
+  view web e API per filtrare i diari accessibili per ruolo.
+- **Documentazione API**: `docs/api/overview.md`, `docs/api/endpoints.md`, `docs/api/export.md`.
+
+## 2.1.0 — 2026-06-27
+- **Viewer inline per PDF, CSV e XLSX su PWA standalone**: sostituisce l'approccio a due
+  tap con una pagina viewer dedicata (`/diari/<pk>/pdf/visualizza/`). Il fetch del file
+  parte al caricamento della pagina; quando pronto il pulsante "Scarica" si attiva con un
+  solo tap. Su iOS PWA usa `navigator.share({ files })`; su Android e desktop mostra
+  l'anteprima PDF nell'`<iframe>` e usa `<a download>`. Script `plancia-file-viewer.js`
+  caricato solo nel viewer, rimosso `plancia-pdf-ios.js` globale.
+- **Excel esiti scaricabile via HTTP** (`/edizioni/<pk>/excel/visualizza/`): genera e serve
+  l'XLSX degli esiti dell'edizione on-demand (sincrono, via `genera_excel_edizione()`).
+  Bottone "Esiti Excel" nella pagina di dettaglio edizione per Admin/Segreteria/Incaricati EG.
+- **Viewer per CSV scarti import** (`/import/<pk>/scarti/visualizza/`): stessa UX del viewer
+  PDF, con pulsante "Scarica" che funziona su PWA iOS e Android.
+
+## 2.0.9 — 2026-06-26
+- **Fix PDF su PWA iOS (parte 5 — due tap + navigator.share)**: il blob URL con
+  attributo `download` (v2.0.8) apre comunque Quick Look su iOS standalone, perché
+  WebKit tratta i blob PDF come navigazione indipendentemente dall'attributo. La causa
+  radice è che `navigator.share({ files })` — l'unica API che mostra il foglio Share
+  nativo con "Apri in Acrobat" — deve essere chiamata durante una user gesture attiva.
+  Dopo un `fetch()` asincrono iOS considera il contesto gesture scaduto. Soluzione a
+  due tap: il 1° tap avvia il fetch in background e cambia il bottone in verde quando
+  il PDF è pronto; il 2° tap (nuova user gesture) chiama `navigator.share({ files })`
+  che mostra il foglio Share nativo. Il fallback per iOS < 15 (no file-sharing)
+  rimane `window.location.href`.
+
+## 2.0.8 — 2026-06-26
+- **Fix PDF su PWA iOS (parte 4 — approccio blob)**: l'approccio v2.0.7 (pagina HTML
+  intermedia + `window.open`) causava una regressione: `window.open` restituisce sempre un
+  riferimento non-null su iOS (non viene "bloccato" in senso tecnico), quindi il fallback
+  con il foglio di condivisione non veniva mai raggiunto, ma la finestra aperta non si
+  comportava come Safari vero — il PDF finiva comunque in Quick Look senza toolbar,
+  bloccando l'utente. Nuovo approccio (ispirato a Sergii Novikov, 2024): `fetch(pdfUrl)`
+  → blob → `URL.createObjectURL()` → `<a download href="blob:...">` click. iOS tratta un
+  blob URL con attributo `download` come un download (mostra il foglio Share/Download
+  nativo con "Apri in Acrobat", "Salva su File", ecc.) invece di una navigazione verso
+  un PDF (Quick Look). Non richiede contesto user-gesture sincrono. Aggiunto anche
+  rilevamento `display-mode: standalone` oltre a `window.navigator.standalone`.
+
+## 2.0.7 — 2026-06-25
+- **Fix apertura PDF su PWA iOS (parte 3)**: il foglio di condivisione nativo (v2.0.6) non
+  mostra le app di lettura PDF installate (Acrobat ecc.) — limite della Web Share API su
+  iOS, che espone solo Mail/Messaggi/AirDrop/Copia/Salva su File/Stampa, non le estensioni
+  "Apri in" delle app. Aggiunta una pagina HTML intermedia (`diaries:pdf_apri`,
+  `DiarioPdfApriView`, `templates/diaries/pdf_apri.html`): aprirla in una nuova finestra da
+  iOS standalone forza la delega della navigazione al vero Safari (le pagine HTML, a
+  differenza dei PDF, non vengono intercettate da Quick Look); il redirect lato client che
+  segue apre quindi il PDF dentro Safari, con la toolbar nativa completa e "Apri in" Acrobat.
+  Il foglio di condivisione resta come fallback se la finestra non si apre (popup bloccato).
+
+## 2.0.6 — 2026-06-25
+- **Fix apertura PDF su PWA iOS (parte 2)**: `target="_blank"` (v2.0.5) non era
+  sufficiente — su iOS standalone WebKit intercetta comunque la navigazione verso un PDF
+  con la sua anteprima Quick Look, senza pulsanti per uscire o condividere, indipendentemente
+  dal `target`. Aggiunto `static/js/plancia-pdf-ios.js`: su iOS standalone intercetta il
+  click sui link al PDF, lo scarica via `fetch` e lo apre con il foglio di condivisione
+  nativo (`navigator.share()`), con Annulla/Salva su File/Condividi sempre disponibili.
+  Su tutte le altre piattaforme il comportamento resta invariato.
+
+## 2.0.5 — 2026-06-25
+- **Fix apertura PDF su PWA iOS**: rimosso l'attributo `download` dai link al PDF diario
+  e sostituito con `target="_blank"`. Su iOS, in modalità standalone (PWA installata), la
+  WebView non ha la toolbar di Safari: navigare verso un PDF apriva un'anteprima a schermo
+  intero senza alcun modo per tornare indietro o scaricare/condividere il file. Con
+  `target="_blank"` il PDF viene aperto nel browser di sistema (Safari), che fornisce la
+  sua toolbar completa.
+
+## 2.0.4 — 2026-06-22
+- **Download PDF diari**: il pulsante "Scarica PDF" ora forza il download del file invece
+  di aprirlo nel viewer integrato del browser (aggiunto attributo `download` sui link).
+
+## 2.0.3 — 2026-06-22
+- **PWA Settings → App su iOS**: aggiunto campo `id: "/"` nel web manifest (override
+  `templates/manifest.json`) — iOS 17.4+ usa `id` per identificare stabilmente la PWA e
+  mostrarla in Impostazioni → App con gestione dello spazio.
+
+## 2.0.2 — 2026-06-22
+- **Fix icona PWA su iOS**: override di `templates/pwa.html` con `{% static %}` per `apple-touch-icon`
+  e `icon-512x512` — `ManifestStaticFilesStorage` genera URL hashati che bustano la cache WebKit
+  automaticamente ad ogni aggiornamento del file.
+
+## 2.0.1 — 2026-06-21
+- **Pulsante indietro mobile nell'header**: nelle pagine con breadcrumb, su schermi stretti (<992px)
+  compare un pulsante `‹` che riporta alla voce precedente della breadcrumb (breadcrumb-aware).
+
+### v2.0.0 (in sviluppo — branch `v2-offline`)
+
+**PWA offline-first**
+
+Il Capo Squadriglia può compilare il Diario di Bordo e allegare foto anche senza connessione
+(in campo, in montagna) e sincronizzare al ritorno della connettività.
+
+- **API JSON moduli 1–5** con optimistic locking (`version` su ogni modulo): il client invia
+  la versione su cui ha basato la modifica; il server rifiuta con 409 se la versione è obsoleta.
+- **Service Worker** (v4): cache asset e pagine per uso offline; network-only per `/accounts/`
+  e `/allauth/` (token CSRF sempre fresco); gestione bfcache iOS (`pageshow`, `visibilitychange`).
+- **IndexedDB + autosave**: i moduli vengono salvati nel browser a ogni modifica; la coda di sync
+  li invia al server al ritorno online.
+- **Coda allegati offline**: le foto selezionate vengono ridimensionate client-side (Canvas → JPEG),
+  accodate in IndexedDB, sincronizzate in automatico. Il flush processa tutti i moduli in coda,
+  non solo quello della pagina attiva.
+- **Auth offline**: se la sessione scade mentre si è offline, la coda viene trattenuta con banner
+  "Hai modifiche in attesa — accedi per sincronizzare"; il sync riparte automaticamente al login.
+- **Badge UI**: indicatore foto in sospeso nell'header; badge connessione offline; badge sync.
+- **Fix iOS PWA**: CSRF al login (PKCE), bfcache restore, preview allegati con fallback locale.
+
+---
+
+### v1.17.1 (12/06/2026)
+
+**Fix passkey — completamento funzionalità**
+- Fix CSRF su iOS Safari dopo login Google: `PlanciaAuthenticateView` non chiama più `begin_authentication()` inutilmente per utenti senza passkey, evitando la scrittura in sessione che causava il mismatch CSRF
+- Fix: aggiunto `MFA_SUPPORTED_TYPES = ["totp", "recovery_codes", "webauthn"]` nelle settings — senza questa impostazione `"webauthn"` non compariva in `SUPPORTED_TYPES` e la sezione passkey restava nascosta
+- Template Bootstrap per tutte le pagine WebAuthn: aggiungi passkey, lista, rinomina, elimina
+- Pulsante "Accedi con passkey" nella pagina di login con attributo `form="mfa_login"` necessario per l'associazione al form nascosto usato da `webauthn.js`
+
+---
+
+### v1.17.0 (12/06/2026)
+
+**Passkey (WebAuthn)**
+- Abilitato il login con passkey: Face ID, Touch ID, Windows Hello e chiavi hardware (YubiKey)
+- Gli utenti possono aggiungere e gestire le passkey dalla pagina **Sicurezza (MFA)** nel menu utente
+- Pulsante "Accedi con passkey" nella pagina di login (visualizzato se l'utente ha passkey registrate)
+- La registrazione autonoma via passkey è disabilitata: l'account deve essere creato tramite il flusso inviti esistente
+- Manuale Admin aggiornato con istruzioni per registrare e usare le passkey
+
+---
+
+### v1.16.1 (10/06/2026)
+
+**PWA/favicon — fix icona su iPhone**
+- Aggiunta `favicon.ico` (16/32/48px), `favicon-32x32.png` e `favicon-16x16.png` generate da `icon-192x192.png`
+- Rimosso `<link rel="apple-touch-icon">` duplicato senza `sizes` che sovrascriveva in Safari il tag corretto con `sizes="180x180"` emesso da django-pwa — l'icona installata su iPhone ora si aggiorna
+
+---
+
+### v1.16.0 (10/06/2026)
+
+**PWA — splash screen e shortcuts**
+- Splash screen dedicati per tutti i dispositivi iOS e iPad (iPhone SE → iPhone 16 Pro Max, tutte le iPad) — schermata di avvio personalizzata durante il caricamento dell'app
+- Shortcuts nell'icona: dopo l'installazione, tasto lungo (Android) o pressione prolungata (iOS 13+) espone i collegamenti rapidi a **Diari**, **Valutazioni** e **Helpdesk**
+- Icone aggiornate: set completo con nuove varianti 180×180 e 1024×1024
+
+**Fix**
+- Timeout sessione 4h e scadenza automatica alla chiusura del browser
+- `_val()` normalizza float interi da openpyxl (es. numeri di telefono salvati con `.0` finale)
+- Rinomina URL interno `allegati_delete` → `allegati_elimina`
+
+---
+
+### v1.15.0 (08/06/2026)
+
+**Email — nome mittente**
+- Nuovo campo "Nome mittente" in Impostazioni → Posta elettronica: le email vengono inviate come `Nome <email@dominio.it>`
+
+**Cache PDF — interruzione generazione massiva**
+- Pulsante "Interrompi" nella pagina Cache PDF: ferma ordinatamente il task Celery dopo il diario in corso (flag cooperativo via Redis); il log riporta "Interrotta" con conteggio parziale
+
+**PWA — prompt di installazione**
+- Icone app (192×192, 512×512, apple-touch-icon 180×180) generate dall'emblema AGESCI Campania
+- Banner verde di installazione: su Android/Chrome gestisce `beforeinstallprompt`; su iOS Safari mostra istruzioni manuali (Share → Aggiungi a Home)
+
+**UI mobile — fix footer**
+- Aggiornamento `django-agesci-campania-theme` 1.1.0 → 1.2.4: layout viewport fisso limitato a ≥992px; su mobile il footer scorre con il contenuto
+
+**Deploy**
+- `collectstatic` va eseguito sull'host prima di `up -d` (il bind mount `./staticfiles` persiste tra i rebuild e sovrascrive i file statici baked nell'immagine)
+
+---
+
+### v1.13.0 (08/06/2026)
+
+**Import Risposte EG — asincrono Celery**
+- Nuovo task `task_import_risposte_eg`: elabora il file xlsx in background, manda email agli Admin all'avvio e al completamento con l'output completo
+- Nuova card "4. Risposte EG" nella pagina Import con upload xlsx e selezione edizione
+
+**Template PDF aggiornato**
+- Dati generali: Capo Squadriglia con email e cell da Anagrafica.csq_* (se disponibili)
+- Presentazione: colonna unica "Nome e cognome" (rimosso cognome separato)
+- Imprese — Posti d'azione: tabella Chi / Cosa (con fallback su `descrizione` per dati pre-migrazione)
+- Imprese — Specialità/brevetti: colonna Chi aggiunta
+- Missione: rimossa sezione Posti d'azione
+
+**Fix**
+- Pulsante Dilazione nascosto quando `stato ≥ INVIATO` (CRP ha già inviato)
+- Eliminazione foto disponibile anche dal dettaglio diario (card Imprese e Missione)
+- Fix `timezone.utc` → `timezone.UTC` in `notifications/views.py` (Python 3.14 / Django 6 compat)
+
+**Test suite: 117 → 138 (+21)**
+- `TestModuliCsqCompleti`: 8 test per logica NUOVO/RINNOVO
+- `TestEliminazioneAllegati`: 5 test per permessi eliminazione per stato e ruolo
+- `TestDilazioneContext`: 4 test per context dilazione
+- `TestNuoviCampiModello`: 4 test per PostoAzione.chi+cosa, EsitoSpecialita.chi, MembroSq.nome, Anagrafica.csq_*
+
+---
+
+### v1.12.0 (08/06/2026)
+
+**Revisione completa UI Diario di Bordo (moduli 1–6)**
+
+*Modulo 1 — Anagrafica*
+- Aggiunti campi Capo Squadriglia (nome, cognome, email, cell) editabili
+- Campo nome squadriglia editabile: rinomina anche le cartelle su Google Drive
+- Selezione tipo partecipazione (Nuovo / Rinnovo) nella sezione Specialità
+- Sezione "Note da import (precompilazione)" sempre in sola lettura
+- Tooltip esplicativi su tutti i campi
+- Abbreviazioni CRP/GV eliminate dall'UI → "Capo Reparto", "Guidoncini Verdi"
+
+*Modulo 2 — Presentazione squadriglia*
+- Membri: solo nome (rimosso il campo cognome separato)
+- 3 righe iniziali preimpostate (Capo Squadriglia, Vice, Squadrigliere)
+- Pulsante "Aggiungi membro" per inserire righe aggiuntive
+
+*Moduli 3/4 — Imprese*
+- Posti d'azione suddivisi in **Chi** e **Cosa** (migrazione automatica dei dati esistenti)
+- Specialità individuali e brevetti di competenza: campo **Chi** per indicare il membro
+- Pulsanti "Aggiungi riga" per posti d'azione, specialità e brevetti
+- Anteprima foto con pulsante di eliminazione (disponibile fino all'invio del Capo Reparto)
+- Tooltip con descrizioni dettagliate per Perché, Come, Cosa, Link esterno
+- Pulizia automatica dei link Jotform presenti nei diari esistenti
+
+*Modulo 5 — Missione*
+- Rimossa sezione "Posti d'azione" (non prevista per la missione)
+- Anteprima foto con pulsante di eliminazione
+- Tooltip su "Descrizione svolgimento"
+
+*Modulo 6 — Relazione finale (Capo Reparto)*
+- Label "Specialità conquistata" → "Ritieni che la specialità di squadriglia sia stata conquistata?"
+- Tooltip con descrizioni dettagliate per tutti i campi
+
+**Dettaglio diario**
+- Card Anagrafica: mostra dati CSQ, tipo partecipazione, precompilazione da import
+- Card Presentazione: membri con solo nome
+- Card Imprese: posti d'azione con Chi in grassetto, specialità/brevetti con Chi
+- Card Missione: rimossa sezione posti d'azione
+
+**Lista diari — filtri a cascata**
+- I menu a tendina (Zona, Gruppo, Specialità, Stato, Tipo) si aggiornano in tempo reale
+  mostrando solo le opzioni presenti nelle righe visibili dopo i filtri attivi
+
+**PDF e Google Drive**
+- Fix: `carica_pdf_diario` ora include sempre la Relazione finale (modulo 6)
+- Drive: prima di caricare un PDF/Excel, l'eventuale versione precedente viene eliminata automaticamente — la cartella di output mantiene solo l'ultima versione
+
+**Footer**
+- Link "Manuale" spostato dalla navbar al footer come ultimo elemento fisso
+- Link sociali: massimo 4 (era 5)
+
+---
+
+### v1.10.0 (07/06/2026)
+
+**PDF diari**
+- Il PDF include ora la **Relazione finale del Capo Reparto** (modulo 6)
+- Accessibile solo a CRP, Incaricati EG e Admin (non al Capo Squadriglia)
+- Compressione immagini nel PDF (480px) — riduzione dimensione ~80%
+- Lock anti-duplicati: impossibile avviare due task paralleli per lo stesso diario
+- Errori task: notifica all'utente richiedente e agli Admin con traceback; log in Impostazioni
+
+**Allegati**
+- Resize automatico al caricamento (default 1024px, configurabile in Impostazioni → Allegati)
+- Conversione automatica in JPEG quality 85
+
+**Impostazioni**
+- Form per sezione con salvataggio indipendente (fix: la validazione email non bloccava più il salvataggio di altre sezioni)
+- Nuova sezione **Sicurezza**: MFA + protezione brute-force (tentativi, cooloff, scadenza tentativi)
+- Sblocco IP in Impostazioni (lista IP bloccati con sblocco singolo o massivo)
+- Nuova sezione **Allegati**: dimensione massima immagini
+- Fix Gmail OAuth2: i campi SMTP manuali vengono nascosti quando OAuth è attivo
+- Tag template nel footer: `{{ titolo }}`, `{{ sottotitolo }}`, `{{ versione }}`, `{{ commit }}`
+- Bottoni **Test SMTP** e **Test provider transazionale** con feedback errore inline
+- Fix XOAUTH2 doppia codifica (errore Gmail 501 Cannot Decode)
+- Fix formato data "Aggiornato il" (lettere a/l/e interpretate come codici Django)
+
+**Monitoraggio**
+- **Flower** (dashboard Celery): avviabile con `COMPOSE_PROFILES=flower docker compose up -d`; accessibile su `/celery/` per gli staff
+- Comandi console per ispezione task: `celery inspect active`, `celery inspect stats`
+
+**Deploy**
+- Documentato il processo deploy corretto: `build --no-cache` + `up -d` (non `restart`)
+- Gunicorn timeout 30s → 120s
+
+---
+

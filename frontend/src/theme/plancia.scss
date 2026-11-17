@@ -1,0 +1,70 @@
+// =============================================================
+//  Tema della SPA: Bootstrap 6 + partial del tema AGESCI Campania
+//  (copiati da django-agesci-campania-theme 3.0.0a3, commit 76e47d7: aggiornarli
+//  ricopiandoli, non modificarli qui) + gli stili propri di Plancia in fondo.
+// =============================================================
+@use "palette";
+@use "branche";
+@use "layout";
+@use "bootstrap-overrides";
+@use "forms";
+@use "header";
+@use "sidebar";
+@use "footer";
+@use "components";
+
+// --- Plancia -------------------------------------------------------------------
+.plancia-badge-versione {
+  font-variant-numeric: tabular-nums;
+}
+
+.icona {
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+  fill: currentColor;
+  flex-shrink: 0;
+}
+
+.plancia-banner-offline {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+// Avatar del menu utente: bordo/colore per ruolo attivo (come la 2.x)
+.ag-sidebar__user-avatar {
+  border: 2px solid transparent;
+  &.avatar-admin { border-color: #dc3545; background: rgb(220 53 69 / 30%); }
+  &.avatar-segreteria { border-color: #0d6efd; background: rgb(13 110 253 / 30%); }
+  &.avatar-incaricato_eg { border-color: #6f42c1; background: rgb(111 66 193 / 30%); }
+  &.avatar-csq { border-color: #198754; background: rgb(25 135 84 / 30%); }
+  &.avatar-crp { border-color: #ffc107; background: rgb(255 193 7 / 30%); }
+  &.avatar-pgv { border-color: #0dcaf0; background: rgb(13 202 240 / 30%); }
+}
+// Nome e ruolo sotto l'avatar vanno a capo invece di essere tagliati ("Membro Pattuglia
+// Guidoncini Verdi"); da collassata l'etichetta resta nascosta dal tema.
+.ag-sidebar:not(.ag-sidebar--collapsed) .ag-sidebar__user-toggle {
+  white-space: normal;
+  .ag-sidebar__label { white-space: normal; min-width: 0; line-height: 1.25; }
+}
+.ag-sidebar--collapsed .ag-sidebar__section-title {
+  font-size: 0;
+  padding: .25rem .5rem;
+  &::after { content: ""; display: block; height: 1px; background: rgb(255 255 255 / 20%); }
+}
+
+// Il footer resta in fondo anche con poco contenuto
+.ag-scroll-area {
+  display: flex;
+  flex-direction: column;
+  > main { flex: 1 0 auto; }
+}
+
+// Tra body e il layout c'è #app: senza min-height 0 i contenitori flex crescono quanto il
+// contenuto e scorre tutta la pagina invece della sola .ag-scroll-area (sidebar e menu utente
+// escono dallo schermo).
+#app,
+.plancia-corpo {
+  min-height: 0;
+}

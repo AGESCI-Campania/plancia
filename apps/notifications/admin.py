@@ -11,11 +11,11 @@ class MailTemplateAdmin(admin.ModelAdmin):
     search_fields = ("chiave", "oggetto")
     readonly_fields = ("aggiornato_at", "tag_help")
 
+    @admin.display(description="Tag disponibili")
     def tag_help(self, obj):
         from django.utils.html import format_html
         tags = ", ".join(f"{{{{ {t} }}}}" for t in obj.tag_disponibili)
         return format_html("<code>{}</code>", tags) if tags else "—"
-    tag_help.short_description = "Tag disponibili"
 
     fieldsets = (
         (None, {"fields": ("chiave", "attivo")}),
@@ -23,10 +23,6 @@ class MailTemplateAdmin(admin.ModelAdmin):
         ("Tag disponibili", {"fields": ("tag_help",)}),
         ("Timestamp", {"fields": ("aggiornato_at",), "classes": ("collapse",)}),
     )
-
-    class Media:
-        # tinymce per il corpo HTML
-        js = ("tinymce/tinymce.min.js",)
 
 
 @admin.register(Invito)

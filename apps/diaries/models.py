@@ -405,15 +405,13 @@ class PostoAzione(models.Model):
     impresa = models.ForeignKey(Impresa, on_delete=models.CASCADE, related_name="posti_azione")
     chi = models.CharField(max_length=200, blank=True, verbose_name="chi")
     cosa = models.CharField(max_length=300, blank=True, verbose_name="cosa")
-    # Mantenuto per compatibilità con i dati pre-migrazione; non più usato nell'UI
-    descrizione = models.CharField(max_length=300, blank=True, default="")
 
     class Meta:
         verbose_name = "posto d'azione"
         verbose_name_plural = "posti d'azione"
 
     def __str__(self) -> str:
-        return f"{self.chi} — {self.cosa}"[:60] if self.chi or self.cosa else self.descrizione[:60]
+        return f"{self.chi} — {self.cosa}"[:60]
 
 
 class EsitoSpecialita(models.Model):
@@ -492,6 +490,7 @@ class RelazioneFinale(models.Model):
         null=True, blank=True, verbose_name="specialità conquistata"
     )
     aggiornato_at = models.DateTimeField(auto_now=True)
+    version = models.PositiveIntegerField(default=0)
 
     class Meta:
         verbose_name = "relazione finale"

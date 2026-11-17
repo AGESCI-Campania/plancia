@@ -56,8 +56,7 @@ class Ticket(models.Model):
         return f"#{self.pk} {self.oggetto} ({self.stato})"
 
     def get_absolute_url(self) -> str:
-        from django.urls import reverse
-        return reverse("helpdesk:detail", kwargs={"pk": self.pk})
+        return f"/helpdesk/{self.pk}"  # pagina della SPA
 
     def chiudi(self, operatore) -> None:
         self.stato = StatoTicket.CHIUSO

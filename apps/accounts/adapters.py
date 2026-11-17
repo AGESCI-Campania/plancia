@@ -79,14 +79,40 @@ def _sync_ruoli_globali(user, groups: list[str]) -> None:
         user.ruolo = ruolo
 
 
-def _rifiuta_login(request, messaggio: str):
-    """Interrompe il social login con un messaggio, senza creare account parziali."""
-    from allauth.core.exceptions import ImmediateHttpResponse
-    from django.contrib import messages
-    from django.shortcuts import redirect
+# Pagina di accesso della SPA: mostra il parametro `errore` (frontend/src/views/auth/AccessoView.vue).
+URL_SPA_ACCESSO = "/accesso"
 
-    messages.error(request, messaggio)
-    raise ImmediateHttpResponse(redirect("account_login"))
+
+def _rifiuta_login(request, messaggio: str):
+    """Interrompe il social login tornando alla pagina di accesso della SPA con il messaggio,
+    senza creare account parziali."""
+    from urllib.parse import urlencode
+
+    from allauth.core.exceptions import ImmediateHttpResponse
+    from django.http import HttpResponseRedirect
+
+    raise ImmediateHttpResponse(
+        HttpResponseRedirect(f"{URL_SPA_ACCESSO}?{urlencode({'errore': messaggio})}")
+    )
+
+
+def mfa_da_configurare(request, user) -> bool:
+    """L'utente deve configurare la MFA prima di usare Plancia (web e API).
+
+    Esenzioni: DEBUG/SKIP_MFA_ENFORCEMENT, impersonazione (l'operatore reale ha già la sua
+    MFA), sessione aperta via SSO Sestante (la MFA l'ha chiesta l'IdP).
+    """
+    from django.conf import settings
+
+    if settings.DEBUG or getattr(settings, "SKIP_MFA_ENFORCEMENT", False):
+        return False
+    if not user.is_authenticated or getattr(user, "is_hijacked", False):
+        return False
+    if not ruolo_richiede_mfa(user) or sessione_da_sestante(request):
+        return False
+    from allauth.mfa.utils import is_mfa_enabled
+
+    return not is_mfa_enabled(user)
 
 
 def ruolo_richiede_mfa(user) -> bool:

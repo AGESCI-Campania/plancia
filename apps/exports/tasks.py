@@ -92,12 +92,10 @@ def _notifica_errore_pdf(utente_pk: int | None, diario, errore: str, traceback_s
         from django.core.mail import EmailMultiAlternatives
 
         from apps.accounts.models import Ruolo, User
-        from apps.siteconfig.email_backends import get_connection_per_tipo
         from apps.siteconfig.models import Impostazioni
 
         imp = Impostazioni.get()
         base_url = getattr(settings, "BASE_URL", "https://plancia.agescicampania.net").rstrip("/")
-        conn = get_connection_per_tipo("standard")
 
         if utente_pk:
             utente = User.objects.filter(pk=utente_pk).first()
@@ -114,9 +112,8 @@ def _notifica_errore_pdf(utente_pk: int | None, diario, errore: str, traceback_s
                     ),
                     from_email=imp.from_email_completo,
                     to=[utente.email],
-                    connection=conn,
                 )
-                msg.send()
+                msg.send(using="standard")
 
         admin_emails = list(
             User.objects.filter(ruolo=Ruolo.ADMIN)
@@ -130,16 +127,15 @@ def _notifica_errore_pdf(utente_pk: int | None, diario, errore: str, traceback_s
                 f"Edizione: {diario.edizione}\n"
                 f"Errore: {errore}\n\n"
                 f"Traceback:\n{traceback_str}\n\n"
-                f"Log: {base_url}/impostazioni/#log-export"
+                f"Log: {base_url}/impostazioni/log-export"
             )
             msg_admin = EmailMultiAlternatives(
                 subject=f"[Plancia] Errore PDF — {diario.squadriglia}",
                 body=corpo_admin,
                 from_email=imp.from_email_completo,
                 to=admin_emails,
-                connection=conn,
             )
-            msg_admin.send()
+            msg_admin.send(using="standard")
     except Exception:
         pass  # la notifica non è critica
 
@@ -153,11 +149,9 @@ def _invia_mail_pdf(chiave: str, utente_pk: int, diario, link_pdf: str = "") -> 
     try:
         from django.conf import settings
         from django.core.mail import EmailMultiAlternatives
-        from django.urls import reverse
 
         from apps.accounts.models import User
         from apps.notifications.models import render_mail
-        from apps.siteconfig.email_backends import get_connection_per_tipo
         from apps.siteconfig.models import Impostazioni
 
         utente = User.objects.filter(pk=utente_pk).first()
@@ -168,7 +162,7 @@ def _invia_mail_pdf(chiave: str, utente_pk: int, diario, link_pdf: str = "") -> 
 
         if not link_pdf and chiave == "diario_pdf_pronto":
             base_url = getattr(settings, "BASE_URL", "https://plancia.agescicampania.net").rstrip("/")
-            link_pdf = f"{base_url}{reverse('diaries:pdf', args=[diario.pk])}"
+            link_pdf = f"{base_url}/diari/{diario.pk}/pdf"  # pagina PDF della SPA
 
         oggetto, corpo = render_mail(chiave, {
             "nome": utente.first_name or utente.email,
@@ -187,10 +181,9 @@ def _invia_mail_pdf(chiave: str, utente_pk: int, diario, link_pdf: str = "") -> 
             body=corpo,
             from_email=imp.from_email_completo,
             to=[utente.email],
-            connection=get_connection_per_tipo("standard"),
         )
         msg.attach_alternative(corpo, "text/html")
-        msg.send()
+        msg.send(using="standard")
     except Exception:
         pass  # la notifica non è critica
 
@@ -253,7 +246,6 @@ def task_genera_pdf_massivo(self, edizione_pk: int, utente_pk: int | None = None
     from apps.editions.models import Edizione
     from apps.exports.models import LogTaskExport
     from apps.exports.service import genera_pdf_diario
-    from apps.siteconfig.email_backends import get_connection_per_tipo
     from apps.siteconfig.models import Impostazioni
 
     lock_key = lock_key_massivo(edizione_pk)
@@ -274,14 +266,13 @@ def task_genera_pdf_massivo(self, edizione_pk: int, utente_pk: int | None = None
             utente_str = f"{utente.get_full_name()} <{utente.email}>"
 
     imp = Impostazioni.get()
-    conn = get_connection_per_tipo("standard")
 
     def _mail(subject: str, body: str, to: list[str]) -> None:
         import contextlib
         with contextlib.suppress(Exception):
             EmailMultiAlternatives(
-                subject=subject, body=body, from_email=imp.from_email_completo, to=to, connection=conn,
-            ).send()
+                subject=subject, body=body, from_email=imp.from_email_completo, to=to,
+            ).send(using="standard")
 
     # --- stati dei diari da includere (inviati o oltre) ----------------------
     from apps.diaries.models import Diario, StatoDiario
@@ -332,7 +323,7 @@ def task_genera_pdf_massivo(self, edizione_pk: int, utente_pk: int | None = None
                 from apps.storage_drive.models import DriveFile, TipoFile
                 # Salta se cache già presente
                 if DriveFile.objects.filter(diario=diario, tipo=TipoFile.PDF).exists():
-                    link = f"{base_url}/diari/{diario.pk}/pdf/"
+                    link = f"{base_url}/diari/{diario.pk}/pdf"
                     completati.append(f"• {diario.squadriglia} (cached): {link}")
                     continue
 
@@ -342,7 +333,7 @@ def task_genera_pdf_massivo(self, edizione_pk: int, utente_pk: int | None = None
                     from apps.storage_drive.service import carica_pdf_diario
                     carica_pdf_diario(diario)
 
-                link = f"{base_url}/diari/{diario.pk}/pdf/"
+                link = f"{base_url}/diari/{diario.pk}/pdf"
                 completati.append(f"• {diario.squadriglia}: {link}")
                 LogTaskExport.objects.create(
                     tipo=LogTaskExport.Tipo.PDF, stato=LogTaskExport.Stato.OK,
@@ -413,7 +404,7 @@ def task_genera_pdf_massivo(self, edizione_pk: int, utente_pk: int | None = None
         if admin_emails:
             _mail(
                 f"[Plancia] Errori generazione massiva PDF — {edizione_str}",
-                riepilogo + f"\n\nLog: {base_url}/impostazioni/log-export/",
+                riepilogo + f"\n\nLog: {base_url}/impostazioni/log-export",
                 admin_emails,
             )
 
@@ -435,7 +426,6 @@ def task_export_diari(edizione_pk: int, utente_pk: int, formato: str) -> dict:
         from apps.diaries.models import Diario
         from apps.editions.models import Edizione
         from apps.exports.service import genera_export_diari
-        from apps.siteconfig.email_backends import get_connection_per_tipo
         from apps.siteconfig.models import Impostazioni
 
         edizione = Edizione.objects.get(pk=edizione_pk)
@@ -457,10 +447,9 @@ def task_export_diari(edizione_pk: int, utente_pk: int, formato: str) -> dict:
             ),
             from_email=imp.from_email_completo,
             to=[utente.email],
-            connection=get_connection_per_tipo("standard"),
         )
         msg.attach(filename, contenuto, content_type.split(";")[0].strip())
-        msg.send()
+        msg.send(using="standard")
         return {"ok": True, "size": len(contenuto)}
     except Exception as exc:
         import traceback as tb_module

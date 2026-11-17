@@ -23,3 +23,17 @@ class ZonaSchema(Schema):
     id: int
     nome: str
     gruppi: list[GruppoSchema]
+
+
+class SocioAutocompleteSchema(Schema):
+    """Voce dell'autocompletamento Socio (stessi campi di `GET /api/soci/`)."""
+
+    id: int
+    user_pk: int | None = None
+    codice_socio: str
+    categoria: str
+    nome: str
+    cognome: str
+    gruppo: str
+    zona: str
+    label: str

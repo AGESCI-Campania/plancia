@@ -1,23 +1,23 @@
-{% extends "base.html" %}
-{% load bootstrap_icons %}
-
-{% block title %}Accesso negato — Plancia{% endblock %}
-
-{% block extra_head %}
-{{ block.super }}
-<style>:root { --ag-primary: #dc3545; --ag-primary-subtle: #f8d7da; }</style>
-{% endblock %}
-
-{% block content %}
-<div class="text-center py-5">
-  <div class="mb-3 text-danger" style="font-size:5rem;line-height:1">
-    {% bs_icon "shield-x" size="80" %}
-  </div>
-  <h1 class="display-4 fw-bold text-danger mb-2">403</h1>
-  <p class="lead mb-1">Accesso negato</p>
-  <p class="text-muted mb-4">
-    Non hai i permessi per accedere a questa pagina.
-  </p>
-  <a href="/" class="btn btn-danger">Torna alla home</a>
-</div>
-{% endblock %}
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Accesso negato · Plancia</title>
+    <style>
+      body { font-family: "Open Sans", system-ui, sans-serif; margin: 0; color: #343a40; background: #f4f4f6; }
+      header { background: #3d8e33; color: #fff; padding: 1rem 1.5rem; font-weight: 700; }
+      main { max-width: 32rem; margin: 3rem auto; padding: 0 1.5rem; }
+      h1 { font-family: Montserrat, system-ui, sans-serif; font-size: 1.5rem; }
+      a { color: #2e6b1a; }
+    </style>
+  </head>
+  <body>
+    <header>Plancia</header>
+    <main>
+      <h1>Accesso negato</h1>
+      <p>Non hai i permessi per aprire questa pagina.</p>
+      <p><a href="/">Torna alla home</a></p>
+    </main>
+  </body>
+</html>

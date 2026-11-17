@@ -1,4 +1,4 @@
-.PHONY: manual screenshots
+.PHONY: manual
 
 MANUAL_DIR  = docs/manuale
 MANUAL_PDF  = $(MANUAL_DIR)/plancia_manuale.pdf
@@ -31,6 +31,3 @@ $(MANUAL_PDF): $(MANUAL_SRC)
 	  index.md csq.md crp.md pgv.md incaricato.md segreteria.md admin.md \
 	  -o plancia_manuale.pdf
 	@echo "PDF generato: $(MANUAL_PDF)"
-
-screenshots:
-	uv run python $(MANUAL_DIR)/seed_e_screenshot.py

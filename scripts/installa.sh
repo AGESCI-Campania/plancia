@@ -29,12 +29,20 @@ for v in DJANGO_SECRET_KEY POSTGRES_PASSWORD ALLOWED_HOSTS CSRF_TRUSTED_ORIGINS 
 done
 controlla_var_nuove
 
-# --- Cartelle ---
-mkdir -p logs backups
+# --- Versione: si installa una release (tag vX.Y.Z), poi si aggiorna con scripts/aggiorna.sh ---
+git fetch --tags --quiet || avviso "Non riesco a scaricare i tag da GitHub."
+if ! git describe --tags --exact-match --match 'v[0-9]*' >/dev/null 2>&1; then
+	ultima="$(git tag -l 'v[0-9]*' --sort=-v:refname | head -1)"
+	avviso "Il repo non è su una release (tag vX.Y.Z)."
+	[[ -z "$ultima" ]] || avviso "Ultima release: $ultima (git checkout $ultima e rilanciare)."
+fi
+
+# --- Cartelle (create dall'utente del repo: i container girano con lo stesso uid) ---
+mkdir -p logs backups aggiornamenti/log
 
 # --- Avvio (le migrazioni le applica l'entrypoint del container web) ---
 info "Costruisco l'immagine di Plancia e scarico le altre."
-docker compose build --pull
+costruisci_immagini --pull
 docker compose pull --ignore-buildable
 docker compose up -d
 attendi_salute 600 "${SERVIZI_SALUTE[@]}"
@@ -64,6 +72,7 @@ fi
 # Sestante non è una dipendenza d'avvio: serve solo al login.
 installa_servizio_systemd plancia "$UNIT_PROXY"
 installa_backup_systemd
+installa_aggiornamenti_systemd
 
 cat <<EOF
 

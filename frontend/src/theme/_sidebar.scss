@@ -1,0 +1,250 @@
+// =============================================================
+//  _sidebar.scss — Sidebar collapsible v2
+// =============================================================
+
+.ag-sidebar {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+
+  // Bootstrap 6: la sidebar e' un <dialog class="lg:drawer drawer-start">.
+  // Sotto lg e' un drawer; qui lo vogliamo a tutta altezza (senza inset e
+  // angoli arrotondati) e largo 280px, come l'offcanvas della v2.
+  --bs-drawer-inset: 0;
+  --bs-drawer-border-radius: 0;
+  --bs-drawer-width: 280px;
+
+  // z-index: sotto lg lo gestisce il drawer (--bs-drawer-zindex, sopra il
+  // backdrop); fissarlo sempre qui farebbe vincere il nostro z-index:2 (CSS
+  // fuori dai @layer, quindi sempre prioritario) e nasconderebbe la sidebar
+  // dietro il backdrop.
+  @media (min-width: 1024px) {
+    position: relative;
+    z-index: 2;
+    flex-grow: 0; // .lg:drawer ha flex-grow:1 (non !important)
+  }
+
+  // Collassata: solo icone visibili (la larghezza e' nel blocco @layer sotto)
+  &--collapsed {
+    .ag-sidebar__label {
+      opacity: 0;
+      width: 0;
+      overflow: hidden;
+      margin: 0;
+    }
+
+    .ag-sidebar__toggle-label { display: none; }
+
+    .ag-sidebar__user { padding: .75rem; justify-content: center; }
+  }
+
+  // ── Variante scura (default) ─────────────────────────────────────────────
+  &--dark {
+    background-color: var(--ag-primary);
+    color: var(--ag-on-primary);
+
+    .ag-sidebar__toggle,
+    .ag-sidebar__close {
+      color: var(--ag-on-primary);
+      border-bottom: 1px solid rgba(255, 255, 255, .15);
+      &:hover { background-color: rgba(0, 0, 0, .1); }
+    }
+
+    .ag-sidebar__nav-link {
+      color: var(--ag-on-primary);
+      opacity: .82;
+
+      &:hover,
+      &.active {
+        opacity: 1;
+        background-color: rgba(0, 0, 0, .15);
+      }
+    }
+
+    .ag-sidebar__section-title { color: rgba(255, 255, 255, .5); }
+
+    .ag-sidebar__user { border-top: 1px solid rgba(255, 255, 255, .15); }
+    .ag-sidebar__user-toggle { color: var(--ag-on-primary); opacity: .82; &:hover { opacity: 1; } }
+    .ag-sidebar__user-avatar { background-color: rgba(0, 0, 0, .25); color: var(--ag-on-primary); }
+  }
+
+  // ── Variante chiara ──────────────────────────────────────────────────────
+  &--light {
+    background-color: #f8f9fa;
+    border-right: 1px solid var(--bs-border-color, #dee2e6);
+    color: var(--bs-fg-body, #212529);
+
+    .ag-sidebar__toggle,
+    .ag-sidebar__close {
+      color: var(--ag-primary);
+      border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+      &:hover { background-color: var(--ag-primary-subtle); }
+    }
+
+    .ag-sidebar__nav-link {
+      color: var(--bs-fg-body, #212529);
+
+      &:hover,
+      &.active {
+        background-color: var(--ag-primary-subtle);
+        color: var(--ag-primary);
+      }
+    }
+
+    .ag-sidebar__section-title { color: var(--bs-fg-2, #6c757d); }
+
+    .ag-sidebar__user { border-top: 1px solid var(--bs-border-color, #dee2e6); }
+    .ag-sidebar__user-toggle { color: var(--bs-fg-body, #212529); opacity: .82; &:hover { opacity: 1; } }
+    .ag-sidebar__user-avatar { background-color: var(--ag-primary-subtle); color: var(--ag-primary); }
+  }
+}
+
+// ── Toggle button (desktop, collassa a icon rail) e close (mobile, chiude il drawer)
+// NB: "display" non va dichiarato qui in modo incondizionato. Le utility di
+// Bootstrap 6 (.d-none, .lg:d-none…) stanno in @layer e il CSS del tema e' fuori
+// dai layer, quindi vincerebbe sempre sulle utility messe nel markup: si
+// dichiara solo nella media query in cui l'elemento deve essere visibile.
+.ag-sidebar__toggle,
+.ag-sidebar__close {
+  align-items: center;
+  width: 100%;
+  padding: .75rem 1rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 1.1rem;
+
+  &:focus { outline: none; }
+}
+.ag-sidebar__toggle { gap: .5rem; text-align: left; }
+.ag-sidebar__close { justify-content: flex-end; }
+@media (min-width: 1024px) {
+  .ag-sidebar__toggle { display: flex; } // markup: d-none lg:d-flex
+}
+@media (max-width: 1023.98px) {
+  .ag-sidebar__close { display: flex; } // markup: lg:d-none
+}
+
+// ── Bottone flottante per aprire la sidebar come drawer (sotto lg) ──────────
+.ag-sidebar__mobile-toggle {
+  position: fixed;
+  left: 1rem;
+  bottom: 1rem;
+  z-index: 1030;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  background-color: var(--ag-primary);
+  color: var(--ag-on-primary);
+  box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .2);
+  cursor: pointer;
+
+  &:focus { outline: none; box-shadow: 0 0 0 .2rem rgba(0, 0, 0, .25); }
+
+  @media (max-width: 1023.98px) { display: flex; } // markup: lg:d-none
+}
+
+// ── Lista di navigazione ──────────────────────────────────────────────────────
+.ag-sidebar__nav {
+  list-style: none;
+  padding: .5rem 0;
+  margin: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex-grow: 1;
+}
+
+.ag-sidebar__nav-link {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .6rem 1rem;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color .15s;
+  font-size: .9rem;
+  border-radius: 0;
+
+  svg, i { flex-shrink: 0; width: 1.25rem; text-align: center; }
+}
+
+// ── Label (nascosta quando collassata) ────────────────────────────────────────
+.ag-sidebar__label {
+  opacity: 1;
+  transition: opacity .15s, width .15s;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+// ── Titolo sezione ────────────────────────────────────────────────────────────
+.ag-sidebar__section-title {
+  font-size: .7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  padding: 1rem 1rem .35rem;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+// ── Sezione utente (fondo sidebar) ───────────────────────────────────────────
+.ag-sidebar__user {
+  padding: .75rem 1rem;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ag-sidebar__user-toggle {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  text-decoration: none;
+  white-space: nowrap;
+
+}
+
+.ag-sidebar__user-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: .75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+// ── Da lg in su: .lg:drawer diventa elemento statico, ma Bootstrap 6 lo fa con
+// dichiarazioni !important dentro @layer components (width:auto, background
+// trasparente, border:0, transition:none). Un !important fuori dai layer
+// PERDE contro un !important dentro un layer: per vincere serve un layer
+// PRECEDENTE (nell'ordine "colors, config, root, reboot, layout, content,
+// forms, components, …" dichiarato da Bootstrap), qui "layout". NON spostare
+// queste regole fuori da @layer: senza, la sidebar torna larga come l'area
+// contenuto e senza colore di branca.
+@layer layout {
+  @media (min-width: 1024px) {
+    .ag-sidebar {
+      width: 240px !important;
+      min-width: 240px !important;
+      transition: width .2s ease, min-width .2s ease !important;
+    }
+    .ag-sidebar--collapsed {
+      width: 64px !important;
+      min-width: 64px !important;
+    }
+    .ag-sidebar--dark { background-color: var(--ag-primary) !important; }
+    .ag-sidebar--light {
+      background-color: #f8f9fa !important;
+      border-right: 1px solid var(--bs-border-color, #dee2e6) !important;
+    }
+  }
+}

@@ -21,10 +21,15 @@ from django.conf import settings
 from django.core.mail.backends.base import BaseEmailBackend
 from django.core.mail.backends.filebased import EmailBackend as FileBackend
 from django.core.mail.backends.smtp import EmailBackend as SmtpBackend
+from django.core.mail.handler import DEFAULT_MAILER_ALIAS
 from django.test.utils import override_settings
 from django.utils.module_loading import import_string
 
 logger = logging.getLogger(__name__)
+
+# Alias passato ai backend costruiti qui dentro: con Django 6.1 un backend creato senza
+# `alias` usa le impostazioni EMAIL_* deprecate (e lo segnala).
+_ALIAS_INTERNO = "plancia-interno"
 
 _PROVIDER_BACKEND = {
     "brevo": "anymail.backends.brevo.EmailBackend",
@@ -170,12 +175,14 @@ class GmailOAuth2Backend(SmtpBackend):
 def _smtp_backend(imp, fail_silently: bool = False) -> BaseEmailBackend:
     """Restituisce il backend SMTP configurato (password o Gmail OAuth)."""
     if imp.smtp_use_gmail_oauth:
-        return GmailOAuth2Backend(fail_silently=fail_silently)
+        return GmailOAuth2Backend(alias=_ALIAS_INTERNO, fail_silently=fail_silently)
+    riserva = settings.SMTP_RISERVA
     return SmtpBackend(
-        host=imp.smtp_host or settings.EMAIL_HOST,
-        port=imp.smtp_port or settings.EMAIL_PORT,
-        username=imp.smtp_user or settings.EMAIL_HOST_USER,
-        password=imp.smtp_password or settings.EMAIL_HOST_PASSWORD,
+        alias=_ALIAS_INTERNO,
+        host=imp.smtp_host or riserva["host"],
+        port=imp.smtp_port or riserva["port"],
+        username=imp.smtp_user or riserva["username"],
+        password=imp.smtp_password or riserva["password"],
         use_tls=imp.smtp_use_tls,
         fail_silently=fail_silently,
     )
@@ -187,7 +194,8 @@ class _AnymailBackend(BaseEmailBackend):
     def __init__(self, backend_path: str, anymail_settings: dict, fail_silently: bool = False):
         self._backend_path = backend_path
         self._anymail_settings = anymail_settings
-        super().__init__(fail_silently=fail_silently)
+        self.fail_silently = fail_silently
+        super().__init__(alias=_ALIAS_INTERNO)
 
     def send_messages(self, messages):
         try:
@@ -227,7 +235,8 @@ class _TeeBackend(BaseEmailBackend):
 
     def __init__(self, backends: list, fail_silently: bool = False):
         self._backends = backends
-        super().__init__(fail_silently=fail_silently)
+        self.fail_silently = fail_silently
+        super().__init__(alias=_ALIAS_INTERNO)
 
     def send_messages(self, messages):
         sent = 0
@@ -257,12 +266,14 @@ def get_connection_per_tipo(tipo: str = "standard", fail_silently: bool = False)
 
     if imp.email_mode == EmailMode.SIMULATO:
         return FileBackend(
-            file_path=str(settings.EMAIL_FILE_PATH),
+            alias=_ALIAS_INTERNO,
+            file_path=str(settings.EMAIL_SIMULATO_DIR),
             fail_silently=fail_silently,
         )
 
     if imp.email_mode == EmailMode.MAILPIT:
         return SmtpBackend(
+            alias=_ALIAS_INTERNO,
             host=getattr(settings, "MAILPIT_SMTP_HOST", "localhost"),
             port=getattr(settings, "MAILPIT_SMTP_PORT", 1025),
             use_tls=False,
@@ -281,7 +292,9 @@ def get_connection_per_tipo(tipo: str = "standard", fail_silently: bool = False)
     )
 
     if imp.email_mode == EmailMode.SIMULATO_PIU_INVIO:
-        file_conn = FileBackend(file_path=str(settings.EMAIL_FILE_PATH), fail_silently=True)
+        file_conn = FileBackend(
+            alias=_ALIAS_INTERNO, file_path=str(settings.EMAIL_SIMULATO_DIR), fail_silently=True
+        )
         # L'invio reale è best-effort: gli errori vengono loggati ma non propagati
         # (il file simulato viene sempre scritto).
         return _TeeBackend([file_conn, real], fail_silently=True)
@@ -290,12 +303,22 @@ def get_connection_per_tipo(tipo: str = "standard", fail_silently: bool = False)
 
 
 # ---------------------------------------------------------------------------
-# Backend globale (EMAIL_BACKEND) — usato da allauth, sistema, ecc.
+# Backend dei MAILERS — "default" (allauth, mail_admins, …), "standard", "massivo"
 # ---------------------------------------------------------------------------
 
 class PlanciaEmailBackend(BaseEmailBackend):
-    """Backend globale: legge email_mode e instrada a SMTP o provider transazionale."""
+    """Legge email_mode e instrada a SMTP o provider transazionale secondo `tipo`.
+
+    Si usa tramite gli alias di settings.MAILERS: `mailers["massivo"]`,
+    `msg.send(using="standard")`.
+    """
+
+    def __init__(self, tipo: str = "standard", fail_silently: bool = False, *,
+                 alias: str | None = DEFAULT_MAILER_ALIAS, **kwargs):
+        self.tipo = tipo
+        self.fail_silently = fail_silently
+        super().__init__(alias=alias, **kwargs)
 
     def send_messages(self, email_messages):
-        conn = get_connection_per_tipo("standard", fail_silently=self.fail_silently)
+        conn = get_connection_per_tipo(self.tipo, fail_silently=self.fail_silently)
         return conn.send_messages(email_messages)

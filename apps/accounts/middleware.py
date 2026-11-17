@@ -1,60 +1,45 @@
 # apps/accounts/middleware.py
-"""Middleware per l'enforcement della MFA sui ruoli privilegiati (docs sez. 2, 12)."""
-from django.conf import settings
-from django.contrib import messages
-from django.shortcuts import redirect
-from django.urls import reverse
+"""MFA obbligatoria sui percorsi Django rimasti (docs sez. 2, 12).
 
-from apps.accounts.adapters import ruolo_richiede_mfa, sessione_da_sestante
+L'interfaccia è la SPA: la configurazione della MFA si fa lì (Profilo → Sicurezza, via
+`/_allauth/`). Sull'API la stessa regola la applica `apps/api/auth.py` (403
+`mfa_da_configurare`). Qui si coprono admin, proxy Mailpit/Flower e le altre viste Django:
+chi deve configurare la MFA riceve 403 con una pagina statica che spiega cosa fare.
+"""
+from django.http import HttpResponse
+from django.template.loader import get_template
 
-# URL con prefisso esclusi dall'enforcement: MFA setup, login/logout, assets, API.
+from apps.accounts.adapters import mfa_da_configurare
+
+# Percorsi esclusi: allauth headless (serve proprio a configurare la MFA), API (regola
+# applicata da PlanciaAuth), callback dei provider, statici, healthcheck.
 _PERCORSI_ESCLUSI = (
-    "/accounts/",   # login, logout, password, MFA setup
-    "/_allauth/",   # allauth headless API
-    "/api/v1/",     # REST API (auth via X-Session-Token, non redirect)
+    "/_allauth/",
+    "/api/v1/",
+    "/accounts/",
     "/static/",
     "/media/",
-    "/favicon.ico",
+    "/healthz/",
+    "/anymail/",
 )
 
 
 class MFAEnforcementMiddleware:
-    """Reindirizza gli utenti privilegiati senza TOTP alla pagina di attivazione MFA.
+    """403 agli utenti con ruolo che impone la MFA e senza MFA configurata.
 
-    Non agisce durante le sessioni di impersonazione (django-hijack): l'operatore
-    reale ha già superato la propria MFA. Vedi docs sez. 2 e 12.
+    Le esenzioni (DEBUG, impersonazione, sessione aperta via Sestante) stanno in
+    `adapters.mfa_da_configurare`, regola unica per web e API.
     """
 
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        if self._deve_forzare_setup(request):
-            messages.warning(
-                request,
-                "Il tuo ruolo richiede l'autenticazione a due fattori. "
-                "Configura l'app Authenticator per continuare.",
-            )
-            return redirect(reverse("mfa_activate_totp"))
+        if self._deve_bloccare(request):
+            return HttpResponse(get_template("403_mfa.html").render(), status=403)
         return self.get_response(request)
 
-    def _deve_forzare_setup(self, request) -> bool:
-        if settings.DEBUG or getattr(settings, "SKIP_MFA_ENFORCEMENT", False):
+    def _deve_bloccare(self, request) -> bool:
+        if request.path_info.startswith(_PERCORSI_ESCLUSI):
             return False
-        user = request.user
-        if not user.is_authenticated:
-            return False
-        # Durante l'impersonazione (hijack) non forzare: l'operatore reale ha già la MFA.
-        if getattr(user, "is_hijacked", False):
-            return False
-        if not ruolo_richiede_mfa(user):
-            return False
-        if any(request.path_info.startswith(p) for p in _PERCORSI_ESCLUSI):
-            return False
-        # Sessione aperta via SSO Sestante: la MFA l'ha già chiesta l'IdP. Conta il metodo
-        # di login della sessione, non l'account collegato (chi entra con password resta soggetto).
-        if sessione_da_sestante(request):
-            return False
-
-        from allauth.mfa.utils import is_mfa_enabled
-        return not is_mfa_enabled(user)
+        return mfa_da_configurare(request, request.user)

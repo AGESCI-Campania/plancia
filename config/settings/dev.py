@@ -6,10 +6,11 @@ DEBUG = True
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0"]
 
 # Email via Mailpit (SMTP fake locale — UI: http://localhost:8025)
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "localhost"
-EMAIL_PORT = 1025
-EMAIL_USE_TLS = False
+_MAILPIT = {
+    "BACKEND": "django.core.mail.backends.smtp.EmailBackend",
+    "OPTIONS": {"host": "localhost", "port": 1025, "use_tls": False},
+}
+MAILERS = {"default": _MAILPIT, "standard": _MAILPIT, "massivo": _MAILPIT}
 # Mailpit proxy (/mailadmin/) — in dev Mailpit gira su localhost
 MAILPIT_INTERNAL_URL = "http://localhost:8025"
 MAILPIT_SMTP_HOST = "localhost"

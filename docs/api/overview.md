@@ -93,7 +93,7 @@ Parametro `page` (default 1), dimensione pagina configurabile via `?page_size=N`
 ## Rate limiting
 
 Le chiamate a `/api/v1/` sono soggette a rate limiting basato su Redis (fixed window).  
-Il client è identificato tramite `X-Session-Token` (se presente) o indirizzo IP.
+Il client è identificato dalla sessione (`X-Session-Token` o cookie, solo se la sessione esiste) e altrimenti dall'IP reale dietro Caddy + nginx (penultimo `X-Forwarded-For`, come per axes): più utenti dietro lo stesso NAT non si bloccano a vicenda.
 
 I limiti sono configurabili in **Impostazioni → API** da Admin/Segreteria:
 

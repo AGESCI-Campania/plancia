@@ -1,149 +1,158 @@
 # Guida — Capo Reparto
 
-Il Capo Reparto può leggere tutti i moduli del diario della propria squadriglia
-e ha l'esclusiva per compilare il **Modulo 6 — Relazione finale**, che non è mai visibile al Capo Squadriglia.
+Il Capo Reparto segue i diari delle squadriglie del proprio reparto: ne legge tutti i moduli,
+consegna ai Capi Squadriglia i link di attivazione e compila, in esclusiva, il **Modulo 6 —
+Relazione finale**, che il Capo Squadriglia non vede mai. Infine invia il diario allo staff.
 
 ---
 
-## Primo accesso alla piattaforma
+## Primo accesso
 
-La Segreteria regionale ti invierà un'email con un link personale di attivazione.
-Clicca il link e accedi: non ti viene chiesto nulla di aggiuntivo.
-Da questo momento puoi impostare la password dal menu in alto a destra → **Profilo**.
-
-> Per i ruoli di Capo Reparto, Pattuglia GV, Segreteria e Incaricato EG le email
-> sono verificate dalla piattaforma AGESCI: l'invito arriverà alla tua email ufficiale.
-
----
-
-## Distribuire i link di accesso ai tuoi Capi Squadriglia
-
-Quando la Segreteria avvia l'invio degli inviti ai Capi Squadriglia, riceverai
-un'**email riepilogativa** con una tabella che elenca tutti i tuoi Capi Squadriglia
-e il loro link di accesso personale.
-
-**Il tuo compito è consegnare a ciascuno il proprio link.** Puoi farlo:
-
-- Di persona al prossimo incontro di reparto (il modo più sicuro)
-- Via chat o messaggio diretto
-- Stampando e ritagliando la tabella dalla email
-
-Ogni Capo Squadriglia aprirà il link e inserirà il proprio **codice socio AGESCI**
-(il numero sulla tessera) e la propria email. Questo passaggio garantisce che l'account
-sia davvero attivato dalla persona giusta.
-
-> **Link perso?** Se un Capo Squadriglia non riesce ad attivare l'account, la Segreteria
-> può inviare un nuovo link dalla pagina **Gestione Inviti**. Segnalalo prima possibile
-> per non rallentare la compilazione del Diario di Bordo.
+La Segreteria regionale ti invia un'email con il link personale di attivazione. Aprilo: la
+pagina di attivazione ti fa entrare (o, se hai già credenziali tue, ti rimanda alla pagina di
+accesso). Da quel momento puoi entrare con la tua email e la password, scelta dal menu utente →
+**Password e sicurezza** (o con **Password dimenticata?** dalla pagina di accesso), oppure con
+**Accedi con SSO AGESCI Campania** se hai l'account regionale.
 
 ---
 
-## Home page
+## Home e lista dei diari
 
-La home mostra l'edizione attiva e il riepilogo dei diari del tuo reparto.
+La home mostra l'edizione in corso (diari visibili, 1ª e 2ª scadenza, date e luogo dell'evento) e
+la tabella dei diari del tuo reparto, con stato, Capo Squadriglia e Capo Reparto.
 
-![Home Capo Reparto](screenshots/10_home_crp.png)
+![Home del Capo Reparto](screenshots/crp_home.png)
 
----
+La voce **Diari** del menu apre l'elenco completo, con ricerca (squadriglia, Capo Squadriglia o
+Capo Reparto), filtri per edizione, zona, gruppo, reparto, specialità, tipo e stato
+(selezionabili insieme), ordinamento cliccando sulle colonne e paginazione. Sul telefono i diari
+sono schede e i filtri si aprono con il pulsante **Filtri**. L'icona PDF a destra apre il PDF del
+diario, quando è disponibile.
 
-## Lista diari
-
-Dalla voce **Diari** nella barra di navigazione vedi tutti i diari delle squadriglie
-del tuo reparto, con lo stato attuale di ciascuno.
-
-![Lista diari Capo Reparto](screenshots/21_lista_diari_crp.png)
-
-
----
-
-## Dettaglio diario
-
-Cliccando su un diario accedi al dettaglio, dove trovi lo stato di compilazione
-di ogni modulo e le azioni disponibili in base allo stato corrente.
-
-![Dettaglio diario Capo Reparto](screenshots/22_dettaglio_diario_crp.png)
-
+![Lista dei diari](screenshots/crp_diari.png)
 
 ---
 
-## Cambia il Capo Squadriglia
+## Distribuire i link ai Capi Squadriglia
 
-Se un Capo Squadriglia deve essere sostituito (es. abbandona la squadriglia),
-puoi aggiornare il referente direttamente dalla pagina del diario,
-finché il diario non è ancora stato inviato al Capo Reparto (stato *In compilazione*).
+Quando la Segreteria invia gli inviti ai Capi Squadriglia ricevi un'**email riepilogativa** con
+la tabella dei tuoi Capi Squadriglia e il link personale di ciascuno. **Il tuo compito è
+consegnare a ognuno il proprio link**: di persona all'incontro di reparto (il modo più sicuro),
+in chat o stampando la tabella. Il Capo Squadriglia lo apre e conferma il proprio **codice socio
+AGESCI** e la propria email: così l'account viene attivato dalla persona giusta.
 
-1. Apri il **dettaglio del diario** dalla home o dalla lista diari del tuo reparto.
-2. Clicca il pulsante **"Cambia Capo Squadriglia"** (visibile solo quando il diario è
-   in stato *In compilazione*).
-3. Cerca il nuovo Capo Squadriglia per nome, cognome o codice socio nel campo di ricerca.
-4. Selezionalo e clicca **"Salva"**.
+Dalla voce **Inviti** del menu (pagina *Inviti Capi Squadriglia*) vedi, per ogni squadriglia,
+il Capo Squadriglia, l'email (se nota) e lo **Stato invito** (*Inviato*, *Attivato*…).
+Con **Reinvia** mandi un nuovo link a chi non l'ha ricevuto o l'ha perso: il link precedente
+smette di funzionare.
 
+![Inviti Capi Squadriglia](screenshots/crp_inviti.png)
 
-![Form Cambia Capo Squadriglia](screenshots/23_cambia_csq.png)
+---
 
-Il diario viene aggiornato immediatamente. Il precedente Capo Squadriglia perde l'accesso
-al diario; il nuovo lo vede dalla propria home page.
+## Il diario della squadriglia
 
-> **Attenzione**: il pulsante non compare se il diario è già nello stato *Relazione finale*
-> o successivi. In quel caso contatta la Segreteria.
+Aprendo un diario trovi lo stato, i referenti, la scadenza, il riquadro **Azioni**, lo **Stato
+della compilazione** di ogni modulo e sotto il contenuto dei moduli 1–5 (e del modulo 6 quando
+c'è).
+
+![Diario in Relazione finale](screenshots/crp_diario.png)
+
+Le azioni disponibili dipendono dallo stato:
+
+| Stato | Azioni del Capo Reparto |
+|---|---|
+| Non iniziato, In compilazione | **Cambia Capo Squadriglia** |
+| Relazione finale | Compila il modulo 6, **Invia il diario allo staff** |
+| Inviato e successivi | **PDF del diario** |
+
+---
+
+## Cambiare il Capo Squadriglia
+
+Se il Capo Squadriglia deve essere sostituito (per esempio lascia la squadriglia) puoi farlo
+finché il diario è *Non iniziato* o *In compilazione*:
+
+1. apri il diario e premi **Cambia Capo Squadriglia**;
+2. nella finestra, nel campo **Nuovo Capo Squadriglia**, scrivi almeno 2 caratteri (nome,
+   cognome, codice socio o gruppo) e scegli il ragazzo dall'elenco;
+3. premi **Conferma cambio**.
+
+![Cambia Capo Squadriglia](screenshots/crp_cambia_csq.png)
+
+Il precedente Capo Squadriglia perde l'accesso al diario; il nuovo lo vede nella propria home
+dopo aver attivato l'account. Dopo l'invio della parte del Capo Squadriglia il cambio lo può fare
+solo lo staff: apri un ticket all'Helpdesk.
 
 ---
 
 ## Modulo 6 — Relazione finale
 
-Accessibile **solo dopo** che il Capo Squadriglia ha cliccato "Invia al Capo Reparto"
-(il diario si trova nello stato *Relazione finale*). Finché il Capo Squadriglia non ha inviato
-la propria parte, il modulo 6 risulta bloccato.
+Il modulo si compila quando il Capo Squadriglia ha premuto **Invia al Capo Reparto** e il diario
+è in stato *Relazione finale*. Lo apri dal riquadro *Modulo 6* del diario o dalla barra dei
+moduli. L'avviso in cima ricorda che il modulo è riservato al Capo Reparto.
 
 Compila:
 
-- **Sintesi 1ª impresa** — percorso fatto dalla squadriglia (oggetto, tempi, luoghi, obiettivi raggiunti, eventuali problematiche)
-- **Sintesi 2ª impresa** — come sopra, se presente
-- **Sintesi missione** — percorso durante la missione, se presente
-- **Considerazioni finali** — le competenze acquisite hanno avuto ricaduta concreta? I membri hanno conquistato specialità/brevetti?
-- **Ritieni che la specialità di squadriglia sia stata conquistata?** — Sì / No / Non ancora deciso
+- **Sintesi 1ª impresa**: il percorso della squadriglia (oggetto, tempi, luoghi, cambiamenti
+  rispetto al progetto, obiettivi raggiunti, problemi);
+- **Sintesi 2ª impresa** e **Sintesi missione**, se presenti;
+- **Considerazioni finali**: le competenze acquisite hanno avuto una ricaduta concreta? I membri
+  hanno conquistato specialità o brevetti?
+- **Ritieni che la specialità di squadriglia sia stata conquistata?** — *Sì*, *No* o *Non ancora
+  deciso*.
 
-I campi hanno suggerimenti (tooltip ⓘ) che guidano la compilazione.
+![Relazione finale](screenshots/crp_relazione_finale.png)
 
-![Relazione finale](screenshots/11_relazione_finale.png)
+Come tutti i moduli, la Relazione finale si **salva da sola** (barra in fondo: *Salvato alle …*,
+**Salva ora**) e si può compilare anche offline: vedi
+[Uso senza connessione](index.md#uso-senza-connessione).
 
-> Questo modulo è riservato. Il Capo Squadriglia non può vederlo né accedervi in nessuna circostanza.
-
-> Puoi eliminare le foto allegate alle imprese e alla missione finché non hai ancora inviato il diario allo staff.
-
----
-
-## Invio del diario allo staff
-
-Dopo aver compilato la relazione finale, clicca il pulsante **"Invia diario allo staff"**.
-Il diario passa in stato *Inviato* e da questo momento non è più modificabile
-(salvo riapertura autorizzata dallo staff).
+> La Relazione finale non è mai visibile al Capo Squadriglia. Fino all'invio puoi anche eliminare
+> le foto allegate alle imprese e alla missione.
 
 ---
 
-## Scarica il PDF del diario
+## Inviare il diario allo staff
 
-Dalla pagina di dettaglio del diario (in stato *Inviato* o successivo) è disponibile
-il pulsante **"Scarica PDF"**. Il PDF include:
-
-- **Moduli 1–5** compilati dal Capo Squadriglia (anagrafica, presentazione, imprese, missione)
-- **Relazione finale** compilata dal Capo Reparto (modulo 6)
-
-La generazione del PDF avviene in background tramite un task asincrono: al termine ricevi
-una mail con il link per scaricarlo. Se il PDF è già stato generato in precedenza, viene
-scaricato direttamente dalla cache su Drive. Il pulsante apre il PDF in una nuova scheda
-del browser, da cui puoi scaricarlo o condividerlo con la toolbar del browser. Sulla PWA
-installata da iPhone/iPad il pulsante apre il PDF in Safari, da cui puoi scaricarlo,
-stamparlo o aprirlo direttamente in Acrobat o altre app di lettura PDF installate. Ogni
-rigenerazione sostituisce il file precedente su Drive (la cartella di output mantiene
-sempre una sola versione).
-
-> Il Capo Squadriglia **non ha accesso al PDF** — il documento è destinato al Capo Reparto,
-> alla Pattuglia GV e agli Incaricati EG. L'esito della valutazione non compare mai nel PDF.
+Quando la Relazione finale è pronta premi **Invia il diario allo staff** nel riquadro Azioni e
+conferma. Il diario passa in stato *Inviato* e non è più modificabile (salvo riapertura da parte
+dello staff).
 
 ---
 
-## Visibilità della valutazione
+## Il PDF del diario
 
-La valutazione della Pattuglia GV e l'esito finale non sono visibili al Capo Reparto fino a quando
-l'Incaricato EG non pubblica gli esiti.
+Dal diario inviato (o dall'icona PDF nell'elenco) **PDF del diario** apre la pagina del PDF. Il
+PDF contiene i moduli 1–5 e la Relazione finale, **mai** l'esito della valutazione; è disponibile
+per il Capo Reparto, la Pattuglia GV e lo staff, non per il Capo Squadriglia.
+
+![PDF del diario](screenshots/crp_pdf.png)
+
+- Se il PDF è pronto lo vedi in anteprima e **Scarica** lo salva. Nell'app installata su iPhone
+  l'anteprima non c'è: **Scarica** apre il pannello di condivisione, da cui salvarlo in File,
+  stamparlo o aprirlo in un'altra app.
+- Se non è ancora stato generato compare **Genera il PDF**: la generazione avviene sul server e
+  riceverai un'email quando è pronto; la pagina si aggiorna da sola.
+- Durante una generazione massiva dello staff il PDF singolo può essere momentaneamente bloccato.
+
+---
+
+## Esito della valutazione
+
+La valutazione (della Pattuglia GV e degli Incaricati EG) non è visibile al Capo Reparto finché
+gli Incaricati EG non **pubblicano** l'esito. Dopo la pubblicazione il diario mostra il badge
+**Esito pubblicato** e il riquadro **Valutazione** con l'esito e le note.
+
+![Esito pubblicato](screenshots/crp_esito_pubblicato.png)
+
+Se l'esito è *Maggiori informazioni richieste* lo staff può riaprire il diario per le
+integrazioni: torna *In compilazione* e il Capo Squadriglia può modificarlo di nuovo.
+
+---
+
+## Helpdesk
+
+Per dilazioni, problemi di accesso dei ragazzi o cambi di referente non più possibili da te, apri
+un ticket dalla voce **Helpdesk** → **Nuovo ticket** (vedi la
+[guida del Capo Squadriglia](csq.md#serve-aiuto)).

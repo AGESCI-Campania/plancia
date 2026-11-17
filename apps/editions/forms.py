@@ -1,4 +1,5 @@
 # apps/editions/forms.py
+"""Form di validazione di edizioni e dilazioni (usati da `services`, nessuna resa HTML)."""
 from django import forms
 
 from apps.editions.models import Dilazione, Edizione
@@ -13,20 +14,6 @@ class EdizioneForm(forms.ModelForm):
             "data_evento_inizio", "data_evento_fine",
             "evento_comune", "evento_localita",
         ]
-        widgets = {
-            "scadenza_evento": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
-            "scadenza_assemblea": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
-            "data_evento_inizio": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
-            "data_evento_fine": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
-            # hidden: valorizzato dal JS autocomplete
-            "evento_comune": forms.HiddenInput(),
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        for name, field in self.fields.items():
-            if not isinstance(field.widget, (forms.CheckboxInput, forms.HiddenInput)):
-                field.widget.attrs.setdefault("class", "form-control")
 
     def clean(self):
         cleaned = super().clean()
@@ -41,9 +28,3 @@ class DilazioneForm(forms.ModelForm):
     class Meta:
         model = Dilazione
         fields = ["nuova_scadenza", "motivazione"]
-        widgets = {
-            "nuova_scadenza": forms.DateInput(
-                attrs={"type": "date", "class": "form-control"}, format="%Y-%m-%d"
-            ),
-            "motivazione": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
-        }

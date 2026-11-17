@@ -1,5 +1,5 @@
 # apps/diaries/tests/test_visibilita.py
-"""Test delle regole di visibilità (docs sez. 5 — tre livelli: view, queryset, funzione)."""
+"""Test delle regole di visibilità (docs sez. 5 — tre livelli: API, queryset, funzione)."""
 import pytest
 from django.utils import timezone
 
@@ -87,110 +87,71 @@ def diario(db, edizione, socio_csq, socio_crp):
 
 
 class TestRelazioneFinaleVisibilita:
-    """La relazione finale NON deve mai essere visibile al CSQ (docs sez. 5)."""
+    """La relazione finale NON deve mai essere visibile al CSQ (docs sez. 5): regola e API."""
 
-    def test_csq_non_vede_relazione_nel_context(self, diario, user_csq, client):
+    def test_regola(self, user_csq, user_crp):
+        from apps.diaries.permessi import puo_vedere_relazione
+
+        assert puo_vedere_relazione(user_csq) is False
+        assert puo_vedere_relazione(user_crp) is True
+
+    def test_csq_non_legge_ne_scrive_la_relazione(self, diario, user_csq, client):
         client.force_login(user_csq)
-        response = client.get(f"/diari/{diario.pk}/")
-        assert response.status_code == 200
-        assert response.context["mostra_relazione"] is False
+        url = f"/api/v1/diari/{diario.pk}/relazione-finale"
+        assert client.get(url).status_code == 403
+        r = client.put(url, data='{"version": 0, "data": {}}', content_type="application/json")
+        assert r.status_code == 403
 
-    def test_crp_vede_relazione_nel_context(self, diario, user_crp, client):
+    def test_crp_legge_la_relazione(self, diario, user_crp, client):
         client.force_login(user_crp)
-        response = client.get(f"/diari/{diario.pk}/")
-        assert response.status_code == 200
-        assert response.context["mostra_relazione"] is True
-
-    def test_csq_non_puo_accedere_url_relazione(self, diario, user_csq, client):
-        client.force_login(user_csq)
-        response = client.get(f"/diari/{diario.pk}/relazione/")
-        assert response.status_code == 403
-
-    def test_csq_non_puo_postare_relazione(self, diario, user_csq, client):
-        client.force_login(user_csq)
-        response = client.post(f"/diari/{diario.pk}/relazione/", {})
-        assert response.status_code == 403
+        assert client.get(f"/api/v1/diari/{diario.pk}/relazione-finale").status_code == 200
 
 
 class TestEliminazioneAllegati:
-    """puo_eliminare_allegati nel context del detail (docs sez. 5)."""
+    """`permessi.puo_eliminare_allegati` (docs sez. 5): fino all'invio del diario."""
 
-    def test_csq_puo_eliminare_in_compilazione(self, diario, user_csq, client):
-        client.force_login(user_csq)
-        resp = client.get(f"/diari/{diario.pk}/")
-        assert resp.context["puo_eliminare_allegati"] is True
+    @pytest.mark.parametrize("stato,ruolo,atteso", [
+        (StatoDiario.IN_COMPILAZIONE, "csq", True),
+        (StatoDiario.RELAZIONE_FINALE, "csq", True),
+        (StatoDiario.RELAZIONE_FINALE, "crp", True),
+        (StatoDiario.INVIATO, "csq", False),
+        (StatoDiario.INVIATO, "crp", False),
+    ])
+    def test_regola(self, diario, user_csq, user_crp, stato, ruolo, atteso):
+        from apps.diaries.permessi import puo_eliminare_allegati
 
-    def test_csq_puo_eliminare_in_relazione_finale(self, diario, user_csq, client):
-        diario.stato = "relazione_finale"
+        diario.stato = stato
         diario.save()
-        client.force_login(user_csq)
-        resp = client.get(f"/diari/{diario.pk}/")
-        assert resp.context["puo_eliminare_allegati"] is True
-
-    def test_crp_puo_eliminare_in_relazione_finale(self, diario, user_crp, client):
-        diario.stato = "relazione_finale"
-        diario.save()
-        client.force_login(user_crp)
-        resp = client.get(f"/diari/{diario.pk}/")
-        assert resp.context["puo_eliminare_allegati"] is True
-
-    def test_csq_non_puo_eliminare_dopo_invio(self, diario, user_csq, client):
-        diario.stato = "inviato"
-        diario.save()
-        client.force_login(user_csq)
-        resp = client.get(f"/diari/{diario.pk}/")
-        assert resp.context["puo_eliminare_allegati"] is False
-
-    def test_crp_non_puo_eliminare_dopo_invio(self, diario, user_crp, client):
-        diario.stato = "inviato"
-        diario.save()
-        client.force_login(user_crp)
-        resp = client.get(f"/diari/{diario.pk}/")
-        assert resp.context["puo_eliminare_allegati"] is False
+        utente = user_csq if ruolo == "csq" else user_crp
+        assert puo_eliminare_allegati(utente, diario) is atteso
 
 
-class TestDilazioneContext:
-    """dilazione_form nel context: presente solo per staff prima dell'invio (docs sez. 4)."""
+class TestDilazione:
+    """`permessi.puo_concedere_dilazione`: solo staff, prima dell'invio (docs sez. 4)."""
 
     @pytest.fixture
     def user_staff(self, db):
-        import json
-        from allauth.mfa.models import Authenticator
-        from apps.accounts.models import Ruolo, User
-        u = User.objects.create_user(
+        return User.objects.create_user(
             username="staff_dil", email="staff_dil@test.it", password="x",
             ruolo=Ruolo.SEGRETERIA, is_staff=True,
         )
-        Authenticator.objects.create(
-            user=u, type=Authenticator.Type.TOTP,
-            data=json.dumps({"secret": "AAAAAAAAAAAAAAAA"}),
-        )
-        return u
 
-    def test_staff_vede_dilazione_in_compilazione(self, diario, user_staff, client):
-        client.force_login(user_staff)
-        resp = client.get(f"/diari/{diario.pk}/")
-        assert "dilazione_form" in resp.context
-        assert resp.context["dilazione_form"] is not None
+    @pytest.mark.parametrize("stato,atteso", [
+        (StatoDiario.IN_COMPILAZIONE, True),
+        (StatoDiario.RELAZIONE_FINALE, True),
+        (StatoDiario.INVIATO, False),
+    ])
+    def test_staff(self, diario, user_staff, stato, atteso):
+        from apps.diaries.permessi import puo_concedere_dilazione
 
-    def test_staff_vede_dilazione_in_relazione_finale(self, diario, user_staff, client):
-        diario.stato = "relazione_finale"
+        diario.stato = stato
         diario.save()
-        client.force_login(user_staff)
-        resp = client.get(f"/diari/{diario.pk}/")
-        assert resp.context.get("dilazione_form") is not None
+        assert puo_concedere_dilazione(user_staff, diario) is atteso
 
-    def test_staff_non_vede_dilazione_dopo_invio(self, diario, user_staff, client):
-        diario.stato = "inviato"
-        diario.save()
-        client.force_login(user_staff)
-        resp = client.get(f"/diari/{diario.pk}/")
-        assert resp.context.get("dilazione_form") is None
+    def test_csq_mai(self, diario, user_csq):
+        from apps.diaries.permessi import puo_concedere_dilazione
 
-    def test_csq_non_ha_dilazione(self, diario, user_csq, client):
-        client.force_login(user_csq)
-        resp = client.get(f"/diari/{diario.pk}/")
-        assert resp.context.get("dilazione_form") is None
+        assert puo_concedere_dilazione(user_csq, diario) is False
 
 
 class TestNuoviCampiModello:
@@ -214,7 +175,7 @@ class TestNuoviCampiModello:
         assert es.chi == "Sofia Ferrari"
 
     def test_membro_sq_solo_nome(self, diario):
-        from apps.diaries.models import Presentazione, MembroSq
+        from apps.diaries.models import MembroSq, Presentazione
         pres = Presentazione.objects.create(diario=diario)
         m = MembroSq.objects.create(presentazione=pres, nome="Luca Bianchi", ruolo="csq")
         assert m.nome == "Luca Bianchi"
@@ -233,15 +194,13 @@ class TestNuoviCampiModello:
 
 
 class TestScopingDiari:
-    """Il CSQ vede solo il proprio diario; il CRP solo i diari del suo reparto."""
+    """Il CSQ vede solo il proprio diario (elenco e dettaglio dell'API)."""
 
     def test_csq_vede_solo_il_proprio_diario(self, diario, user_csq, client):
         client.force_login(user_csq)
-        response = client.get("/diari/")
+        response = client.get("/api/v1/diari")
         assert response.status_code == 200
-        diari = list(response.context["diari"])
-        assert diario in diari
-        assert len(diari) == 1
+        assert [d["id"] for d in response.json()["items"]] == [diario.pk]
 
     def test_csq_non_accede_a_diario_altrui(self, db, diario, edizione, user_csq, client):
         from apps.org.models import Gruppo, Reparto, Socio, Squadriglia, Zona
@@ -259,8 +218,8 @@ class TestScopingDiari:
             scadenza_riferimento=ScadenzaRiferimento.PRIMA,
         )
         client.force_login(user_csq)
-        response = client.get(f"/diari/{altro_diario.pk}/")
-        assert response.status_code == 403
+        response = client.get(f"/api/v1/diari/{altro_diario.pk}")
+        assert response.status_code in (403, 404)
 
 
 class TestDiariVisibili:
@@ -280,8 +239,8 @@ class TestDiariVisibili:
         assert list(qs) == [diario]
 
     def test_csq_non_vede_diari_altrui(self, db, diario, user_csq, edizione):
-        from apps.org.models import Gruppo, Reparto, Socio, Squadriglia, Zona
         from apps.diaries.visibility import diari_visibili
+        from apps.org.models import Gruppo, Reparto, Socio, Squadriglia, Zona
         zona2 = Zona.objects.create(nome="Zona Altra TV")
         gruppo2 = Gruppo.objects.create(nome="Gruppo Altro TV", zona=zona2)
         reparto2 = Reparto.objects.create(nome="Reparto Altro TV", gruppo=gruppo2)
@@ -307,17 +266,17 @@ class TestDiariVisibili:
             assert d.crp == user_crp.socio
 
     def test_filtro_edizione(self, db, diario, user_crp, edizione):
-        from apps.editions.models import Edizione
         from apps.diaries.visibility import diari_visibili
-        altra_edizione = Edizione.objects.create(anno=2099)
+        from apps.editions.models import Edizione
+        Edizione.objects.create(anno=2099)  # un'altra edizione, da escludere
         qs = diari_visibili(user_crp, edizione=edizione)
         assert diario in qs
         assert all(d.edizione_id == edizione.pk for d in qs)
 
     def test_pgv_vede_solo_assegnati(self, db, diario, user_csq, edizione):
         from apps.accounts.models import Ruolo, User
-        from apps.evaluations.models import AssegnazionePGV, Valutazione
         from apps.diaries.visibility import diari_visibili
+        from apps.evaluations.models import AssegnazionePGV, Valutazione
 
         pgv = User.objects.create_user(
             username="pgv_tv", email="pgv_tv@test.it", password="x", ruolo=Ruolo.PGV

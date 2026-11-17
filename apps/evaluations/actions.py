@@ -8,6 +8,11 @@ fine-grained (es. "il CSQ deve essere il CSQ di questo specifico diario").
 """
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
+
+from django.db import transaction
+
 from apps.accounts.models import Ruolo
 from apps.diaries.models import Diario, StatoDiario
 from apps.evaluations.models import AssegnazionePGV, EsitoValutazione, StatoValutazione, Valutazione
@@ -25,6 +30,19 @@ class StatoNonValido(AzioneNonConsentita):
     """Il diario o la valutazione non sono nello stato richiesto."""
 
 
+@contextmanager
+def _transizione() -> Iterator[None]:
+    """Esegue le modifiche in una transazione; i ValueError dei modelli (transizione FSM non
+    ammessa) diventano StatoNonValido invece di un errore 500."""
+    try:
+        with transaction.atomic():
+            yield
+    except AzioneNonConsentita:
+        raise
+    except ValueError as exc:
+        raise StatoNonValido(str(exc)) from None
+
+
 # ---------------------------------------------------------------------------
 # Transizioni FSM
 # ---------------------------------------------------------------------------
@@ -40,7 +58,8 @@ def csq_invia(diario: Diario, user) -> None:
         raise PermessoNegato("Solo il Capo Squadriglia del diario può inviare la propria parte.")
     if diario.stato != StatoDiario.IN_COMPILAZIONE:
         raise StatoNonValido("Il diario deve essere in compilazione.")
-    diario.csq_invia()
+    with _transizione():
+        diario.csq_invia()
 
 
 def invia(diario: Diario, user) -> None:
@@ -54,7 +73,8 @@ def invia(diario: Diario, user) -> None:
         raise PermessoNegato("Solo il Capo Reparto del diario può inviare il diario.")
     if diario.stato != StatoDiario.RELAZIONE_FINALE:
         raise StatoNonValido("Il diario deve essere in stato relazione finale.")
-    diario.invia()
+    with _transizione():
+        diario.invia()
 
 
 def riapri(diario: Diario, user) -> None:
@@ -63,7 +83,8 @@ def riapri(diario: Diario, user) -> None:
         raise PermessoNegato("Solo lo staff può riaprire un diario.")
     if not diario.puo_essere_riaperto():
         raise StatoNonValido("Riapertura non consentita: verifica stato e scadenza.")
-    diario.riapri()
+    with _transizione():
+        diario.riapri()
 
 
 # ---------------------------------------------------------------------------
@@ -91,10 +112,11 @@ def valuta_direttamente(diario: Diario, esito: str, note: str, user) -> Valutazi
         raise StatoNonValido("Il diario non è in uno stato valutabile.")
     if esito not in EsitoValutazione.values:
         raise StatoNonValido("Esito non valido.")
-    if diario.stato == StatoDiario.INVIATO:
-        diario.avvia_valutazione()
-    val, _ = Valutazione.objects.get_or_create(diario=diario)
-    val.valuta_direttamente(user, esito, note)
+    with _transizione():
+        if diario.stato == StatoDiario.INVIATO:
+            diario.avvia_valutazione()
+        val, _ = Valutazione.objects.get_or_create(diario=diario)
+        val.valuta_direttamente(user, esito, note)
     return val
 
 
@@ -109,7 +131,8 @@ def proponi_pgv(diario: Diario, esito: str, note: str, pgv) -> Valutazione:
         raise StatoNonValido("Maggiori informazioni non può essere proposto dalla Pattuglia GV.")
     if esito not in EsitoValutazione.values:
         raise StatoNonValido("Esito non valido.")
-    val.proponi_pgv(pgv, esito, note)
+    with _transizione():
+        val.proponi_pgv(pgv, esito, note)
     return val
 
 
@@ -120,7 +143,8 @@ def conferma_proposta(diario: Diario, note: str, user) -> Valutazione:
     val = _get_val(diario)
     if val.stato != StatoValutazione.IN_REVISIONE:
         raise StatoNonValido("Nessuna proposta in revisione da confermare.")
-    val.conferma(user, note)
+    with _transizione():
+        val.conferma(user, note)
     return val
 
 
@@ -131,7 +155,8 @@ def rigetta_proposta(diario: Diario, user) -> Valutazione:
     val = _get_val(diario)
     if val.stato != StatoValutazione.IN_REVISIONE:
         raise StatoNonValido("Nessuna proposta da rigettare.")
-    val.rigetta_proposta(user)
+    with _transizione():
+        val.rigetta_proposta(user)
     return val
 
 
@@ -144,7 +169,8 @@ def modifica_valutazione(diario: Diario, esito: str, note: str, user) -> Valutaz
     val = _get_val(diario)
     if val.pubblicata:
         raise StatoNonValido("Non è possibile modificare un esito già pubblicato.")
-    val.modifica(user, esito, note)
+    with _transizione():
+        val.modifica(user, esito, note)
     return val
 
 

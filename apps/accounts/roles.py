@@ -13,7 +13,12 @@ Vincoli di categoria:
 """
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from apps.accounts.models import Ruolo
+
+if TYPE_CHECKING:
+    from apps.accounts.models import Nomina, User
 
 # Categoria di Socio richiesta per ciascun ruolo (None = nessun vincolo).
 ROLE_REQUIRES_CATEGORY: dict[str, str | None] = {
