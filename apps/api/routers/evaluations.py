@@ -13,6 +13,7 @@ from apps.api.permissions import puo_vedere_diario, richiedi_ruolo
 from apps.api.schemas.evaluations import (
     ActionErrorSchema,
     AssegnaPGVBodySchema,
+    AssegnazionePGVApiSchema,
     AzioniValutazioneSchema,
     ConfermaBodySchema,
     DiarioStatoSchema,
@@ -92,7 +93,10 @@ def _val_schema(val, user=None) -> ValutazioneApiSchema:
         note=val.note,
         pubblicata=val.pubblicata,
         assegnazioni=[
-            {"pgv_pk": a.pgv_id, "pgv_nome": a.pgv.get_full_name() or a.pgv.email, "pgv_email": a.pgv.email}
+            AssegnazionePGVApiSchema(
+                pgv_pk=a.pgv_id, pgv_nome=a.pgv.get_full_name() or a.pgv.email,
+                pgv_email=a.pgv.email,
+            )
             for a in val.assegnazioni_pgv.select_related("pgv")
         ],
         stato_display=val.get_stato_display(),

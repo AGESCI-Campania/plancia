@@ -54,3 +54,11 @@
   flex-direction: column;
   > main { flex: 1 0 auto; }
 }
+
+// Tra body e il layout c'è #app: senza min-height 0 i contenitori flex crescono quanto il
+// contenuto e scorre tutta la pagina invece della sola .ag-scroll-area (sidebar e menu utente
+// escono dallo schermo).
+#app,
+.plancia-corpo {
+  min-height: 0;
+}

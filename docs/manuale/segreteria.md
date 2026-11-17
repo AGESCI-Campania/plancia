@@ -1,200 +1,206 @@
 # Guida — Segreteria
 
-La Segreteria gestisce gli utenti, le edizioni, gli import delle anagrafiche e le impostazioni
-operative della piattaforma.
+La Segreteria gestisce le edizioni, gli utenti e le nomine, gli inviti, gli import delle
+anagrafiche, i cambi di referente e l'helpdesk. Le stesse funzioni di gestione sono disponibili
+agli Incaricati EG e agli Admin; le **Impostazioni** della piattaforma sono riservate agli Admin.
 
-> La Segreteria deve configurare l'**autenticazione a due fattori (MFA)** al primo accesso.
+> La Segreteria deve usare la **verifica in due passaggi**: al primo accesso Plancia porta alla
+> pagina *Password e sicurezza* per configurarla (salvo accesso con SSO AGESCI Campania, o se
+> l'Admin l'ha resa facoltativa).
 
----
-
-## Home page
-
-La home mostra l'edizione attiva con lo stato complessivo dei diari.
-
-![Home Segreteria](screenshots/14_home_segreteria.png)
+Le voci di gestione sono nella sezione **Gestione** del menu laterale: **Edizioni**, **Utenti**,
+**Inviti**, **Import**.
 
 ---
 
-## Gestione utenti
+## Home
 
-Da **Gestione → Utenti** trovi l'elenco completo degli utenti della piattaforma.
-Puoi filtrare per ruolo e cercare per nome o email.
+La home mostra l'edizione attiva: contatori per stato (cliccabili come filtro), tabella di tutti
+i diari e il pulsante **Gestisci edizione**. Se non c'è un'edizione aperta o in valutazione la
+home propone **Elenco edizioni** e **Nuova edizione**.
 
-![Lista utenti](screenshots/15_utenti_lista.png)
-
-Per ogni utente puoi:
-
-- Visualizzarne il profilo e il ruolo
-- **Assegnare un ruolo** (Nomina): segreteria può creare utenti con ruolo CRP, PGV, CSQ,
-  Incaricato EG e altri Segreteria
-- Inviare un nuovo invito via email se l'utente non ha ancora attivato l'account
-
-> La Segreteria **non può** creare o modificare account Admin.
-
-### Crea utente staff
-
-Da **Gestione → Persone → Crea utente staff** puoi creare direttamente utenti con ruolo
-**Segreteria** o **Incaricato EG** senza passare per il codice socio AGESCI.
-
-![Crea utente staff](screenshots/38_crea_staff.png)
-
-Inserisci nome, cognome, email e ruolo: al salvataggio viene inviata automaticamente
-un'email di reset password all'indirizzo indicato per il primo accesso.
+![Home Segreteria](screenshots/segreteria_home.png)
 
 ---
 
-## Impostazioni di piattaforma
+## Edizioni
 
-Da **Gestione → Impostazioni** (visibile a Admin e Segreteria):
+**Edizioni** elenca le edizioni (bozza, aperta, in valutazione, chiusa) con scadenze e date
+dell'evento; ogni scheda ha **Apri** e **Modifica**. **Nuova edizione** crea un'edizione.
 
-![Impostazioni](screenshots/16_impostazioni.png)
+![Elenco edizioni](screenshots/edizioni.png)
 
-Le sezioni disponibili:
+Nel modulo dell'edizione: **Anno**, **Stato**, **1ª scadenza (evento)**, **2ª scadenza
+(assemblea)**, **Inizio evento**, **Fine evento**, **Comune** (con suggerimenti) e **Località**;
+poi **Salva edizione**.
 
-| Sezione | Cosa configuri |
-|---|---|
-| **Identità** | Titolo e sottotitolo mostrati nella navbar |
-| **Footer** | Testo, etichetta link e URL del footer |
-| **Posta elettronica** | Modalità di invio email, SMTP, indirizzo mittente |
-| **Stato e diagnostica** | Modalità manutenzione, debug toolbar |
-| **Import tracciati** | Avvio manuale degli import Co.Ca., Ragazzi, Evento |
-| **Template email** | Personalizzazione in rich text delle email di sistema |
+### Dettaglio dell'edizione
+
+![Dettaglio edizione](screenshots/edizione_dettaglio.png)
+
+La barra in alto contiene:
+
+- **Modifica**;
+- **Esiti Excel**: il file con gli esiti di tutti i diari dell'edizione;
+- **Esporta diari** → *Excel (xlsx)*, *Calc (ods)* o *CSV*: un foglio unico con il contenuto di
+  tutti i moduli. Con molti diari il file viene preparato in background e arriva per email;
+- **Pubblica esiti** (vedi la [guida dell'Incaricato EG](incaricato.md#pubblicare-gli-esiti));
+- il pulsante del prossimo stato: **Apri edizione** (da bozza: Capi Squadriglia e Capi Reparto
+  possono compilare), **Avvia valutazione**, **Chiudi edizione** (non si può annullare).
+
+Sotto: l'**Avanzamento diari** per stato (cliccando un riquadro si filtra la tabella), la tabella
+**Diari di bordo** con ricerca e filtri, le **Dilazioni** e il collegamento a **Google Drive**.
+
+### Dilazioni
+
+Nel riquadro **Dilazioni** premi **Concedi dilazione**, scegli il **Diario** (solo quelli non
+ancora inviati), la **Nuova scadenza** e la **Motivazione**, poi **Concedi**. La dilazione si può
+concedere anche dal diario (**Concedi dilazione** nel riquadro Azioni).
+
+![Dilazioni](screenshots/edizione_dilazioni.png)
+
+### Google Drive dell'edizione
+
+Gli allegati e i PDF di ogni edizione possono finire in due cartelle Google Drive: **Cartella
+Allegati** e **Cartella Output**. Il riquadro **Google Drive** permette di **Connettere un account
+Google Drive**, scegliere le cartelle con **Sfoglia** e impostare il **Formato nome cartella
+diario** (con anteprima). Al salvataggio di tutti e tre i valori la configurazione viene
+**bloccata** e non si può più cambiare. I dettagli sono nella
+[guida dell'Amministratore](admin.md#google-drive).
+
+![Google Drive dell'edizione](screenshots/edizione_drive.png)
 
 ---
 
-## Gestione Inviti
+## Utenti e nomine
 
-Da **Gestione → Inviti** puoi inviare e monitorare gli inviti per l'edizione attiva.
-La pagina mostra contatori e stato (non inviato / inviato / attivato) per ogni squadriglia.
+**Utenti** elenca tutti gli account con ricerca (email, nome o cognome) e filtro per ruolo.
 
-![Gestione Inviti](screenshots/28_gestione_inviti.png)
+![Utenti](screenshots/utenti.png)
 
+### Nuovo utente
+
+**Nuovo utente** offre due tipi:
+
+- **Utente di staff** (Admin, Segreteria, Incaricato EG): non serve un codice socio. Inserisci
+  *Nome*, *Cognome*, *Email* e *Ruolo*, poi **Crea utente e invia l'email**: l'utente riceve il
+  link per impostare la password. Se l'email non arriva può usare *Password dimenticata?*.
+- **Da Socio importato**: scegli un capo tra i soci importati e il ruolo, poi **Crea account**;
+  l'invito si invia poi dalla pagina **Inviti**.
+
+![Nuovo utente](screenshots/utente_nuovo.png)
+
+La Segreteria può nominare Incaricati EG, Pattuglia GV, Capi Reparto e Capi Squadriglia; Admin e
+Segreteria li nomina solo un Admin.
+
+### Dettaglio utente
+
+Il dettaglio mostra i dati (email, codice socio, categoria, gruppo, zona, ruoli attivi), lo
+**Storico nomine** (con **Revoca**: la nomina resta nello storico) e gli **Ultimi accessi**.
+Da **Assegna ruolo** scegli *Ruolo*, eventualmente *Edizione* (solo per Capo Reparto e Capo
+Squadriglia) e *Scadenza*, poi **Conferma nomina**.
+
+![Dettaglio utente](screenshots/utente_dettaglio.png)
+
+### Impersonare un utente
+
+**Impersona utente** (in alto nel dettaglio) fa vedere Plancia esattamente come la vede
+quell'utente, utile per l'assistenza. In cima a ogni pagina compare la fascia *"Stai operando come
+…"* con **Torna al tuo account**. La Segreteria non può impersonare chi ha il ruolo Admin; ogni
+impersonazione viene registrata.
+
+---
+
+## Inviti
+
+**Inviti** (sezione Gestione) mostra l'edizione attiva con due riquadri, **Capi Reparto** e
+**Capi Squadriglia**: *Totale*, *Da invitare*, *Invitati*, *Attivati*, il **Canale di invio**
+(predefinito o email di sistema) e il pulsante di invio.
+
+![Gestione inviti](screenshots/inviti_gestione.png)
 
 ### Sequenza consigliata
 
-1. Esegui gli import (Co.Ca. → Squadriglie) e riconcilia le eventuali anomalie.
-2. Clicca **"Invia inviti ai Capi Reparto"**: ogni CRP riceve il proprio link di accesso.
-3. Dopo che i CRP hanno attivato l'account (o in parallelo), clicca
-   **"Invia inviti ai Capi Squadriglia"**.
+1. Esegui gli import (Capi → Squadriglie iscritte) e risolvi le anomalie.
+2. **Invia inviti ai Capi Reparto**: ogni Capo Reparto riceve il proprio link di attivazione.
+3. **Invia inviti ai Capi Squadriglia**: ogni Capo Reparto riceve un'**email riepilogativa** con i
+   link dei propri Capi Squadriglia, da consegnare ai ragazzi; se nel tracciato c'è l'email del
+   Capo Squadriglia parte anche un'email diretta, come canale secondario.
+4. Il Capo Squadriglia attiva l'account confermando **codice socio AGESCI** ed **email**.
 
-### Cosa succede con l'invio ai Capi Squadriglia
+### Dettaglio per squadriglia
 
-- Ogni Capo Reparto riceve un'**email riepilogativa** con la tabella dei propri
-  Capi Squadriglia e il loro link personale. Il CRP deve consegnarli ai ragazzi.
-- Se il Capo Squadriglia ha un'email nel tracciato, riceve anche un'**email diretta**
-  come canale secondario (l'email potrebbe essere errata, quindi non è il canale primario).
-- L'attivazione richiede il **codice socio AGESCI** (dalla tessera) + una email:
-  questo garantisce che l'account sia attivato dalla persona giusta.
-
-### Reinvio individuale
-
-Dalla tabella della pagina Gestione Inviti puoi reinviare l'invito a un singolo
-utente con il pulsante **↺** accanto al suo nome.
+La tabella in basso (con ricerca e filtri per zona e gruppo) mostra per ogni squadriglia Capo
+Squadriglia e Capo Reparto, lo stato dei due inviti (*Non inviato*, *Inviato*, *Attivato*, e
+l'esito della consegna se il provider lo comunica) e i pulsanti per **reinviare** un invito (il
+link precedente viene invalidato) o **inviare gli inviti mancanti** della squadriglia. I Capi
+Reparto creati dall'import come provvisori hanno il badge **Da riconciliare**.
 
 ---
 
-## Import anagrafiche
+## Import
 
-Da **Gestione → Import anagrafiche** trovi lo storico di tutti gli import eseguiti.
+**Import** carica i tracciati e mostra lo storico. L'ordine consigliato è:
 
-![Storico import](screenshots/17_import_storico.png)
-
-I tre tipi di import (avviabili da Impostazioni o da riga di comando):
-
-| Comando | Sorgente | Effetto |
+| Scheda | File | Cosa fa |
 |---|---|---|
-| `import_coca` | CSV capi Co.Ca. | Crea/aggiorna Soci (categoria capo) |
-| `import_ragazzi` | CSV ragazzi | Crea/aggiorna Soci (categoria ragazzo) |
-| `import_squadriglie` | CSV Evento | Crea diari, lega CSQ per codice socio e CRP per email |
+| 1. Capi (Co.Ca.) | CSV (export BuonaStrada) | Crea/aggiorna i soci capi; va fatto prima delle squadriglie |
+| 2. Squadriglie iscritte | CSV dell'evento (BuonaCaccia), con l'edizione | Crea i diari, i Capi Squadriglia e abbina il Capo Reparto per email |
+| 3. Ragazzi *(opzionale)* | CSV (export BuonaStrada) | Aggiorna i dati dei ragazzi tramite codice socio |
+| 4. Risposte EG (Jotform) | xlsx | Importa i diari compilati con il Jotform; elaborazione in background, resoconto per email |
 
-> I CSV reali non vanno mai caricati nel repository (contengono dati di minori).
-> Usa sempre file di test dalla cartella `fixtures/`.
+Scegli il file (e l'edizione dove richiesto) e premi **Importa …**.
 
-### Capi Reparto non trovati — record provvisori
+![Import tracciati](screenshots/import.png)
 
-Se durante l'import squadriglie un Capo Reparto non viene trovato per email
-(ad esempio il tracciato Co.Ca. non è ancora stato importato, o l'email è diversa),
-la piattaforma crea automaticamente un **Capo Reparto provvisorio** con i dati
-disponibili dal tracciato Evento (nome, cognome, email).
-Il codice socio è temporaneo (formato `tmpNNNNN`) e sarà sostituito dalla riconciliazione.
+> I file reali contengono dati di minori: non vanno condivisi né conservati fuori dalla
+> piattaforma.
 
-Questo garantisce che ogni diario abbia sempre un Capo Reparto associato —
-anche prima della riconciliazione — e che i Capi Reparto provvisori possano già
-ricevere l'invito e distribuire i link ai loro Capi Squadriglia.
+### Anomalie e riconciliazione
 
-I record provvisori sono identificati dal badge **"Da riconciliare"** nella pagina
-Gestione Inviti. Effettua la riconciliazione prima di pubblicare i risultati.
+Lo **Storico import** riporta per ogni caricamento righe totali, OK, scartate e anomalie;
+**Dettaglio** apre il resoconto:
 
-### Riconciliazione manuale
+- **Anomalie da riconciliare**: di solito un Capo Reparto non trovato per email. In quel caso
+  l'import crea un **Capo Reparto provvisorio** (codice socio temporaneo `tmpNNNNN`) così il
+  diario ha comunque un referente e può ricevere l'invito. Dopo un nuovo import dei capi premi
+  **Riprova anomalie** per abbinarli in automatico; per le righe residue cerca il socio capo
+  (nome, cognome, gruppo, zona o codice socio) e premi **Associa**. Se il provvisorio aveva già
+  attivato l'account, l'account passa al socio reale senza perdere dati.
+- **Righe scartate**: le righe escluse con il motivo dell'errore; **Scarica CSV** per correggerle.
 
-Ogni riga anomala è accessibile dallo storico import. Puoi:
-
-- Cliccare **"Riprova anomalie"** dopo un nuovo import Co.Ca. per abbinare
-  automaticamente i CRP ora presenti nel DB.
-- Usare il form di riconciliazione manuale per abbinare singole righe cercando
-  il Socio capo per nome, cognome o codice socio.
-
-Quando riconcili un CRP provvisorio che ha già attivato l'account, l'account utente
-viene trasferito automaticamente al Socio reale senza perdita di dati.
+![Dettaglio import](screenshots/import_dettaglio.png)
 
 ---
 
-## Cambio referenti di un diario
+## Cambio dei referenti
 
-### Cambia il Capo Reparto di un singolo diario
+### Capo Squadriglia o Capo Reparto di un diario
 
-Se un Capo Reparto deve essere sostituito sul singolo diario (es. errore di import
-o cambio improvviso), puoi aggiornarlo finché il diario non è stato inviato
-(stati *In compilazione* e *Relazione finale*).
+Dal diario, nel riquadro Azioni, **Cambia Capo Squadriglia** o **Cambia Capo Reparto**: cerca il
+nuovo referente (almeno 2 caratteri) e premi **Conferma cambio**. Lo staff può farlo finché il
+diario non è stato inviato (stati *Non iniziato*, *In compilazione*, *Relazione finale*).
 
-1. Apri il **dettaglio del diario**.
-2. Clicca il pulsante **"Cambia Capo Reparto"**.
-3. Cerca il nuovo Capo Reparto per nome, cognome o codice socio.
-4. Selezionalo e clicca **"Salva"**.
+### Capo Reparto di tutto il reparto
 
-### Cambia il Capo Reparto di un intero reparto (bulk)
+Quando un Capo Reparto viene sostituito su tutte le squadriglie, dal diario premi **Cambia il Capo
+Reparto di tutto il reparto**. La pagina elenca i **Diari coinvolti** (solo quelli non ancora
+inviati); scegli il **Nuovo Capo Reparto** e premi **Conferma cambio per tutti i diari**.
 
-Utile quando un CRP viene sostituito e ha più diari associati (più squadriglie).
+![Cambia Capo Reparto del reparto](screenshots/cambia_crp_reparto.png)
 
-1. Dalla lista diari, individua il reparto interessato e clicca
-   **"Cambia Capo Reparto — reparto"** accanto a uno dei diari.
-2. La pagina mostra tutti i diari del reparto che possono ancora essere modificati
-   (stati *In compilazione* e *Relazione finale*).
-3. Cerca il nuovo Capo Reparto e clicca **"Salva"**.
-   Tutti i diari elencati vengono aggiornati in un'unica operazione.
-
-![Cambia Capo Reparto per reparto](screenshots/29_cambia_crp_reparto.png)
-
-> I diari già in stato *Inviato* o successivi **non vengono modificati** dal cambio bulk.
-> Per quei diari è necessaria un'operazione manuale tramite il pannello Django Admin.
-
----
-
-## Gestione edizioni
-
-Da **Gestione → Elenco edizioni** puoi vedere e modificare le edizioni.
-
-![Dettaglio edizione](screenshots/18_edizione_detail.png)
-
-Per ogni edizione è possibile:
-
-- Cambiare lo stato (Aperta → In valutazione → Chiusa)
-- Impostare le date evento e le scadenze
-- Collegare un account Google Drive per l'archiviazione dei file
-- Aggiungere dilazioni per specifiche squadriglie
+I diari già inviati non vengono toccati: per quelli serve un intervento dell'Admin.
 
 ---
 
 ## Helpdesk
 
-Dalla voce **Helpdesk** in navbar gestisci i ticket aperti da CSQ e CRP.
-Puoi rispondere, prendere in carico e chiudere i ticket.
+**Helpdesk** mostra tutte le richieste di assistenza, filtrabili per stato.
 
----
+![Helpdesk](screenshots/helpdesk.png)
 
-## Impersonazione utenti
+Nel ticket trovi la richiesta (chi l'ha aperta, categoria, diario collegato) e le risposte.
+Scrivi nella **La tua risposta** e premi **Rispondi**; **Prendi in carico** assegna il ticket a
+te, **Chiudi ticket** lo chiude.
 
-La Segreteria può **impersonare** (accedere come) qualunque utente con rango inferiore
-(non Admin) tramite il pulsante nella pagina di dettaglio utente.
-Durante l'impersonazione appare un banner arancio in cima alla pagina.
-Non è possibile impersonare un Admin.
+![Ticket](screenshots/helpdesk_ticket.png)

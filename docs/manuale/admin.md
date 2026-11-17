@@ -1,171 +1,175 @@
 # Guida — Amministratore
 
-L'Admin ha accesso completo alla piattaforma: crea altri Admin e Segreteria, configura
-l'autenticazione, gestisce le edizioni e supervisiona tutto il sistema.
+L'Admin ha accesso completo: oltre a tutte le funzioni di gestione (vedi la
+[guida della Segreteria](segreteria.md) e quella dell'[Incaricato EG](incaricato.md)) configura la
+piattaforma, l'accesso, Google Drive e la posta, segue i PDF e aggiorna il server dal web.
 
-> L'Admin deve configurare l'**autenticazione a due fattori (MFA)** al primo accesso.
-
----
-
-## Home page e lista utenti
-
-![Home Admin](screenshots/19_home_admin.png)
-
-Da **Gestione → Utenti** l'Admin vede tutti gli utenti inclusi gli altri Admin.
-
-![Lista utenti Admin](screenshots/20_utenti_admin.png)
+> Per l'Admin la **verifica in due passaggi** è sempre obbligatoria (salvo accesso con SSO AGESCI
+> Campania, dove la chiede l'SSO).
 
 ---
 
-## Pannello Django Admin
+## Il menu Sistema
 
-Da **Gestione → Pannello admin** (`/admin/`) è possibile accedere all'interfaccia Django
-per operazioni di basso livello su qualsiasi modello del database.
-Usalo solo per operazioni di emergenza o debug che non sono esposte nell'UI normale.
+Oltre a *Gestione* (Edizioni, Utenti, Inviti, Import, Statistiche), l'Admin trova nel menu la
+sezione **Sistema**:
+
+| Voce | Cosa contiene |
+|---|---|
+| **Impostazioni** | Le impostazioni della piattaforma, divise in schede |
+| **Cache PDF** | PDF già generati, invalidazione e generazione massiva |
+| **Log export** | Storico della generazione di PDF ed Excel, con gli errori |
+| **Aggiornamenti** | Versione del server e aggiornamento dal web |
+| **Pannello admin** | L'amministrazione Django (`/admin/`), per interventi di basso livello |
+| **Flower** | Il monitor dei job in background (Celery), se attivo |
+| **Mailpit** | Le email intercettate in modalità di prova |
+
+![Home dell'Admin](screenshots/admin_home.png)
+
+Pannello admin, Flower e Mailpit si aprono in una nuova scheda con la stessa sessione di Plancia
+(senza sessione portano alla pagina di accesso). Usa il Pannello admin solo per emergenze non
+gestibili dall'app.
 
 ---
 
-## Configurazione autenticazione a due fattori (MFA)
+## Impostazioni
 
-Al primo accesso la piattaforma richiede di configurare un'app authenticator TOTP
-(Google Authenticator, Aegis, Authy, ecc.).
+La pagina **Impostazioni della piattaforma** ha sei schede; ogni riquadro ha il proprio pulsante
+di salvataggio.
 
-1. Scansiona il QR code mostrato con la tua app authenticator.
-2. Inserisci il codice a 6 cifre generato per confermare.
-3. Salva i **codici di recupero** in un posto sicuro: servono se perdi l'accesso all'app.
+### Identità e footer
 
-La pagina **Sicurezza (MFA)** nel menu utente (in alto a destra) permette di
-gestire i dispositivi TOTP e rigenerare i codici di recupero.
+**Titolo** e **Sottotitolo** della piattaforma; **Testo del footer**, con l'editor (*Visuale*,
+*HTML*, *Anteprima*) e le variabili `{{ titolo }}`, `{{ sottotitolo }}`, `{{ versione }}`,
+`{{ commit }}`; **Link del footer** (fino a 4, con tipo, etichetta e indirizzo, riordinabili). Il
+link al manuale e quelli alle pagine legali compaiono da soli.
 
-![Impostazione MFA](screenshots/30_mfa_impostazione.png)
+![Identità e footer](screenshots/impostazioni_generale.png)
 
-### Obbligo MFA per Segreteria e Incaricati EG
+### Posta elettronica
 
-Per impostazione predefinita la MFA è obbligatoria anche per **Segreteria** e
-**Incaricati EG**. Un Admin può renderla facoltativa in
-**Impostazioni → Sicurezza → MFA obbligatoria per Segreteria e Incaricati EG**.
+- **Modalità invio mail**: *Invio reale*, *Simulato (solo log su file)*, *Simulato + invio reale*,
+  *Mailpit*.
+- **Nome mittente** e **Mittente (from)**.
+- **Backend email standard** (email di sistema: reset password, verifica, notifiche singole) e
+  **Backend invii massivi** (inviti in blocco): SMTP o provider transazionale.
+- **Backend SMTP**: host, porta, TLS, utente e password; in alternativa **Gmail OAuth2**
+  (**Collega Gmail** / **Scollega**, vedi sotto).
+- **Backend provider transazionale** (Brevo, Mailgun…): provider, API key, webhook secret e
+  l'URL del webhook da configurare nel provider (serve a tracciare consegne e rimbalzi).
+- **Salva posta elettronica**, poi **Test SMTP** / **Test provider transazionale** inviano una mail
+  di prova al tuo indirizzo (ignorando la modalità simulata).
 
-- **Attivato** (default): Segreteria e Incaricati EG devono configurare la MFA al primo accesso.
-- **Disattivato**: Segreteria e Incaricati EG possono accedere senza MFA. Per gli Admin resta sempre obbligatoria.
+![Posta elettronica](screenshots/impostazioni_email.png)
 
-![Opzione MFA Segreteria/IABR](screenshots/31_mfa_impostazioni.png)
+Guida completa: **[Configurazione email](../guide/email_provider.md)**.
 
+**Gmail OAuth2 SMTP.** Per usare Gmail senza password: nel client OAuth di Google Cloud (lo stesso
+di Drive) aggiungi come URI di reindirizzamento
+`https://plancia.agescicampania.net/impostazioni/gmail-smtp/oauth/callback/` (la pagina mostra
+l'indirizzo esatto), poi premi **Collega Gmail** e autorizza l'account da cui inviare. Il token si
+rinnova da solo.
 
-### Passkey (accesso senza password)
+### Sicurezza
 
-Oltre al TOTP, è possibile aggiungere una **passkey** per accedere con Face ID, Touch ID,
-Windows Hello o una chiave hardware (YubiKey) — senza inserire email e password.
+- **MFA obbligatoria per Segreteria e Incaricati EG**: attiva per impostazione predefinita;
+  spegnendola la verifica in due passaggi resta obbligatoria solo per gli Admin.
+- **Protezione dai tentativi di accesso**: *Tentativi prima del blocco*, *Minuti di blocco
+  automatico* (0 = blocco permanente fino allo sblocco), *Scadenza dei tentativi*.
+- **IP bloccati**: elenco con **Sblocca** e **Sblocca tutti**.
 
-**Come aggiungere una passkey:**
+![Sicurezza](screenshots/impostazioni_sicurezza.png)
 
-1. Accedi normalmente e vai nel menu utente (in alto a destra) → **Sicurezza (MFA)**.
-2. Trovi la sezione **Passkey** → clicca **Aggiungi passkey**.
-3. Inserisci un nome per il dispositivo (es. "iPhone 16", "MacBook Pro").
-4. Lascia spuntata l'opzione **"Usa come passkey"** per poter accedere senza password.
-5. Clicca **Registra passkey** — il browser apre la procedura di registrazione biometrica:
-   sblocca con impronta, viso o PIN e segui le istruzioni a schermo.
+### Sistema
 
-**Come accedere con la passkey:**
+- **Allegati**: *Lato maggiore delle immagini (px)*; le foto caricate vengono ridotte a questa
+  misura (JPEG qualità 85); nel PDF entrano a 480 px.
+- **Stato e diagnostica**: **Modalità manutenzione** con il messaggio da mostrare (solo gli Admin
+  possono usare Plancia; gli altri vedono il messaggio in cima alla pagina), **Debug toolbar**,
+  **Log diagnostico**; collegamenti a Flower e Mailpit.
+- **Strumenti**: collegamenti a Cache PDF, Log export, Google Drive, Aggiornamenti del server e
+  Import tracciati.
 
-Nella pagina di login compare il pulsante **"Accedi con passkey"**. Cliccandolo il browser
-propone le passkey registrate — sblocca il dispositivo e accedi direttamente, senza email
-né password né TOTP.
+![Sistema](screenshots/impostazioni_sistema.png)
 
-**Gestione passkey:**
+### Template email
 
-Da **Sicurezza (MFA)** → clicca il numero di passkey configurate → apri la lista per:
-- **Rinominare** una passkey (icona matita)
-- **Eliminare** una passkey non più usata (icona cestino)
+L'elenco delle email automatiche (inviti, reset password, notifiche…) con i **tag** disponibili
+(tra doppie graffe, sostituiti all'invio). Senza personalizzazione si usa il file predefinito.
+**Modifica** apre l'editor (*Oggetto email*, *Attivo*, *Corpo HTML*, **Salva template**);
+**Importa da file** parte dal predefinito; **Crea nuovo** / **Crea nuovo da attuale** duplica un
+template su un'altra chiave; **Elimina (ripristina predefinito)** torna al file.
 
-> **Nota**: le passkey sono legate al browser/dispositivo su cui vengono create. Prima di
-> cambiare dispositivo, aggiungi una nuova passkey dal vecchio e poi elimina quella obsoleta.
+![Template email](screenshots/impostazioni_template_email.png)
+
+### Pagine legali
+
+**Privacy Policy** e **Condizioni del Servizio**, pubblicate su `/pagine/<nome>` e linkate nel
+piè di pagina: **Visualizza**, **Predefinito** (carica il testo di partenza fornito dalla
+piattaforma: **personalizzalo prima di pubblicarlo**) e **Modifica** (*Titolo*, *Contenuto*,
+**Salva**).
+
+![Pagine legali](screenshots/impostazioni_pagine.png)
 
 ---
 
 ## Accesso con SSO AGESCI Campania (Sestante)
 
 Il pulsante **Accedi con SSO AGESCI Campania** usa l'account regionale di
-`https://auth.agescicampania.net`. Compare solo quando nel file `.env` del server sono
-valorizzati `SOCIAL_SESTANTE_CLIENT_ID` e `SOCIAL_SESTANTE_CLIENT_SECRET` (si trovano in
+`https://auth.agescicampania.net`. Compare solo quando nel file `.env` del server sono valorizzati
+`SOCIAL_SESTANTE_CLIENT_ID` e `SOCIAL_SESTANTE_CLIENT_SECRET` (si trovano in
 <https://auth.agescicampania.net/if/admin/#/core/providers> → **Plancia AGESCI Campania** →
-modifica; dopo averli inseriti: `docker compose up -d`).
+modifica; dopo averli inseriti: `docker compose up -d`). Guida tecnica:
+[SSO Sestante](../guide/sso_sestante.md).
 
-Cosa succede al login con SSO:
+Al login con SSO:
 
 - l'account Plancia con la stessa email viene **collegato**; se non esiste viene **creato** senza
   ruoli locali;
 - i gruppi dell'SSO `admin-multipiattaforma` e `segreteria` danno i ruoli **Admin** e
   **Segreteria** in Plancia, aggiornati a ogni accesso (tolti nell'SSO → revocati qui). I ruoli
-  assegnati in Plancia (Incaricato EG, Pattuglia GV, Capo Reparto, Capo Squadriglia, e gli
-  Admin/Segreteria nominati qui) non vengono mai toccati;
-- la **MFA** la chiede l'SSO: Plancia non la richiede a chi è entrato con SSO, ma continua a
-  richiederla a chi entra con email e password;
-- account SSO senza email, o email usata da più account Plancia: l'accesso viene rifiutato con
-  un messaggio. In caso di doppioni, unificare gli account prima di riprovare.
+  assegnati in Plancia non vengono mai toccati;
+- la **verifica in due passaggi** la chiede l'SSO: Plancia non la richiede a chi è entrato con SSO,
+  ma continua a richiederla a chi entra con email e password;
+- account SSO senza email, o email usata da più account Plancia: l'accesso viene rifiutato con un
+  messaggio nella pagina di accesso. In caso di doppioni unifica gli account prima di riprovare.
 
 Il login con email e password resta disponibile accanto all'SSO.
 
 ---
 
-## Configurazione autenticazione social (Google, Microsoft, Apple)
+## Accesso con Google, Microsoft e Apple
 
-Per abilitare i pulsanti "Accedi con Google / Microsoft / Apple" nella pagina di login
-segui la guida completa: **[`docs/guide/social_auth.md`](../guide/social_auth.md)**
+Per i pulsanti *Accedi con Google / Microsoft / Apple* segui la guida
+**[Autenticazione social](../guide/social_auth.md)**. In sintesi:
 
-In sintesi:
+1. crea le credenziali OAuth presso il provider con redirect URI
+   `https://plancia.agescicampania.net/accounts/<google|microsoft|apple>/login/callback/`;
+2. imposta le variabili nel `.env` del server (`SOCIAL_GOOGLE_CLIENT_ID`,
+   `SOCIAL_GOOGLE_CLIENT_SECRET`, …);
+3. applica con `docker compose up -d`. I pulsanti compaiono solo per i provider configurati.
 
-1. **Ottieni le credenziali OAuth** dal provider (Google Cloud Console, portale Azure,
-   Apple Developer Program) — vedi §4 della guida. Redirect URI:
-   `https://plancia.agescicampania.net/accounts/<google|microsoft|apple>/login/callback/`.
-2. **Imposta le variabili d'ambiente** nel file `.env` sul server:
-   ```bash
-   SOCIAL_GOOGLE_CLIENT_ID=xxxxx.apps.googleusercontent.com
-   SOCIAL_GOOGLE_CLIENT_SECRET=GOCSPX-xxxxx
-   # Opzionale:
-   SOCIAL_MICROSOFT_CLIENT_ID=...
-   SOCIAL_MICROSOFT_CLIENT_SECRET=...
-   ```
-3. Applica con `docker compose up -d`. I pulsanti compaiono solo per i provider con
-   `CLIENT_ID` valorizzato. (Il dominio del record *Sites* lo imposta già `scripts/installa.sh`.)
-
-> Il social login Google/Microsoft/Apple **non crea nuovi utenti da solo**: l'email del provider
-> deve corrispondere a un account già esistente in piattaforma (creato tramite invito da
-> Segreteria/Admin). Solo l'SSO AGESCI Campania crea gli account mancanti.
+> I provider social **non creano nuovi utenti**: l'email deve corrispondere a un account già
+> esistente. Solo l'SSO AGESCI Campania crea gli account mancanti.
 
 ---
 
-## Configurazione Google Drive OAuth
+## Google Drive
 
-Plancia può caricare automaticamente PDF e file Excel su **Google Drive** al termine
-dell'archiviazione di un'edizione. Richiede un'applicazione OAuth separata da quella
-del social login.
+Plancia può archiviare foto e PDF dei diari su **Google Drive**. Serve un client OAuth separato
+da quello del login con Google (gli scope sono diversi):
 
-### Perché due applicazioni Google OAuth?
-
-| Scopo | Variabili env | Scope richiesti |
+| Scopo | Variabili | Scope |
 |---|---|---|
-| **Social login** (accedi con Google) | `SOCIAL_GOOGLE_CLIENT_ID/SECRET` | `email`, `profile`, `openid` |
-| **Google Drive** (upload file) | `GOOGLE_OAUTH_CLIENT_ID/SECRET` | `drive` (lettura/scrittura Drive) |
+| Login con Google | `SOCIAL_GOOGLE_CLIENT_ID/SECRET` | `email`, `profile`, `openid` |
+| Google Drive | `GOOGLE_OAUTH_CLIENT_ID/SECRET`, `GOOGLE_OAUTH_REDIRECT_URI` | `drive` |
 
-Le due app possono usare lo stesso progetto Google Cloud ma devono avere **credenziali OAuth
-separate** perché i permessi (scope) sono diversi.
+### 1. Credenziali
 
-### Passo 1 — Crea le credenziali OAuth per Drive
-
-1. Vai su [console.cloud.google.com](https://console.cloud.google.com) → seleziona
-   il progetto già usato per il social login (o creane uno dedicato).
-2. **API e servizi** → **Libreria** → cerca **Google Drive API** → **Abilita**.
-3. **API e servizi** → **Credenziali** → **Crea credenziali** → **ID client OAuth 2.0**:
-   - Tipo applicazione: **Applicazione web**
-   - Nome: `Plancia Drive`
-   - **URI di reindirizzamento autorizzati**:
-     - Dev: `http://localhost:8000/drive/oauth/callback/`
-     - Produzione: `https://plancia.agescicampania.net/drive/oauth/callback/`
-4. Copia **ID client** e **Secret client**.
-
-### Passo 2 — Imposta le variabili d'ambiente
-
-Nel file `.env` (o `.env.dev` per il test locale):
+In [Google Cloud Console](https://console.cloud.google.com): abilita la **Google Drive API**, crea
+un **ID client OAuth 2.0** di tipo *Applicazione web* con URI di reindirizzamento
+`https://plancia.agescicampania.net/drive/oauth/callback/` (in sviluppo
+`http://localhost:8000/drive/oauth/callback/`) e metti ID e secret nel `.env`:
 
 ```bash
 GOOGLE_OAUTH_CLIENT_ID=xxxxx.apps.googleusercontent.com
@@ -173,306 +177,130 @@ GOOGLE_OAUTH_CLIENT_SECRET=GOCSPX-xxxxx
 GOOGLE_OAUTH_REDIRECT_URI=https://plancia.agescicampania.net/drive/oauth/callback/
 ```
 
-In dev la redirect URI può essere `http://` — la piattaforma imposta automaticamente
-`OAUTHLIB_INSECURE_TRANSPORT=1` solo nel callback di sviluppo.
+Guida completa: **[Google Drive OAuth](../guide/google_drive_oauth.md)**.
 
-### Passo 3 — Collega un account Drive a un'edizione
+### 2. Collegare l'account
 
-Il flusso OAuth Drive non è globale ma **per edizione**: ogni edizione può usare un
-account Google Drive diverso.
+Da **Impostazioni → Sistema → Google Drive** (pagina *Google Drive*) premi **Collega un account
+Google Drive** e autorizza l'account Google che contiene le cartelle. La pagina elenca gli
+**Account collegati** (*Attivo* o *Autorizzazione scaduta*: in quel caso ripeti il collegamento
+con lo stesso account). Conviene un account dedicato (es. `archivio@…`) per non esporre file
+personali.
 
-1. Vai su **Gestione → Elenco edizioni** → clicca sull'edizione da configurare.
-2. Nel pannello **Google Drive** clicca **Collega account Drive**.
-3. Vieni reindirizzato a Google per autorizzare l'accesso a Drive
-   con l'account Google che contiene le cartelle dell'edizione.
-4. Dopo il consenso torni alla pagina dell'edizione con l'email dell'account collegato.
-5. Usando il **folder picker** puoi selezionare (o creare) le cartelle:
-   - **Cartella allegati**: cartella principale dove vengono create le sottocartelle delle foto
-   - **Cartella output**: cartella principale dove vengono depositate le sottocartelle PDF/Excel
-6. Imposta il **formato del nome delle sottocartelle** per i diari (vedi sezione successiva).
-7. Clicca **Salva e blocca configurazione**.
+![Google Drive](screenshots/impostazioni_drive.png)
 
-### Passo 3b — Formato delle sottocartelle per diario
+### 3. Cartelle dell'edizione
 
-Per ogni diario viene creata automaticamente una sottocartella univoca dentro la cartella
-allegati e una dentro la cartella output. Il nome della sottocartella è calcolato dal formato
-configurato nell'edizione.
+Nella pagina dell'edizione, riquadro **Google Drive**:
 
-**Variabili disponibili:**
+1. **Connetti account Google Drive** (o **Cambia account Drive**);
+2. **Cartella Allegati** e **Cartella Output**: incolla l'ID o premi **Sfoglia** per sceglierla;
+3. **Formato nome cartella diario**, con l'anteprima. Variabili: `{id_univoco}` (obbligatoria,
+   5 cifre), `{edizione}`, `{nome_gruppo}`, `{nome_zona}`, `{nome_reparto}`, `{nome_squadriglia}`,
+   `{specialita}`. Predefinito:
+   `{id_univoco}_{edizione}_{nome_gruppo}_{nome_reparto}_{nome_squadriglia}_{specialita}`;
+4. **Salva e blocca configurazione**.
 
-| Variabile | Contenuto | Obbligatoria |
-|---|---|---|
-| `{id_univoco}` | ID numerico del diario (5 cifre, es. `00042`) | ✅ Sì |
-| `{edizione}` | Anno dell'edizione (es. `2026`) | No |
-| `{nome_gruppo}` | Nome del gruppo scout | No |
-| `{nome_zona}` | Nome della zona | No |
-| `{nome_reparto}` | Nome del reparto | No |
-| `{nome_squadriglia}` | Nome della squadriglia | No |
-| `{specialita}` | Specialità di squadriglia (se compilata) | No |
-
-**Formato di default:**
-```
-{id_univoco}_{edizione}_{nome_gruppo}_{nome_reparto}_{nome_squadriglia}_{specialita}
-```
-
-Esempio di cartella generata: `00042_2026_Salerno1_Reparto1_Aquile_Campismo`
-
-I caratteri non validi (spazi, accenti, simboli) vengono sostituiti automaticamente
-con underscore al momento della creazione.
-
-> ⚠️ **Attenzione — configurazione irreversibile**: una volta salvate le due cartelle
-> principali e il formato, non è più possibile modificarli. Le sottocartelle vengono
-> create automaticamente la prima volta che viene caricata una foto o generato un PDF
-> per ciascun diario. Verifica attentamente i valori prima di salvare.
-
-La pagina mostra un'**anteprima live** del nome che verrebbe generato e, sotto ciascun
-ID cartella, il nome reale su Drive come link cliccabile.
-
-### Passo 4 — Test dell'upload
-
-Dopo aver collegato l'account, puoi verificare il funzionamento generando un PDF
-di prova da un diario completato e controllando che compaia nella cartella Drive configurata.
-
-### Note di sicurezza
-
-- Le credenziali OAuth Drive (access token + refresh token) sono memorizzate nella tabella
-  `storage_drive_drivecredenziali` del database. Il database è cifrato a riposo in produzione.
-- Un refresh token scade se l'app Google non viene usata per 6 mesi o se l'utente
-  revoca l'accesso dal proprio account Google. In quel caso basta ripetere il flusso
-  di collegamento (passo 3).
-- Lo scope richiesto è `https://www.googleapis.com/auth/drive` (accesso completo al
-  Drive dell'account autorizzato). Considera di usare un account Google dedicato
-  (es. `archivio@agescicampania.it`) per limitare l'esposizione dei file personali.
+> **Configurazione irreversibile**: con le due cartelle e il formato salvati la configurazione si
+> blocca. Le sottocartelle di ogni diario vengono create al primo caricamento di una foto o di un
+> PDF; cambiando il nome della squadriglia nell'anagrafica vengono rinominate.
 
 ---
 
-## Pagina Impostazioni
+## PDF dei diari
 
-La pagina **Impostazioni** (`/impostazioni/`) è divisa in sezioni indipendenti, ognuna
-con il proprio pulsante **Salva**. Un errore in una sezione non blocca il salvataggio
-delle altre.
+### Cache PDF
 
-![Impostazioni piattaforma](screenshots/16_impostazioni.png)
+**Cache PDF** elenca per ogni edizione i PDF già generati (squadriglia, nome del file, dimensione,
+data, link a Drive), con l'eliminazione del singolo PDF, **Invalida tutti** per l'edizione e
+**Invalida tutta la cache PDF**.
 
-| Sezione | Contenuto |
-|---|---|
-| **Identità** | Titolo e sottotitolo della piattaforma |
-| **Footer** | Testo HTML del footer (supporta `{{ titolo }}`, `{{ versione }}`, `{{ commit }}`); link laterali |
-| **Posta elettronica** | Modalità invio, backend SMTP / provider transazionale, Gmail OAuth2, test invio |
-| **Sicurezza** | MFA, protezione brute-force (axes) |
-| **Allegati** | Dimensione massima immagini in upload |
-| **Diagnostica** | Manutenzione, debug-toolbar; link rapidi a Flower e Mailpit |
-| **IP bloccati** | Lista IP bloccati da django-axes con sblocco singolo o massivo |
-| **Strumenti** | Link a Cache PDF (`/impostazioni/cache-pdf/`) e Log export (`/impostazioni/log-export/`) |
-| **Import tracciati** | Carica CSV Co.Ca. / Squadriglie / Ragazzi; storico import |
-| **Pagine legali** | Modifica Privacy Policy e Condizioni del Servizio; carica contenuto predefinito |
-| **Template email** | Visualizza e personalizza i template delle email automatiche |
+**Genera tutti i PDF di un'edizione**: scegli l'**Edizione** e premi **Avvia generazione
+massiva**. Il server genera i PDF di tutti i diari inviati, li carica su Drive e manda un
+aggiornamento per email ogni 10 diari; una barra mostra l'avanzamento e **Interrompi** la ferma
+dopo il diario in corso. Durante la generazione i PDF singoli di quell'edizione sono sospesi.
 
-### Sezione Posta elettronica
+![Cache PDF](screenshots/cache_pdf.png)
 
-![Impostazioni email](screenshots/32_impostazioni_email.png)
+### Log export
 
-- **Nome mittente**: testo visualizzato come mittente (es. "Plancia AGESCI Campania"). Combinato
-  con il campo **Mittente (from)** produce il formato `Nome <email@dominio.it>`.
-- **Modalità invio**: *Invio reale*, *Simulato*, *Simulato + invio reale*, *Mailpit*.
-  In modalità *Simulato + invio reale* le email vengono scritte sia su file che inviate
-  davvero — utile per testare in produzione senza rischiare.
-- **Test SMTP** / **Test provider transazionale**: invia un'email di prova alla tua
-  casella usando il rispettivo backend (ignora la modalità simulato).
-- **Gmail OAuth2**: se collegato, i campi SMTP manuali vengono nascosti e sostituiti
-  dall'autenticazione OAuth2.
+**Log export** è lo storico delle generazioni di PDF ed Excel: data, tipo, stato, diario o
+edizione, utente e messaggio; per gli errori il **Traceback** completo. Gli errori arrivano anche
+per email al richiedente e agli Admin.
 
-### Sezione Sicurezza
-
-![Impostazioni sicurezza](screenshots/33_impostazioni_sicurezza.png)
-
-- **Tentativi prima del blocco** (default 5): dopo quanti tentativi falliti l'IP viene bloccato.
-- **Minuti di blocco automatico** (default 10): il blocco si scioglie automaticamente.
-  0 = blocco permanente fino allo sblocco manuale.
-- **Scadenza tentativi** (default attivo): i tentativi falliti scadono dopo il periodo
-  di blocco e non vengono più conteggiati.
-- **IP bloccati**: lista degli IP attualmente bloccati con possibilità di sblocco singolo
-  o massivo.
-
-### Sezione Allegati
-
-![Impostazioni allegati](screenshots/35_impostazioni_allegati.png)
-
-- **Dimensione massima immagini**: lato maggiore in pixel. Al caricamento, le immagini
-  più grandi vengono ridimensionate e salvate come JPEG quality 85.
-  Il valore si applica agli allegati, non alle immagini nel footer o nei template email.
-
-### Cache PDF e generazione massiva
-
-Da **Gestione → Cache PDF** (o dal link in Impostazioni → Strumenti) è possibile:
-
-![Cache PDF](screenshots/36_cache_pdf.png)
-
-- **Lista PDF in cache**: per ogni edizione vengono mostrati i PDF già generati e caricati su Drive,
-  con dimensione e data di caricamento.
-- **Invalidazione singola**: elimina il PDF di una squadriglia dalla cache (il prossimo PDF sarà rigenerato).
-- **Invalidazione per edizione** o **totale**: svuota la cache di un'edizione o di tutte.
-- **Generazione massiva**: avvia un task Celery che genera i PDF di tutti i diari inviati
-  dell'edizione selezionata, li carica su Drive e invia aggiornamenti via email ogni 10 diari.
-  Durante la generazione i PDF singoli per quella edizione sono disabilitati.
-- **Interrompi**: ferma ordinatamente una generazione massiva in corso. Il task completa il
-  diario corrente e poi si arresta; il log riporta "Interrotta" con il conteggio parziale.
-
-> Durante una generazione massiva attiva il selettore mostra "(generazione in corso…)" e l'opzione
-> è disabilitata per evitare doppie esecuzioni. Il lock viene rilasciato automaticamente al termine o dopo 2 ore.
-
-### Log generazione PDF/Excel
-
-Da **Gestione → Log export** (o dal link in Impostazioni → Strumenti) è disponibile
-lo storico completo dei task di generazione PDF e Excel:
-
-![Log export](screenshots/37_log_export.png)
-
-- Stato del task (completato / errore), tipo di export, data e richiedente.
-- Per i task in errore: traceback completo apribile in un modale.
-- I task di generazione massiva vengono registrati con il tipo `PDF massivo — Edizione XXXX`.
-- Gli errori generano automaticamente una notifica email al richiedente e agli Admin.
-
-### Strumenti di sviluppo nel menu Gestione
-
-Il menu **Gestione** (in alto a destra, visibile a tutto lo staff) contiene la sezione
-**Strumenti di sviluppo** con accesso diretto a:
-
-![Menu Gestione con Strumenti](screenshots/39_navbar_gestione.png)
-
-- **Flower** (`/celery/`): dashboard Celery con task attivi, coda, worker e cronologia.
-- **Mailpit** (`/mailadmin/`): web UI per le email di debug in sviluppo e diagnosi.
-
-Flower deve essere avviato con il profilo opzionale:
-```bash
-COMPOSE_PROFILES=flower   # in .env, poi: docker compose up -d
-```
+![Log export](screenshots/log_export.png)
 
 ---
 
-## Configurazione email: dual-backend e Gmail OAuth2 SMTP
+## Aggiornare il server dal web
 
-Plancia supporta due backend email indipendenti: SMTP (anche Gmail via OAuth2) e provider
-transazionale (Brevo, Mailgun, ecc.). I due backend vengono usati automaticamente in base
-al tipo di invio, oppure puoi sceglierli manualmente prima di ogni invio bulk.
+**Aggiornamenti** mostra la **Versione installata**, l'**Ultima release** pubblicata su GitHub
+(con le novità) e l'**Ultimo controllo**; **Controlla ora** ripete il controllo.
 
-Guida completa: **[`docs/guide/email_provider.md`](../guide/email_provider.md)**
+![Aggiornamenti del server](screenshots/aggiornamenti.png)
 
-### Routing automatico
+Quando c'è una versione nuova:
 
-| Tipo di invio | Backend predefinito |
-|---|---|
-| Email di sistema (password reset, MFA, notifiche) | SMTP |
-| Inviti bulk Capi Reparto / Capi Squadriglia | Provider transazionale |
+1. premi **Aggiorna a vX.Y.Z** e conferma: Plancia andrà in manutenzione per qualche minuto
+   (backup, costruzione e riavvio); ti viene chiesto di confermare la tua identità;
+2. la pagina segue l'avanzamento (fasi, percentuale e **Log dell'aggiornamento**), anche durante
+   il riavvio del server, quando Plancia per qualche istante non risponde;
+3. a fine aggiornamento l'app si ricarica da sola. Se qualcosa va storto il server torna alla
+   versione precedente; l'Admin riceve comunque un'email con l'esito e il log completo resta sul
+   server in `aggiornamenti/log/`.
 
-Modificabile in **Impostazioni → Posta elettronica** → campi *Backend email standard* e *Backend invii massivi*.
+Finché il server non ha preso in carico la richiesta, **Annulla la richiesta** la ritira. Lo
+**Storico degli aggiornamenti** elenca le richieste fatte dal web con esito e log.
 
-### Gmail OAuth2 SMTP
-
-Se usi Gmail come SMTP, configura l'autenticazione OAuth2 invece di username e password.
-
-**Setup rapido:**
-
-1. Nelle credenziali OAuth del tuo progetto Google Cloud (stesse usate per il Drive),
-   aggiungi il redirect URI:
-   `https://plancia.agescicampania.net/impostazioni/gmail-smtp/oauth/callback/`
-
-2. In `.env` aggiungi:
-   ```bash
-   GOOGLE_GMAIL_SMTP_REDIRECT_URI=https://plancia.agescicampania.net/impostazioni/gmail-smtp/oauth/callback/
-   ```
-
-3. In **Impostazioni → Posta elettronica → Backend SMTP** → clicca **Collega Gmail**
-   → autorizza l'account Google da cui vuoi inviare.
-
-Il token di accesso viene rinnovato automaticamente. Puoi scollegare l'account in qualsiasi momento.
-
-> Vedi la guida completa per i dettagli su Gmail API, verifica dell'app e revoca.
+Dopo l'aggiornamento del server gli utenti vedono la finestra **Aggiornamento disponibile** per
+aggiornare l'app sul proprio dispositivo (vedi la [panoramica](index.md#aggiornamenti-dellapp)).
 
 ---
 
 ## Archiviazione di un'edizione
 
-Al termine dell'edizione:
+Al termine dell'edizione, dal server:
 
 ```bash
-# Genera PDF di tutti i diari + Excel esiti e carica su Drive
-uv run python manage.py archivia_edizione --edizione 1 --genera
+# Genera i PDF di tutti i diari e l'Excel degli esiti e li carica su Drive
+docker compose exec web python manage.py archivia_edizione --edizione 1 --genera
 
-# (Dopo verifica) elimina le foto, marca l'edizione archiviata
-uv run python manage.py archivia_edizione --edizione 1 --purga --conferma
+# (Dopo la verifica) elimina le foto e segna l'edizione come archiviata
+docker compose exec web python manage.py archivia_edizione --edizione 1 --purga --conferma
 ```
 
-Il comando `--purga` elimina fisicamente le foto caricate (trattamento dati minori)
-mantenendo i link esterni come testo. I PDF e l'Excel rimangono su Drive.
+`--purga` elimina fisicamente le foto (dati di minori) mantenendo i link esterni come testo; PDF
+ed Excel restano su Drive.
 
 ---
 
 ## Backup
 
-Ogni notte alle 02:30 il server esegue `scripts/backup.sh` (timer systemd
-`plancia-backup.timer`): un unico archivio con dump del database, file `.env` e allegati non
-ancora caricati su Drive, nella cartella `backups/` del server, conservato 14 giorni
-(`BACKUP_DIR` e `BACKUP_GIORNI` in `.env`). Prima di ogni aggiornamento `scripts/aggiorna.sh`
-salva anche un dump del solo database. Stato: `systemctl status plancia-backup.timer`.
+Ogni notte alle 02:30 il server esegue `scripts/backup.sh` (timer `plancia-backup.timer`): un
+archivio con dump del database, file `.env` e allegati non ancora caricati su Drive, nella
+cartella `backups/`, conservato 14 giorni (`BACKUP_DIR` e `BACKUP_GIORNI` in `.env`). Ogni
+aggiornamento salva anche un dump del database. Stato: `systemctl status plancia-backup.timer`.
 
 ---
 
-## Cambio referenti dei diari
+## Per gli sviluppatori: rigenerare gli screenshot del manuale
 
-L'Admin ha accesso alle stesse funzionalità di cambio referenti descritte nella
-**[Guida Segreteria](segreteria.md#cambio-referenti-di-un-diario)**:
+Gli screenshot di questo manuale (`docs/manuale/screenshots/`) si rigenerano con Playwright
+contro uno stack locale, su dati **sintetici**:
 
-- **Cambia Capo Reparto** sul singolo diario (dalla pagina di dettaglio)
-- **Cambia Capo Reparto** in bulk per un intero reparto (dalla lista diari)
+```bash
+# 1. dati dimostrativi (idempotente; --ricrea riporta i diari allo stato iniziale)
+uv run python manage.py popola_demo --password 'Demo-Plancia-2027' --disattiva-rate-limit --ricrea
+# 2. Django in sviluppo (DEBUG: codice di verifica 000000) e la SPA
+uv run python manage.py runserver
+cd frontend && npm run dev
+# 3. gli screenshot (tutti, o solo alcuni gruppi: comune csq crp pgv incaricato segreteria admin)
+PLANCIA_DEMO_PASSWORD='Demo-Plancia-2027' npm run manuale:schermate
+PLANCIA_DEMO_PASSWORD='Demo-Plancia-2027' npm run manuale:schermate -- csq crp
+```
 
-In aggiunta, l'Admin può sempre accedere al pannello Django Admin
-per modifiche di emergenza su qualsiasi diario indipendentemente dallo stato.
-
----
-
-## Crea utente staff
-
-Da **Gestione → Persone → Crea utente staff** Admin e Segreteria possono creare direttamente
-utenti con ruolo **Admin**, **Segreteria** o **Incaricato EG** senza passare per il codice socio AGESCI.
-Questa funzione è pensata per i gestori della piattaforma che non sono necessariamente soci registrati.
-
-![Crea utente staff](screenshots/38_crea_staff.png)
-
-Il form richiede: nome, cognome, email e ruolo.
-Al salvataggio viene inviata automaticamente un'email di **reset password** all'indirizzo indicato,
-consentendo all'utente di impostare la propria password al primo accesso.
-
-> Solo gli Admin possono creare altri Admin. La Segreteria può creare Segreteria e Incaricati EG.
-
----
-
-## Pagine legali
-
-Da **Impostazioni → Pagine legali** è possibile modificare i contenuti di **Privacy Policy**
-(`/privacy/`) e **Condizioni del Servizio** (`/termini/`).
-
-![Pagine legali](screenshots/40_pagine_legali.png)
-
-Per ogni pagina sono disponibili tre azioni:
-- **Apri** (icona esterna): visualizza la pagina pubblica in una nuova scheda.
-- **Predefinito**: carica il testo di base fornito dalla piattaforma (con confirm di sovrascrittura).
-  Il testo predefinito è pensato come punto di partenza per la Privacy Policy GDPR e le Condizioni
-  del Servizio dell'AGESCI Campania — **personalizzalo prima di pubblicarlo**.
-- **Modifica**: apre l'editor HTML per personalizzare il contenuto.
-
----
-
-## Gestione Inviti e primo accesso utenti
-
-L'Admin ha accesso alla pagina **Gestione Inviti** (stessa della Segreteria).
-Vedi la sezione corrispondente nella **[Guida Segreteria](segreteria.md)** per
-il dettaglio del flusso inviti Capi Reparto e Capi Squadriglia.
-
----
-
-## Impersonazione
-
-L'Admin può impersonare qualsiasi utente compresa la Segreteria.
-Ogni impersonazione viene registrata nel log di audit.
-La Segreteria non può impersonare l'Admin.
+Lo script è `frontend/scripts/schermate-manuale.ts` (eseguito direttamente da Node); usa
+`PLANCIA_MANUALE_URL` se la SPA non è su `http://localhost:5173`. Su macOS la generazione dei PDF
+richiede le librerie di WeasyPrint (es. `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib` per
+Django). Il PDF del manuale si genera con `make manual`; alla pubblicazione di una release il
+workflow `release-manual.yml` allega i PDF alla release.

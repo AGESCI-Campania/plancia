@@ -88,7 +88,7 @@ def _date(row: tuple, idx: int) -> date | None:
 
 def _parse_blocchi(testo: str) -> list[dict]:
     """Parsa righe del tipo 'Chiave: valore, Chiave2: valore2' separate da \\n."""
-    risultati = []
+    risultati: list[dict] = []
     if not testo:
         return risultati
     for riga in testo.split("\n"):
@@ -569,7 +569,7 @@ class Command(BaseCommand):
         from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
 
         from apps.diaries.models import Allegato, StatoSync
-        from apps.diaries.views import _resize_immagine
+        from apps.diaries.service import ridimensiona_immagine
         from apps.siteconfig.models import Impostazioni
         from apps.storage_drive.models import DriveCredenziali
         from apps.storage_drive.service import _build_drive_service, assicura_cartelle_diario
@@ -579,7 +579,7 @@ class Command(BaseCommand):
         except DriveCredenziali.DoesNotExist:
             raise CommandError(
                 f"Account Drive '{account_email}' non trovato in DriveCredenziali. "
-                "Connetti prima l'account tramite /impostazioni/ o /edizioni/<pk>/modifica/."
+                "Connetti prima l'account da Impostazioni → Drive o dalla pagina dell'edizione."
             ) from None
 
         max_px: int = Impostazioni.get().allegati_max_px or 1024
@@ -687,10 +687,10 @@ class Command(BaseCommand):
                         _, done = dl.next_chunk()
                     buf.seek(0)
 
-                    # Usa un oggetto file-like con .name per _resize_immagine
+                    # Usa un oggetto file-like con .name per ridimensiona_immagine
                     buf.name = filename
                     buf.content_type = mime
-                    resized_bytes, new_mime, new_name = _resize_immagine(buf, max_px)
+                    resized_bytes, new_mime, new_name = ridimensiona_immagine(buf, max_px)
 
                     media = MediaIoBaseUpload(
                         io.BytesIO(resized_bytes), mimetype=new_mime, resumable=False

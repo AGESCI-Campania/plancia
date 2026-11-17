@@ -9,7 +9,7 @@ from celery.schedules import crontab
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-# --- Versione e commit (usati nel footer e nel template impostazioni) -------
+# --- Versione e commit (GET /api/v1/sito, pagina Aggiornamenti) -------------
 def _read_app_version() -> str:
     try:
         with open(BASE_DIR / "pyproject.toml", "rb") as _f:
@@ -79,7 +79,6 @@ DJANGO_APPS = [
 ]
 
 THIRD_PARTY_APPS = [
-    "agesci_theme",
     "allauth",
     "allauth.account",
     "allauth.headless",
@@ -93,11 +92,7 @@ THIRD_PARTY_APPS = [
     "allauth.usersessions",
     "guardian",
     "axes",
-    "pwa",
-    "tinymce",
-    "hijack",
-    "hijack.contrib.admin",
-    "django_bootstrap_icons",
+    "hijack",  # solo helper/segnali/middleware per l'impersonazione via API (nessun URL)
     "anymail",
     "corsheaders",
 ]
@@ -123,6 +118,8 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Invia SECURE_CSP (definita in prod.py; vuota in dev = nessuna intestazione)
+    "django.middleware.csp.ContentSecurityPolicyMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "apps.siteconfig.middleware.ApiRateLimitMiddleware",
@@ -156,8 +153,6 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-                "agesci_theme.context_processors.agesci_theme",
-                "apps.siteconfig.context_processors.impostazioni",
             ],
         },
     },
@@ -189,19 +184,16 @@ AXES_FAILURE_LIMIT = "apps.siteconfig.axes_helpers.axes_failure_limit"
 AXES_COOLOFF_TIME = "apps.siteconfig.axes_helpers.axes_cooloff_time"
 AXES_LOCKOUT_PARAMETERS = ["ip_address"]  # blocca per IP
 
-# allauth (rifinire secondo docs sez. 12)
+# allauth: solo headless (la SPA). LOGIN_URL è la pagina di accesso della SPA, usata da admin
+# e proxy per chi non è autenticato.
+LOGIN_URL = "/accesso"
 LOGIN_REDIRECT_URL = "/"
-ACCOUNT_LOGIN_METHODS = {"email"}
-ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
+# Login con email o codice socio: gli utenti nati da un Socio hanno come username il codice
+# (notifications.service.crea_o_ottieni_utente_per_socio), i Capi Squadriglia spesso non hanno
+# un'email vera. La SPA invia `username` se l'identificativo non contiene "@".
+ACCOUNT_LOGIN_METHODS = {"email", "username"}
+ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
-ACCOUNT_FORMS = {
-    "login": "apps.accounts.forms.PlanciaLoginForm",
-    "signup": "apps.accounts.forms.PlanciaSignupForm",
-    "reset_password": "apps.accounts.forms.PlanciaResetPasswordForm",
-    "change_password": "apps.accounts.forms.PlanciaChangePasswordForm",
-    "set_password": "apps.accounts.forms.PlanciaSetPasswordForm",
-    "add_email": "apps.accounts.forms.PlanciaAddEmailForm",
-}
 _GOOGLE_CLIENT_ID     = env.str("SOCIAL_GOOGLE_CLIENT_ID", default="")
 _GOOGLE_CLIENT_SECRET = env.str("SOCIAL_GOOGLE_CLIENT_SECRET", default="")
 _MS_CLIENT_ID         = env.str("SOCIAL_MICROSOFT_CLIENT_ID", default="")
@@ -286,13 +278,14 @@ MFA_PASSKEY_LOGIN_ENABLED = True
 MFA_PASSKEY_SIGNUP_ENABLED = False
 
 # --- allauth headless -------------------------------------------------------
-# HEADLESS_ONLY=False: manteniamo l'UI web tradizionale affiancata all'API.
+# HEADLESS_ONLY: nessuna pagina allauth di Django; restano /_allauth/ (browser per la SPA,
+# app per l'app mobile) e le callback dei provider social/SSO sotto /accounts/.
 # TOKEN_STRATEGY sessions: il client mobile invia il session key nell'header X-Session-Token.
-HEADLESS_ONLY = False
+HEADLESS_ONLY = True
 HEADLESS_TOKEN_STRATEGY = "allauth.headless.tokens.strategies.sessions.SessionTokenStrategy"
 HEADLESS_CLIENTS = ("browser", "app")
 # Pagine della SPA (frontend/src/router) a cui puntano i link delle email di allauth e i
-# redirect dei provider social/SSO. Con HEADLESS_ONLY=True (Fase 6) sono le uniche.
+# redirect dei provider social/SSO (con HEADLESS_ONLY sono obbligatori).
 HEADLESS_FRONTEND_URLS = {
     "account_confirm_email": "/email/verifica/{key}",
     "account_reset_password": "/accesso/password",
@@ -317,7 +310,6 @@ USE_TZ = True
 # --- Static / media ---------------------------------------------------------
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_DIRS = [BASE_DIR / "static"]
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"  # transitorio: i file definitivi vanno su Drive
 
@@ -342,168 +334,10 @@ CELERY_BEAT_SCHEDULE = {
 
 # --- Aggiornamento del server dal web ----------------------------------------
 # Cartella (bind mount dal repo sul server: /opt/plancia/aggiornamenti) in cui Django scrive
-# richiesta.json e legge stato.json del runner sull'host. Vedi docs/api/fase2-aggiornamenti.md.
+# richiesta.json e legge stato.json del runner sull'host. Vedi docs/api/aggiornamenti.md.
 AGGIORNAMENTI_DIR = Path(env.str("AGGIORNAMENTI_DIR", default=str(BASE_DIR / "aggiornamenti")))
 # Token GitHub read-only opzionale (alza il limite di 60 richieste/ora dell'API anonima).
 GITHUB_TOKEN_RELEASES = env.str("GITHUB_TOKEN_RELEASES", default="")
-
-# --- PWA (django-pwa) -------------------------------------------------------
-PWA_APP_NAME = env.str("PWA_APP_NAME", default="Plancia")
-PWA_APP_DESCRIPTION = "Gestione Guidoncini Verdi - AGESCI Campania"
-PWA_APP_THEME_COLOR = "#5AA02C"  # verde GV (vedi palette docs)
-PWA_APP_BACKGROUND_COLOR = "#ffffff"
-PWA_APP_DISPLAY = "standalone"
-PWA_APP_START_URL = "/"
-PWA_APP_LANG = "it-IT"
-PWA_APP_DIR = "ltr"
-PWA_APP_DEBUG_MODE = False
-# Service worker personalizzato (sostituisce il default vuoto di django-pwa)
-PWA_SERVICE_WORKER_PATH = BASE_DIR / "static" / "js" / "plancia-sw.js"
-PWA_APP_ICONS = [
-    {"src": "/static/images/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png"},
-    {"src": "/static/images/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png"},
-]
-PWA_APP_ICONS_APPLE = [
-    {"src": "/static/images/icons/apple-touch-icon.png", "sizes": "180x180"},
-]
-PWA_APP_SPLASH_SCREEN = [
-    # ---------- iPhone ----------
-    # iPhone 5 / 5s / SE (1ª gen)
-    {
-        'src': '/static/images/icons/splash-640x1136.png',
-        'media': '(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)'
-    },
-    # iPhone 6 / 7 / 8 / SE (2ª e 3ª gen)
-    {
-        'src': '/static/images/icons/splash-750x1334.png',
-        'media': '(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)'
-    },
-    # iPhone 6+ / 7+ / 8+
-    {
-        'src': '/static/images/icons/splash-1242x2208.png',
-        'media': '(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3)'
-    },
-    # iPhone X / XS / 11 Pro / 12 mini / 13 mini
-    {
-        'src': '/static/images/icons/splash-1125x2436.png',
-        'media': '(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)'
-    },
-    # iPhone XR / 11
-    {
-        'src': '/static/images/icons/splash-828x1792.png',
-        'media': '(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2)'
-    },
-    # iPhone XS Max / 11 Pro Max
-    {
-        'src': '/static/images/icons/splash-1242x2688.png',
-        'media': '(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3)'
-    },
-    # iPhone 12 / 12 Pro / 13 / 13 Pro / 14
-    {
-        'src': '/static/images/icons/splash-1170x2532.png',
-        'media': '(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)'
-    },
-    # iPhone 12 Pro Max / 13 Pro Max / 14 Plus
-    {
-        'src': '/static/images/icons/splash-1284x2778.png',
-        'media': '(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3)'
-    },
-    # iPhone 14 Pro / 15 / 15 Pro / 16
-    {
-        'src': '/static/images/icons/splash-1179x2556.png',
-        'media': '(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3)'
-    },
-    # iPhone 14 Pro Max / 15 Plus / 15 Pro Max / 16 Plus
-    {
-        'src': '/static/images/icons/splash-1290x2796.png',
-        'media': '(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)'
-    },
-    # iPhone 16 Pro
-    {
-        'src': '/static/images/icons/splash-1206x2622.png',
-        'media': '(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3)'
-    },
-    # iPhone 16 Pro Max
-    {
-        'src': '/static/images/icons/splash-1320x2868.png',
-        'media': '(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3)'
-    },
-
-    # ---------- iPad ----------
-    # iPad 9.7" / iPad mini 5 e precedenti
-    {
-        'src': '/static/images/icons/splash-1536x2048.png',
-        'media': '(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2)'
-    },
-    # iPad 10.2" (7ª-9ª gen)
-    {
-        'src': '/static/images/icons/splash-1620x2160.png',
-        'media': '(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2)'
-    },
-    # iPad mini 6 / 7
-    {
-        'src': '/static/images/icons/splash-1488x2266.png',
-        'media': '(device-width: 744px) and (device-height: 1133px) and (-webkit-device-pixel-ratio: 2)'
-    },
-    # iPad Air 10.5" / iPad Pro 10.5"
-    {
-        'src': '/static/images/icons/splash-1668x2224.png',
-        'media': '(device-width: 834px) and (device-height: 1112px) and (-webkit-device-pixel-ratio: 2)'
-    },
-    # iPad 10.9" (10ª gen) / iPad Air 4 e 5 / iPad Air 11" (M2)
-    {
-        'src': '/static/images/icons/splash-1640x2360.png',
-        'media': '(device-width: 820px) and (device-height: 1180px) and (-webkit-device-pixel-ratio: 2)'
-    },
-    # iPad Pro 11"
-    {
-        'src': '/static/images/icons/splash-1668x2388.png',
-        'media': '(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2)'
-    },
-    # iPad Pro 12.9"
-    {
-        'src': '/static/images/icons/splash-2048x2732.png',
-        'media': '(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2)'
-    },
-    # iPad Pro 13" (M4)
-    {
-        'src': '/static/images/icons/splash-2064x2752.png',
-        'media': '(device-width: 1032px) and (device-height: 1376px) and (-webkit-device-pixel-ratio: 2)'
-    },
-]
-
-PWA_APP_SHORTCUTS = [
-    {
-        "name": "Diari",
-        "short_name": "Diari",
-        "description": "Apri la lista dei diari di bordo",
-        "url": "/diari/",
-        "icons": [{"src": "/static/images/icons/icon-192x192.png", "sizes": "192x192"}],
-    },
-    {
-        "name": "Valutazioni",
-        "short_name": "Valutazioni",
-        "description": "Apri la lista delle valutazioni",
-        "url": "/valutazioni/",
-        "icons": [{"src": "/static/images/icons/icon-192x192.png", "sizes": "192x192"}],
-    },
-    {
-        "name": "Helpdesk",
-        "short_name": "Helpdesk",
-        "description": "Apri i ticket di supporto",
-        "url": "/helpdesk/",
-        "icons": [{"src": "/static/images/icons/icon-192x192.png", "sizes": "192x192"}],
-    },
-]
-
-# --- Bootstrap Icons (django-bootstrap-icons) --------------------------------
-# Versione CDN allineata a quella usata nei template; cache su disco in .icon_cache/
-BS_ICONS_BASE_URL = "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/"
-BS_ICONS_CACHE = BASE_DIR / ".icon_cache"
-
-# --- Google Drive (storage_drive) ------------------------------------------
-GOOGLE_OAUTH_CLIENT_ID = env.str("GOOGLE_OAUTH_CLIENT_ID", default="")
-GOOGLE_OAUTH_CLIENT_SECRET = env.str("GOOGLE_OAUTH_CLIENT_SECRET", default="")
 
 # --- URL base (usato da notifications/service.py per i link di attivazione) --
 BASE_URL = env.str("BASE_URL", default="http://localhost:8000")
@@ -516,16 +350,11 @@ ADMINS = [("Plancia Admin", e) for e in _admin_emails]
 SERVER_EMAIL = env.str("SERVER_EMAIL", default="plancia@agescicampania.net")
 EMAIL_SUBJECT_PREFIX = "[Plancia] "
 
-# Vista CSRF failure: mostra un template brandizzato invece della pagina Django.
+# Vista CSRF failure: pagina statica (JSON sui percorsi API), vedi config/error_views.py.
 CSRF_FAILURE_VIEW = "config.error_views.csrf_failure"
 
 # --- Email ------------------------------------------------------------------
 DEFAULT_FROM_EMAIL = env.str("DEFAULT_FROM_EMAIL", default="plancia@agescicampania.net")
-
-# Il tema usa alert-{{ message.tags }}: "error" non è una classe Bootstrap valida,
-# serve "danger". MESSAGE_TAGS mappa i livelli Django ai tag Bootstrap corretti.
-# noqa: E402 — import posizionato qui per leggibilità vicino all'uso
-MESSAGE_TAGS = {40: "danger"}  # 40 = messages.ERROR
 
 # Mailer (Django 6.1): tutti passano da PlanciaEmailBackend, che rispetta
 # Impostazioni.email_mode e instrada "standard" e "massivo" ai backend configurati.
@@ -598,31 +427,11 @@ LOGGING = {
 # NB: il flag "debug_diagnostico" di Impostazioni alza a runtime il livello di logging
 # per gli admin; NON ribalta settings.DEBUG (vedi docs sez. 15).
 
-# --- AGESCI Theme -----------------------------------------------------------
-AGESCI_THEME_BRANCA = "eg"
-AGESCI_THEME_NOME = "AGESCI Campania"
-
-# --- TinyMCE ----------------------------------------------------------------
-TINYMCE_DEFAULT_CONFIG = {
-    "plugins": "link code lists image",
-    "toolbar": "undo redo | bold italic | bullist numlist | link image | code",
-    "menubar": False,
-    "height": 400,
-    "link_assume_external_targets": True,
-    "default_link_target": "_blank",
-    "link_title": False,
-    "images_upload_url": "/impostazioni/mail/upload-immagine/",
-    "automatic_uploads": True,
-    "file_picker_types": "image",
-    "images_reuse_filename": False,
-}
-
 # --- Impersonazione (django-hijack) -----------------------------------------
 # Autorizzazione per rango: Admin/Segreteria possono impersonare ruoli con
 # rango <= al proprio (la Segreteria non puo' impersonare un Admin). Vedi docs sez. 2.
+# Usata da apps.accounts.services.avvia_impersonazione (API); gli URL di hijack non sono montati.
 HIJACK_PERMISSION_CHECK = "apps.accounts.roles.can_hijack"
-HIJACK_LOGIN_REDIRECT_URL = "/"
-HIJACK_LOGOUT_REDIRECT_URL = "/"
 
 # --- Google Drive OAuth -----------------------------------------------------
 GOOGLE_OAUTH_CLIENT_ID = env.str("GOOGLE_OAUTH_CLIENT_ID", default="")
@@ -645,11 +454,13 @@ EXPORT_DIARI_SOGLIA_ASYNC: int = 50
 EXPORT_DIARI_CSV_SEMPRE_SYNC: bool = True
 
 # --- CORS (django-cors-headers) ---------------------------------------------
-# Origini autorizzate per l'API REST (es. app mobile React Native).
-# In produzione impostare CORS_ALLOWED_ORIGINS nell'env.
+# Solo per l'app mobile: la SPA è same-origin e non ne ha bisogno. L'app usa allauth
+# headless in modalità *app* (/_allauth/app/) e l'API con X-Session-Token, mai i cookie:
+# niente credenziali cross-origin, e CORS solo su quei percorsi.
+# CORS_ALLOWED_ORIGINS nell'env (vuota = nessuna origine esterna; le app native non la usano).
 CORS_ALLOWED_ORIGINS: list[str] = env.list("CORS_ALLOWED_ORIGINS", default=[])
-# Necessario perché il client mobile invia i cookie di sessione (o X-Session-Token).
-CORS_ALLOW_CREDENTIALS = True
+CORS_URLS_REGEX = r"^/(api/v1|_allauth/app)/"
+CORS_ALLOW_CREDENTIALS = False
 # Header custom necessario per l'auth app-client di allauth headless.
 CORS_ALLOW_HEADERS = [
     "accept",

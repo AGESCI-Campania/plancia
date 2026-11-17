@@ -1,48 +1,53 @@
 # Guida — Pattuglia Guidoncini Verdi
 
-I membri della Pattuglia GV valutano i diari che vengono loro assegnati dall'Incaricato EG.
+I membri della Pattuglia GV valutano i diari che un Incaricato EG assegna loro: leggono tutti i
+moduli, compresa la Relazione finale del Capo Reparto, e **propongono** un esito che un Incaricato
+EG conferma prima della pubblicazione.
 
 ---
 
-## Home page
+## Home
 
-La home mostra l'edizione in corso e il numero di diari assegnati da valutare.
+La home mostra l'edizione in corso con i diari che ti sono stati assegnati e il loro stato.
 
-![Home Pattuglia GV](screenshots/12_home_pgv.png)
-
----
-
-## Lista diari assegnati
-
-Dalla voce **Diari assegnati** puoi vedere solo i diari che ti sono stati assegnati.
-
-![Lista diari Pattuglia GV](screenshots/13_diari_pgv.png)
+![Home Pattuglia GV](screenshots/pgv_home.png)
 
 ---
 
-## Valutazione di un diario
+## Diari assegnati
 
-Entrando nel dettaglio di un diario assegnato puoi:
+La voce **Diari assegnati** del menu elenca solo i diari che ti sono stati assegnati, con gli
+stessi filtri e la ricerca della lista diari. Apri un diario per leggerne i moduli 1–6 e le foto;
+dal riquadro **Azioni** puoi aprire il **PDF del diario**.
 
-1. Leggere tutti i moduli compilati dal Capo Squadriglia (1–5) e la relazione del Capo Reparto (modulo 6).
-2. Aprire la scheda **Valutazione** per inserire la tua proposta:
-   - **Approvato**, **Non approvato** o **Maggiori informazioni richieste**
-   - Un campo note per motivare la decisione
-
-
-![Valutazione diario — Pattuglia GV](screenshots/24_valutazione_pgv.png)
-
-La tua proposta va all'Incaricato EG che la conferma o la modifica prima della pubblicazione.
-
-> Non puoi vedere la valutazione degli altri membri della Pattuglia sullo stesso diario,
-> né ri-delegare la valutazione a un altro membro.
+![Diari assegnati](screenshots/pgv_diari.png)
 
 ---
 
-## Note importanti
+## Proporre la valutazione
 
-- Puoi **proporre** un esito ma non **pubblicarlo**: la pubblicazione è riservata all'Incaricato EG.
-- Se proponi *Approvato* o *Non approvato*, il diario entra in stato **In revisione** e l'Incaricato
-  EG deve confermare prima della pubblicazione.
-- Se proponi *Maggiori informazioni richieste*, il diario torna al Capo Squadriglia per integrazioni
-  senza passare dalla revisione.
+Dal diario apri la pagina **Valutazione** con il pulsante **Apri la valutazione** del riquadro
+*Valutazione* (compare nei diari che ti sono stati assegnati). A sinistra trovi lo
+**Stato valutazione** (stato del diario, esito, stato della valutazione, note, ultima modifica);
+a destra il riquadro **Proponi valutazione**:
+
+1. scegli l'**Esito**: *Approvata* o *Non approvata*;
+2. aggiungi le **Note (facoltative)** per motivare la proposta;
+3. premi **Proponi**.
+
+![Proponi valutazione](screenshots/pgv_valutazione.png)
+
+Il diario passa in stato **In revisione** e la proposta attende la conferma di un Incaricato EG.
+Finché non viene confermata puoi ancora cambiarla dallo stesso riquadro (*"La tua proposta … è in
+attesa di conferma da parte di un Incaricato EG. Puoi ancora cambiarla."*).
+
+---
+
+## Da ricordare
+
+- Puoi **proporre** un esito, non **pubblicarlo**: la pubblicazione è riservata agli Incaricati EG.
+- *Maggiori informazioni richieste* non si propone: se il diario va integrato, scrivilo nelle note
+  o segnalalo all'Incaricato EG, che può decidere direttamente.
+- Valuti solo i diari assegnati a te e non puoi assegnarli ad altri membri della Pattuglia.
+- L'Incaricato EG può confermare la tua proposta, rigettarla (il diario torna *In valutazione*) o
+  valutare direttamente in modo diverso.

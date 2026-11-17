@@ -388,12 +388,12 @@ def test_missione_posti_azione_sync(client_di, diario):
     assert r.status_code == 400
 
 
-def test_salvataggio_web_incrementa_version(client_di, diario):
-    """Un salvataggio dal form web invalida la versione in mano alla SPA/PWA (409)."""
+def test_salvataggio_incrementa_version(client_di, diario):
+    """Un salvataggio da un altro dispositivo invalida la versione in mano alla SPA (409)."""
     Missione.objects.create(diario=diario)
     c = client_di("csq")
-    r = c.post(f"/diari/{diario.pk}/missione/", {"titolo": "Web", "data": "", "descrizione_svolgimento": ""})
-    assert r.status_code == 302
+    r = c.put(_url(diario, "/missione"), **json_body({"version": 0, "data": {"titolo": "Altro"}}))
+    assert r.status_code == 200
     r = c.put(_url(diario, "/missione"), **json_body({"version": 0, "data": {}}))
     assert r.status_code == 409 and r.json()["server_version"] == 1
 
@@ -710,19 +710,8 @@ def test_cambia_crp_reparto(client_di, diario, org, edizione, nuovi_soci):
 
 
 # ---------------------------------------------------------------------------
-# Regole condivise con le viste web e la PWA
+# Regole condivise
 # ---------------------------------------------------------------------------
-
-def test_web_e_pwa_pgv_non_assegnato_403(client_di, diario):
-    c = client_di("pgv")
-    assert c.get(f"/diari/{diario.pk}/").status_code == 403
-    assert c.get(f"/api/diari/{diario.pk}/").status_code == 403
-
-
-def test_web_crp_cambia_csq_in_non_iniziato(client_di, diario):
-    _stato(diario, StatoDiario.NON_INIZIATO)
-    assert client_di("crp").get(f"/diari/{diario.pk}/cambia-csq/").status_code == 200
-
 
 def test_pwa_put_anagrafica_rinomina_cartelle_drive(client_di, diario):
     """Il rename della squadriglia da PWA/API rinomina anche le cartelle Drive (come il web)."""

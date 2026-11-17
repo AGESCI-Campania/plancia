@@ -1,7 +1,7 @@
 # apps/diaries/serialization.py
-"""Helper di validazione e serializzazione condivisi tra api_views.py e l'API ninja.
+"""Helper di validazione e serializzazione dei moduli del Diario usati dall'API ninja.
 
-Estratto da api_views.py per poter essere importato senza dipendere da Django views.
+Nati per gli endpoint JSON della PWA 2.x (rimossi in Plancia 3).
 """
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ from apps.diaries.models import (
     TipoDiario,
 )
 
-# Scelte valide per i campi di scelta — condivise tra api_views.py e router API
+# Scelte valide per i campi di scelta (router API)
 SCELTE_SPECIALITA_SQ: list[str] = [""] + list(SPECIALITA_SQUADRIGLIA)
 SCELTE_TIPO_DIARIO: list[str] = [c[0] for c in TipoDiario.choices]
 SCELTE_RUOLO_SQ: list[str] = [""] + [c[0] for c in RuoloSq.choices]
@@ -350,7 +350,7 @@ def _apply_esito(tipo: str):
 
 
 # ---------------------------------------------------------------------------
-# Validatori di modulo completi (usati da api_views.py e router API)
+# Validatori di modulo completi (router API)
 # ---------------------------------------------------------------------------
 
 def _validate_anagrafica(data: dict, is_staff: bool) -> dict:

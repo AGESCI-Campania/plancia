@@ -31,3 +31,13 @@ fixtures/real_*.csv
 fixtures/prod_*.csv
 *.xlsx
 *.xls
+
+# Frontend: dipendenze e build locali (l'immagine nginx le ricostruisce)
+frontend/node_modules
+frontend/dist
+frontend/dev-dist
+frontend/test-results
+frontend/playwright-report
+.claude
+aggiornamenti
+backups

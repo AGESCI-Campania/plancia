@@ -2,6 +2,9 @@
 # (agesci-campania-web-frontend), che raggiunge questo container come plancia-nginx:80.
 # Header inoltrati: si passano quelli ricevuti da Caddy, non $scheme (qui varrebbe http).
 #
+# Plancia 3: serve la SPA (file statici dell'immagine, frontend/Dockerfile) e inoltra a Django
+# solo API, auth, admin, callback OAuth, webhook e proxy di servizio.
+#
 # Template dell'immagine ufficiale nginx (envsubst solo sulle variabili d'ambiente definite):
 # NGINX_LOCAL_RESOLVERS è il DNS del runtime container, preso da /etc/resolv.conf
 # (NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1 nel compose). Con il resolver e proxy_pass su variabile
@@ -12,6 +15,7 @@ resolver ${NGINX_LOCAL_RESOLVERS} valid=10s ipv6=off;
 server {
     listen 80;
     server_name _;
+    root /usr/share/nginx/html;
 
     # Limite effettivo degli upload (Caddy non ne impone)
     client_max_body_size 25m;
@@ -21,15 +25,53 @@ server {
         return 200 "ok\n";
     }
 
-    location / {
+    # --- Django ----------------------------------------------------------------
+    # API (v1 e gli endpoint della PWA 2.x finché esistono), allauth headless, callback dei
+    # provider social/SSO (/accounts/<provider>/login/callback/, registrate presso i provider),
+    # admin, statici di Django (WhiteNoise), callback OAuth di Drive e Gmail SMTP, webhook,
+    # proxy Mailpit/Flower (solo Admin), health check.
+    location ~ ^/(api|_allauth|accounts|admin|static|anymail|mailadmin|celery|healthz)(/|$) {
         set $app http://web:8000;
         proxy_pass $app;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
-        proxy_set_header X-Forwarded-Host  $http_x_forwarded_host;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_redirect off;
-        proxy_read_timeout 130s;   # > timeout di gunicorn (120s)
+        include /etc/nginx/conf.d/proxy-django.inc;
+    }
+    location ~ ^/(drive/oauth/callback|impostazioni/gmail-smtp/oauth/callback)/ {
+        set $app http://web:8000;
+        proxy_pass $app;
+        include /etc/nginx/conf.d/proxy-django.inc;
+    }
+
+    # Immagini dei template email: le uniche pubbliche di media/ (le altre sono file temporanei).
+    location /media/mail_images/ {
+        alias /srv/media/mail_images/;
+        expires 30d;
+    }
+
+    # --- SPA ---------------------------------------------------------------------
+    # File con hash nel nome: in cache per sempre.
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+    # Service worker, manifest e index.html: sempre ricontrollati (aggiornamento della PWA).
+    location ~ ^/(sw\.js|workbox-[^/]+\.js|index\.html)$ {
+        add_header Cache-Control "no-cache";
+        try_files $uri =404;
+    }
+    location = /manifest.webmanifest {
+        types { application/manifest+json webmanifest; }
+        add_header Cache-Control "no-cache";
+        try_files $uri =404;
+    }
+    # Deep link della SPA: qualunque altro percorso torna a index.html (router lato client).
+    location / {
+        add_header Cache-Control "no-cache";
+        try_files $uri $uri/ /index.html;
+    }
+
+    error_page 502 503 504 /errore-servizio.html;
+    location = /errore-servizio.html {
+        internal;
     }
 }

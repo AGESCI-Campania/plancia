@@ -22,6 +22,7 @@ x-app: &app
   volumes:
     - ./logs:/app/logs              # log Django persistenti sull'host
     - plancia_media:/app/media
+    - ./aggiornamenti:/app/aggiornamenti   # richieste/stato degli aggiornamenti dal web (runner sull'host)
   depends_on:
     db:
       condition: service_healthy
@@ -58,7 +59,7 @@ services:
 
   worker:
     <<: *app
-    command: uv run celery -A config worker -l info
+    command: uv run celery -A config worker -l info --concurrency 2   # memoria: 2 processi bastano
     healthcheck:
       test: ["CMD-SHELL", "uv run celery -A config inspect ping -d celery@$$(hostname) --timeout 10"]
       interval: 60s
@@ -73,11 +74,16 @@ services:
       - ./logs:/app/logs
 
   nginx:
-    image: nginx:1.30.6-alpine
+    # SPA costruita + proxy verso Django (frontend/Dockerfile, deploy/nginx/default.conf.template)
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    image: plancia-nginx:locale
+    pull_policy: never
     environment:
       NGINX_ENTRYPOINT_LOCAL_RESOLVERS: "1"   # vedi deploy/nginx/default.conf.template
     volumes:
-      - ./deploy/nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - plancia_media:/srv/media:ro          # solo /media/mail_images/ è servito
     depends_on:
       web:
         condition: service_healthy
@@ -87,7 +93,7 @@ services:
         aliases:
           - plancia-nginx
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/nginx-health"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/nginx-health && wget -q -O /dev/null http://127.0.0.1/index.html"]
       interval: 30s
       timeout: 5s
       retries: 3

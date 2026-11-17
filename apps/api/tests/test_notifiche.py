@@ -341,30 +341,3 @@ def test_attiva_crea_nomina_mancante(invito_crp, utenti):
     r = Client().post(f"{BASE}/inviti/{invito_crp.token}/attiva", **json_body({}))
     assert r.status_code == 200
     assert Nomina.objects.filter(utente=u, ruolo=Ruolo.CRP, attiva=True).exists()
-
-
-# --- Viste web (regressione dopo l'estrazione nei servizi) ---------------------------
-
-@pytest.fixture
-def senza_mfa(monkeypatch):
-    monkeypatch.setattr("apps.accounts.middleware.mfa_da_configurare", lambda request, user: False)
-
-
-def test_web_attivazione_codice_socio(org, diario, senza_mfa):
-    invito = _nuovo_csq(org, diario)
-    c = Client()
-    url = f"/notifiche/invito/{invito.token}/"
-    assert c.get(url).status_code == 200
-    r = c.post(url, {"codice_socio": "00000", "email": "x@y.it"})
-    assert r.status_code == 200 and "Codice socio non corretto" in r.content.decode()
-    r = c.post(url, {"codice_socio": "88888", "email": "web.csq@example.it"})
-    assert r.status_code == 302
-    invito.refresh_from_db()
-    assert invito.stato == StatoInvito.ATTIVATO
-
-
-def test_web_reinvio_crp(client_di, invito_csq, senza_mfa):
-    r = client_di("crp").post(f"/notifiche/invito/{invito_csq.pk}/reinvia/")
-    assert r.status_code == 302
-    nuovo = Invito.objects.exclude(pk=invito_csq.pk).get()
-    assert nuovo.tipo == TipoInvito.CODICE_SOCIO

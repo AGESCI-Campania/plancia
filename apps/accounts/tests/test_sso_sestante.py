@@ -3,7 +3,6 @@ import pytest
 from allauth.account.models import EmailAddress
 from allauth.core.exceptions import ImmediateHttpResponse
 from allauth.socialaccount.models import SocialAccount, SocialLogin
-from django.contrib.messages.storage.fallback import FallbackStorage
 from django.contrib.sessions.backends.db import SessionStore
 from django.test import RequestFactory
 
@@ -29,7 +28,6 @@ def _richiesta():
     request = RequestFactory().get("/accounts/oidc/sestante/login/callback/")
     request.session = SessionStore()
     request.user = type("Anon", (), {"is_authenticated": False})()
-    request._messages = FallbackStorage(request)
     return request
 
 
@@ -81,8 +79,9 @@ class TestSessioneDaSestante:
 
 @pytest.mark.django_db
 class TestMiddlewareMFAConSSO:
-    PAGINA_PROTETTA = "/edizioni/"
-    PAGINA_MFA_SETUP = "/accounts/2fa/totp/activate/"
+    """Bypass della MFA solo per le sessioni aperte via Sestante (percorsi Django e API)."""
+
+    PAGINA_PROTETTA = "/admin/"
 
     def _imposta_metodi(self, client, metodi):
         session = client.session
@@ -91,10 +90,12 @@ class TestMiddlewareMFAConSSO:
 
     def test_admin_entrato_via_sso_non_deve_configurare_mfa(self, client):
         admin = _crea_utente("admin@test.it", Ruolo.ADMIN)
+        admin.is_staff = True
+        admin.save()
         client.force_login(admin)
         self._imposta_metodi(client, [METODO_SESTANTE])
-        response = client.get(self.PAGINA_PROTETTA)
-        assert self.PAGINA_MFA_SETUP not in response.get("Location", "")
+        assert client.get(self.PAGINA_PROTETTA).status_code == 200
+        assert client.get("/api/v1/edizioni").status_code == 200
 
     def test_admin_collegato_a_sestante_ma_entrato_con_password(self, client):
         """L'account collegato non basta: conta il metodo di login della sessione."""
@@ -102,9 +103,37 @@ class TestMiddlewareMFAConSSO:
         SocialAccount.objects.create(user=admin, provider="sestante", uid="sub-admin")
         client.force_login(admin)
         self._imposta_metodi(client, [METODO_PASSWORD])
-        response = client.get(self.PAGINA_PROTETTA)
-        assert response.status_code == 302
-        assert self.PAGINA_MFA_SETUP in response["Location"]
+        assert client.get(self.PAGINA_PROTETTA).status_code == 403
+        r = client.get("/api/v1/edizioni")
+        assert r.status_code == 403
+        assert r.json()["mfa_da_configurare"] is True
+
+
+class TestCallbackSestante:
+    """La callback è registrata nel blueprint di Sestante: non deve cambiare (HEADLESS_ONLY)."""
+
+    CALLBACK = "/accounts/oidc/sestante/login/callback/"
+
+    def test_reverse(self):
+        from django.urls import reverse
+
+        url = reverse("openid_connect_callback", kwargs={"provider_id": "sestante"})
+        assert url == self.CALLBACK
+
+    def test_resolve(self):
+        from django.urls import resolve
+
+        match = resolve(self.CALLBACK)
+        assert match.url_name == "openid_connect_callback"
+        assert match.kwargs == {"provider_id": "sestante"}
+
+    def test_pagine_allauth_django_assenti(self):
+        """Con HEADLESS_ONLY non esistono più le pagine di login/MFA di Django."""
+        from django.urls import NoReverseMatch, reverse
+
+        for nome in ("account_login", "mfa_activate_totp", "account_change_password"):
+            with pytest.raises(NoReverseMatch):
+                reverse(nome)
 
 
 # ---------------------------------------------------------------------------
@@ -211,9 +240,11 @@ class TestAdapterSestante:
     def test_senza_email_rifiutato(self):
         utenti_prima = User.objects.count()
         sl = _sociallogin(None, [])
-        with pytest.raises(ImmediateHttpResponse):
+        with pytest.raises(ImmediateHttpResponse) as exc:
             self.adapter.pre_social_login(_richiesta(), sl)
         assert User.objects.count() == utenti_prima
+        # Torna alla pagina di accesso della SPA con il messaggio
+        assert exc.value.response["Location"].startswith("/accesso?errore=")
 
     def test_email_duplicata_rifiutata(self):
         _crea_utente("doppio@test.it")

@@ -39,13 +39,26 @@ const moduli = computed(() => (diario.value ? vociModuli(diario.value) : []))
 // Valutazione: la chiede solo chi può vedere la relazione (mai il Capo Squadriglia) e solo
 // dopo l'invio; l'API decide (staff, Pattuglia GV assegnata, Capo Reparto dopo la pubblicazione).
 const valutazione = ref<ValutazioneApi | null>(null)
+/** Valutazione non ancora creata ma l'utente può avviarla (assegnazione, valutazione diretta). */
+const valutazioneDaAvviare = ref(false)
 async function caricaValutazione(d: DiarioDettaglio): Promise<void> {
   valutazione.value = null
+  valutazioneDaAvviare.value = false
   if (!d.permessi?.puo_vedere_relazione || !STATI_DOPO_INVIO.has(d.stato)) return
   try {
     valutazione.value = await api.get<ValutazioneApi>(`/diari/${d.id}/valutazione`)
   } catch (e) {
     if (!(e instanceof ErroreApi) || ![403, 404].includes(e.stato)) throw e
+    if (e.stato !== 404) return
+    // Diario appena inviato: nessuna valutazione ancora. Le azioni dicono se si può avviarla.
+    try {
+      const azioni = await api.get<{ azioni?: Record<string, unknown> } & Record<string, unknown>>(
+        `/diari/${d.id}/valutazione/azioni`,
+      )
+      valutazioneDaAvviare.value = Object.values(azioni.azioni ?? azioni).some((v) => v === true)
+    } catch {
+      valutazioneDaAvviare.value = false
+    }
   }
 }
 const riquadroValutazione = computed(() => {
@@ -60,6 +73,8 @@ const riquadroValutazione = computed(() => {
     }
   }
   const v = diario.value?.valutazione
+  if (!v && valutazioneDaAvviare.value)
+    return { esito: null, stato: 'Da valutare', pubblicata: false, note: '', proposta: null }
   return v
     ? {
         esito: v.esito_display,
@@ -321,7 +336,7 @@ const haAzioni = computed(() => {
 
       <!-- Valutazione (solo dove l'API la rende visibile) -->
       <section v-if="riquadroValutazione" class="card mb-6" aria-labelledby="titolo-valutazione">
-        <div class="card-body d-flex flex-wrap align-items-center gap-5">
+        <div class="card-body d-flex flex-row flex-wrap align-items-center gap-5">
           <div class="flex-grow-1">
             <h2 id="titolo-valutazione" class="h6 mb-2">
               <IconaBs nome="clipboard-check" class="me-2" />Valutazione
@@ -349,7 +364,7 @@ const haAzioni = computed(() => {
             </p>
           </div>
           <RouterLink
-            v-if="valutazione"
+            v-if="valutazione || valutazioneDaAvviare"
             :to="`/diari/${diario.id}/valutazione`"
             class="btn btn-outline theme-primary"
           >

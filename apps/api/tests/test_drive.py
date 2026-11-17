@@ -213,13 +213,3 @@ def test_cartelle_edizione_salva_e_blocca(client_di, edizione, credenziali):
     assert client_di("admin").get("/api/v1/drive/edizioni/999999").status_code == 404
 
 
-def test_vista_web_cartelle_bloccate(client_di, edizione, settings):
-    settings.SKIP_MFA_ENFORCEMENT = True
-    edizione.drive_folder_allegati_id = "a1"
-    edizione.drive_folder_output_id = "o1"
-    edizione.save()  # il formato ha già il default → configurazione bloccata
-    r = client_di("admin").post(f"/drive/edizione/{edizione.pk}/cartelle/",
-                                {"drive_folder_allegati_id": "x", "drive_folder_output_id": "y"})
-    assert r.status_code == 302
-    edizione.refresh_from_db()
-    assert edizione.drive_folder_allegati_id == "a1"

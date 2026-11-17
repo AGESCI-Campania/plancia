@@ -7,18 +7,11 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { api, ErroreApi } from '@/api/http'
+import type { components } from '@/api/schema'
 import CampoForm from '@/components/CampoForm.vue'
 import { useSessioneStore } from '@/stores/sessione'
 
-interface DatiInvito {
-  valido: boolean
-  messaggio?: string
-  richiede_codice_socio?: boolean
-  email?: string
-  nome?: string
-  ruolo?: string
-  [altro: string]: unknown
-}
+type DatiInvito = components['schemas']['InvitoPubblicoSchema']
 
 const props = defineProps<{ token: string }>()
 const sessione = useSessioneStore()
@@ -33,7 +26,6 @@ const inCorso = ref(false)
 onMounted(async () => {
   try {
     invito.value = await api.get<DatiInvito>(`/notifiche/inviti/${props.token}`)
-    email.value = invito.value.email ?? ''
   } catch (e) {
     erroreCarica.value = e instanceof ErroreApi ? e.message : 'Invito non trovato.'
   }
@@ -66,11 +58,18 @@ async function attiva(): Promise<void> {
   <h1 class="h3 mb-4">Attivazione dell'account</h1>
   <div v-if="erroreCarica" class="alert theme-danger" role="alert">{{ erroreCarica }}</div>
   <p v-else-if="!invito"><span class="spinner-border spinner-sm" aria-hidden="true" /></p>
-  <div v-else-if="!invito.valido" class="alert theme-danger" role="alert">
+  <div v-else-if="!invito.attivabile" class="alert theme-danger" role="alert">
     {{ invito.messaggio ?? "L'invito non è più valido." }}
   </div>
   <form v-else novalidate @submit.prevent="attiva">
-    <p v-if="invito.nome">Ciao <strong>{{ invito.nome }}</strong>, conferma i tuoi dati per attivare l'account.</p>
+    <p>
+      Invito come <strong>{{ invito.ruolo_target_display }}</strong>
+      <template v-if="invito.squadriglia"> della squadriglia <strong>{{ invito.squadriglia }}</strong></template>
+      <template v-if="invito.edizione"> ({{ invito.edizione }})</template>.
+      <template v-if="invito.richiede_codice_socio">
+        Per attivare l'account inserisci il tuo codice socio AGESCI e l'email che userai per accedere.
+      </template>
+    </p>
     <div v-for="e in errori.__all__ ?? []" :key="e" class="alert theme-danger">{{ e }}</div>
     <CampoForm
       v-if="invito.richiede_codice_socio"
@@ -81,7 +80,15 @@ async function attiva(): Promise<void> {
       :errori="errori.codice_socio"
       obbligatorio
     />
-    <CampoForm v-model="email" etichetta="Email" tipo="email" autocomplete="email" :errori="errori.email" obbligatorio />
+    <CampoForm
+      v-if="invito.richiede_codice_socio"
+      v-model="email"
+      etichetta="Email"
+      tipo="email"
+      autocomplete="email"
+      :errori="errori.email"
+      obbligatorio
+    />
     <button type="submit" class="btn btn-solid theme-primary w-100" :disabled="inCorso">Attiva l'account</button>
   </form>
 </template>

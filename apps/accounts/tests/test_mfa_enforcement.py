@@ -101,70 +101,90 @@ class TestRuoloRichiedeMfa:
 # Test middleware (via client HTTP)
 # ---------------------------------------------------------------------------
 
+def _attiva_totp(user) -> None:
+    import json
+
+    from allauth.mfa.models import Authenticator
+
+    Authenticator.objects.create(
+        user=user, type=Authenticator.Type.TOTP, data=json.dumps({"secret": "A" * 32})
+    )
+
+
 @pytest.mark.django_db
 class TestMFAEnforcementMiddleware:
-    """Testa il comportamento del middleware su richieste HTTP reali."""
+    """Percorsi Django rimasti (admin, proxy): 403 a chi deve configurare la MFA.
 
-    PAGINA_PROTETTA = "/edizioni/"
-    PAGINA_MFA_SETUP = "/accounts/2fa/totp/activate/"
+    La configurazione si fa dalla SPA via allauth headless; l'API ha la sua regola
+    (apps/api/auth.py) e qui non viene toccata.
+    """
 
-    def test_csq_senza_mfa_accede_liberamente(self, client, utente_csq):
+    PERCORSI_DJANGO = ("/admin/", "/mailadmin/", "/celery/")
+
+    @pytest.mark.parametrize("percorso", PERCORSI_DJANGO)
+    def test_admin_senza_mfa_riceve_403(self, client, utente_admin, percorso):
+        client.force_login(utente_admin)
+        response = client.get(percorso)
+        assert response.status_code == 403
+        assert b"verifica in due passaggi" in response.content.lower()
+        assert "/profilo/sicurezza" in response.content.decode()
+
+    @pytest.mark.parametrize("utente", ["utente_segreteria", "utente_iabr"])
+    def test_ruoli_estesi_senza_mfa_ricevono_403(self, client, utente, request):
+        client.force_login(request.getfixturevalue(utente))
+        assert client.get("/admin/").status_code == 403
+
+    def test_csq_senza_mfa_non_bloccato(self, client, utente_csq):
         client.force_login(utente_csq)
-        response = client.get(self.PAGINA_PROTETTA)
-        # Non deve essere reindirizzato alla pagina MFA
-        assert response.status_code != 302 or self.PAGINA_MFA_SETUP not in response.get("Location", "")
+        # Non è staff: l'admin lo rimanda all'accesso, ma il middleware non risponde 403.
+        assert client.get("/admin/").status_code == 302
 
-    def test_admin_senza_mfa_viene_reindirizzato(self, client, utente_admin):
+    def test_admin_con_mfa_accede_all_admin(self, client, utente_admin):
+        utente_admin.is_staff = utente_admin.is_superuser = True
+        utente_admin.save()
+        _attiva_totp(utente_admin)
         client.force_login(utente_admin)
-        response = client.get(self.PAGINA_PROTETTA)
-        assert response.status_code == 302
-        assert self.PAGINA_MFA_SETUP in response["Location"]
+        assert client.get("/admin/").status_code == 200
 
-    def test_segreteria_senza_mfa_viene_reindirizzata(self, client, utente_segreteria):
-        client.force_login(utente_segreteria)
-        response = client.get(self.PAGINA_PROTETTA)
-        assert response.status_code == 302
-        assert self.PAGINA_MFA_SETUP in response["Location"]
-
-    def test_iabr_senza_mfa_viene_reindirizzato(self, client, utente_iabr):
-        client.force_login(utente_iabr)
-        response = client.get(self.PAGINA_PROTETTA)
-        assert response.status_code == 302
-        assert self.PAGINA_MFA_SETUP in response["Location"]
-
-    def test_admin_con_mfa_accede_liberamente(self, client, utente_admin):
-        """Un Admin con TOTP attivo non viene bloccato."""
-        import json
-
-        from allauth.mfa.models import Authenticator
-        Authenticator.objects.create(
-            user=utente_admin,
-            type=Authenticator.Type.TOTP,
-            data=json.dumps({"secret": "A" * 32}),
-        )
+    def test_admin_senza_mfa_usa_allauth_headless_e_api_me(self, client, utente_admin):
+        """/_allauth/ serve proprio a configurare la MFA: non va bloccato."""
         client.force_login(utente_admin)
-        response = client.get(self.PAGINA_PROTETTA)
-        assert self.PAGINA_MFA_SETUP not in response.get("Location", "")
+        assert client.get("/_allauth/browser/v1/auth/session").status_code != 403
+        assert client.get("/api/v1/me").status_code == 200
 
-    def test_admin_senza_mfa_puo_accedere_a_percorsi_accounts(self, client, utente_admin):
-        """Il middleware non blocca i percorsi /accounts/ per evitare loop infiniti.
-
-        Allauth può fare i propri redirect all'interno di /accounts/ (es. reauthenticate
-        prima di modificare impostazioni di sicurezza): l'importante è che il nostro
-        middleware non reindirizzi verso mfa_activate_totp da qui.
-        """
+    def test_admin_senza_mfa_non_bloccato_su_healthz(self, client, utente_admin):
         client.force_login(utente_admin)
-        response = client.get("/accounts/2fa/totp/activate/")
-        assert self.PAGINA_MFA_SETUP not in response.get("Location", "")
-
-    def test_admin_senza_mfa_non_bloccato_su_logout(self, client, utente_admin):
-        client.force_login(utente_admin)
-        response = client.get("/accounts/logout/")
-        assert self.PAGINA_MFA_SETUP not in response.get("Location", "")
+        assert client.get("/healthz/").status_code == 200
 
     def test_utente_non_autenticato_non_bloccato(self, client):
-        response = client.get(self.PAGINA_PROTETTA)
-        assert self.PAGINA_MFA_SETUP not in response.get("Location", "")
+        response = client.get("/admin/")
+        assert response.status_code == 302
+
+
+@pytest.mark.django_db
+class TestAccessoAdminDjango:
+    """L'admin non usa il proprio form password: rimanda all'accesso della SPA."""
+
+    def test_anonimo_su_admin_va_alla_spa(self, client):
+        response = client.get("/admin/", follow=True)
+        assert response.redirect_chain[-1][0] == "/accesso?next=%2Fadmin%2F"
+
+    def test_login_admin_rimanda_alla_spa_con_next(self, client):
+        response = client.get("/admin/login/?next=/admin/siteconfig/")
+        assert response.status_code == 302
+        assert response["Location"] == "/accesso?next=%2Fadmin%2Fsiteconfig%2F"
+
+    def test_post_password_sul_login_admin_non_autentica(self, client, utente_admin):
+        response = client.post(
+            "/admin/login/", {"username": utente_admin.email, "password": "Pass123!"}
+        )
+        assert response.status_code == 302
+        assert response["Location"].startswith("/accesso")
+        assert "_auth_user_id" not in client.session
+
+    def test_next_esterno_ignorato(self, client):
+        response = client.get("/admin/login/?next=https://esempio.it/")
+        assert response["Location"] == "/accesso?next=%2Fadmin%2F"
 
 
 # ---------------------------------------------------------------------------

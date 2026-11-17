@@ -1,6 +1,6 @@
 """Ultima release GitHub nota e storico delle richieste di aggiornamento (audit trail).
 
-Vedi `docs/piano-plancia-3.md` § "Versioni e aggiornamenti" e `docs/api/fase2-aggiornamenti.md`.
+Vedi `docs/piano-plancia-3.md` § "Versioni e aggiornamenti" e `docs/api/aggiornamenti.md`.
 """
 from __future__ import annotations
 

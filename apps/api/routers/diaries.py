@@ -128,6 +128,10 @@ def _referente(socio) -> ReferenteSchema | None:
     return ReferenteSchema(id=socio.pk, nome=socio.nome, cognome=socio.cognome)
 
 
+def _referente_certo(socio) -> ReferenteSchema:
+    return ReferenteSchema(id=socio.pk, nome=socio.nome, cognome=socio.cognome)
+
+
 def _url(nome: str, **kwargs) -> str:
     from django.urls import reverse
 
@@ -473,7 +477,7 @@ def cambia_crp_reparto(request, reparto_id: int, payload: CambioReferenteBodySch
     return Status(200, CambioCrpRepartoRispostaSchema(
         detail=f"Capo Reparto aggiornato a {nuovo.cognome} {nuovo.nome} per {n} "
                + ("diario." if n == 1 else "diari."),
-        nuovo=_referente(nuovo), diari_aggiornati=n,
+        nuovo=_referente_certo(nuovo), diari_aggiornati=n,
     ))
 
 
@@ -1182,7 +1186,7 @@ def cambia_csq(request, diario_id: int, payload: CambioReferenteBodySchema):
     nota = f" (sostituisce {vecchio.cognome} {vecchio.nome})" if vecchio else ""
     return Status(200, CambioReferenteRispostaSchema(
         detail=f"Capo Squadriglia aggiornato: {nuovo.cognome} {nuovo.nome}{nota}.",
-        nuovo=_referente(nuovo), precedente=_referente(vecchio),
+        nuovo=_referente_certo(nuovo), precedente=_referente(vecchio),
     ))
 
 
@@ -1197,5 +1201,5 @@ def cambia_crp(request, diario_id: int, payload: CambioReferenteBodySchema):
     nota = f" (sostituisce {vecchio.cognome} {vecchio.nome})" if vecchio else ""
     return Status(200, CambioReferenteRispostaSchema(
         detail=f"Capo Reparto aggiornato: {nuovo.cognome} {nuovo.nome}{nota}.",
-        nuovo=_referente(nuovo), precedente=_referente(vecchio),
+        nuovo=_referente_certo(nuovo), precedente=_referente(vecchio),
     ))

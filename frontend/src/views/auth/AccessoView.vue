@@ -7,6 +7,7 @@ import { ErroreApi } from '@/api/http'
 import CampoForm from '@/components/CampoForm.vue'
 import IconaBs from '@/components/IconaBs.vue'
 import { firmaConPasskey, passkeySupportate } from '@/composables/webauthn'
+import { vaiDopoAccesso } from '@/composables/destinazione'
 import { useSessioneStore } from '@/stores/sessione'
 import { useSitoStore } from '@/stores/sito'
 
@@ -20,10 +21,9 @@ const password = ref('')
 const errori = ref<Record<string, string[]>>({})
 const inCorso = ref(false)
 const provider = computed(() => sito.sito?.login.provider ?? [])
-const destinazione = computed(() => (typeof route.query.next === 'string' ? route.query.next : '/'))
 
 async function dopoLogin(): Promise<void> {
-  if (sessione.autenticato) await router.replace(destinazione.value)
+  if (sessione.autenticato) await vaiDopoAccesso(router, route.query.next)
   else if (sessione.passoInSospeso === 'mfa_authenticate')
     await router.push({ name: 'accesso-mfa', query: route.query })
 }
@@ -77,7 +77,14 @@ async function accediConPasskey(): Promise<void> {
   </div>
 
   <form novalidate @submit.prevent="accedi">
-    <CampoForm v-model="email" etichetta="Email" tipo="email" autocomplete="username" :errori="errori.email" obbligatorio />
+    <CampoForm
+      v-model="email"
+      etichetta="Email o codice socio"
+      autocomplete="username"
+      aiuto="I Capi Squadriglia possono usare il codice socio AGESCI."
+      :errori="[...(errori.email ?? []), ...(errori.username ?? [])]"
+      obbligatorio
+    />
     <CampoForm
       v-model="password"
       etichetta="Password"

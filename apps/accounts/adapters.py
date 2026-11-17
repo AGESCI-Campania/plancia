@@ -79,14 +79,21 @@ def _sync_ruoli_globali(user, groups: list[str]) -> None:
         user.ruolo = ruolo
 
 
-def _rifiuta_login(request, messaggio: str):
-    """Interrompe il social login con un messaggio, senza creare account parziali."""
-    from allauth.core.exceptions import ImmediateHttpResponse
-    from django.contrib import messages
-    from django.shortcuts import redirect
+# Pagina di accesso della SPA: mostra il parametro `errore` (frontend/src/views/auth/AccessoView.vue).
+URL_SPA_ACCESSO = "/accesso"
 
-    messages.error(request, messaggio)
-    raise ImmediateHttpResponse(redirect("account_login"))
+
+def _rifiuta_login(request, messaggio: str):
+    """Interrompe il social login tornando alla pagina di accesso della SPA con il messaggio,
+    senza creare account parziali."""
+    from urllib.parse import urlencode
+
+    from allauth.core.exceptions import ImmediateHttpResponse
+    from django.http import HttpResponseRedirect
+
+    raise ImmediateHttpResponse(
+        HttpResponseRedirect(f"{URL_SPA_ACCESSO}?{urlencode({'errore': messaggio})}")
+    )
 
 
 def mfa_da_configurare(request, user) -> bool:

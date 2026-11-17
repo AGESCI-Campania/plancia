@@ -143,7 +143,7 @@ async function terminaImpersonazione(): Promise<void> {
     </div>
   </header>
 
-  <div class="d-flex flex-grow-1 overflow-hidden">
+  <div class="plancia-corpo d-flex flex-grow-1 overflow-hidden">
     <dialog
       id="agSidebar"
       ref="sidebar"

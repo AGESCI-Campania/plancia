@@ -334,7 +334,6 @@ def test_gmail_callback_state_non_valido_spa(client_di, senza_mfa):
     c = client_di("admin")
     sessione = c.session
     sessione["gmail_smtp_oauth_state"] = "atteso"
-    sessione["gmail_smtp_oauth_origine"] = "spa"
     sessione.save()
     r = c.get("/impostazioni/gmail-smtp/oauth/callback/?state=altro")
     assert r.status_code == 302

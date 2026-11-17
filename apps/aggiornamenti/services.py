@@ -3,7 +3,7 @@
 Django scrive SOLO `richiesta.json` nella cartella `settings.AGGIORNAMENTI_DIR`; il runner
 sull'host (unit `plancia-aggiorna.path`, Fase 6) la sposta in `in-corso.json`, lancia
 `scripts/aggiorna.sh` e scrive l'avanzamento in `stato.json`. Contratto dei file in
-`docs/api/fase2-aggiornamenti.md`.
+`docs/api/aggiornamenti.md`.
 """
 from __future__ import annotations
 
@@ -285,6 +285,7 @@ def sincronizza_storico(stato: dict[str, Any] | None = None) -> RichiestaAggiorn
             aperta.save(update_fields=["stato", "messaggio", "aggiornato_at"])
         return aperta
 
+    assert stato is not None  # con stato None la richiesta è None: uscita sopra
     campi = ["aggiornato_at"]
     if isinstance(stato.get("fase"), str):
         richiesta.fase = stato["fase"][:40]

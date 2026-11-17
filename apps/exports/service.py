@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 from pathlib import Path
+from typing import Any
 
 from django.conf import settings
 
@@ -35,14 +36,14 @@ def _compress_image_for_pdf(raw: bytes, mime: str, max_px: int = 480) -> tuple[b
     from PIL import Image, UnidentifiedImageError
 
     try:
-        img = Image.open(io.BytesIO(raw))
+        img: Image.Image = Image.open(io.BytesIO(raw))
         img.load()
         if img.mode not in ("RGB", "L"):
             img = img.convert("RGB")
         w, h = img.size
         if max(w, h) > max_px:
             ratio = max_px / max(w, h)
-            img = img.resize((int(w * ratio), int(h * ratio)), Image.LANCZOS)
+            img = img.resize((int(w * ratio), int(h * ratio)), Image.Resampling.LANCZOS)
         buf = io.BytesIO()
         img.save(buf, format="JPEG", quality=82, optimize=True)
         return buf.getvalue(), "image/jpeg"
@@ -184,7 +185,7 @@ def genera_excel_edizione(edizione) -> bytes:
         )
     )
 
-    zone_viste: dict[str, object] = {}
+    zone_viste: dict[str, Any] = {}
 
     for d in diari:
         sq = d.squadriglia
@@ -283,6 +284,7 @@ def _riga_export_diario(diario, mostra_valutazione: bool) -> list:
         parts = []
         for p in qs.all():
             chi = getattr(p, "chi", "")
+            # Posti d'azione delle imprese (chi/cosa) e della missione (descrizione)
             cosa = getattr(p, "cosa", "") or getattr(p, "descrizione", "")
             if chi and cosa:
                 parts.append(f"{chi}: {cosa}")

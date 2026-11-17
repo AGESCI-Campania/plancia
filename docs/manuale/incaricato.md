@@ -1,102 +1,132 @@
 # Guida — Incaricato EG
 
-L'Incaricato EG supervisiona l'intera valutazione: può valutare direttamente o coinvolgere
-la Pattuglia GV, confermare o modificare le proposte e pubblicare gli esiti ufficiali.
+L'Incaricato EG guida la valutazione: valuta direttamente o coinvolge la Pattuglia GV, conferma o
+rigetta le proposte, può modificare qualunque esito fino alla pubblicazione e pubblica gli esiti
+ufficiali. Ha anche accesso alla gestione (edizioni, utenti, inviti, import: vedi la
+[guida della Segreteria](segreteria.md)) e alle **Statistiche**.
 
-> L'Incaricato EG deve configurare l'**autenticazione a due fattori (MFA)** al primo accesso.
+> L'Incaricato EG deve usare la **verifica in due passaggi**: al primo accesso Plancia porta alla
+> pagina *Password e sicurezza* per configurarla (salvo accesso con SSO AGESCI Campania, o se
+> l'Admin l'ha resa facoltativa).
 
 ---
 
 ## Flussi di valutazione
 
-Per ogni diario l'Incaricato sceglie caso per caso il flusso più adatto:
+Per ogni diario puoi scegliere il flusso più adatto, senza configurazioni preventive:
 
-**Flusso diretto** (senza Pattuglia GV):
-```
-Diario inviato → Valutazione Incaricato → Pubblicazione
-```
+**Flusso diretto**
 
-**Flusso con Pattuglia GV**:
 ```
-Diario inviato → Assegnazione PGV → Proposta PGV → Revisione Incaricato → Pubblicazione
+Diario inviato → Valutazione dell'Incaricato → Pubblicazione
 ```
 
-Entrambi i flussi sono disponibili contemporaneamente su ogni diario e non richiedono
-configurazioni preventive.
+**Flusso con la Pattuglia GV**
+
+```
+Diario inviato → Assegnazione → Proposta della Pattuglia GV (In revisione)
+              → Conferma dell'Incaricato → Pubblicazione
+```
 
 ---
 
-## Home page
+## Home e lista dei diari
 
-La home mostra l'edizione in corso, il numero di diari inviati in attesa di valutazione
-e lo stato complessivo delle assegnazioni.
+La home mostra l'edizione attiva con il pulsante **Gestisci edizione**, i contatori per stato
+(cliccandoli filtri la tabella) e la tabella di tutti i diari. Accanto a ogni diario inviato,
+l'icona **Valutazione** (cartellina con la spunta) apre direttamente la pagina di valutazione.
 
-![Home Incaricato EG](screenshots/25_home_incaricato.png)
+![Home dell'Incaricato EG](screenshots/incaricato_home.png)
 
+La voce **Diari** apre l'elenco completo di tutte le squadriglie, con ricerca, filtri combinabili
+(edizione, zona, gruppo, reparto, specialità, tipo, stati) e ordinamento.
 
----
-
-## Lista diari
-
-Dalla voce **Diari** accedi all'elenco completo dei diari di tutte le squadriglie,
-con il loro stato attuale (Inviato, In valutazione, Approvato, ecc.).
-
-![Lista diari — Incaricato EG](screenshots/26_diari_incaricato.png)
-
+![Lista dei diari](screenshots/incaricato_diari.png)
 
 ---
 
-## Valutazione diretta
+## La pagina di valutazione
 
-Per valutare direttamente (senza coinvolgere la Pattuglia GV), entra nel dettaglio
-di valutazione del diario (`Gestione → Valutazione`) e compila il modulo
-**Valuta direttamente**: scegli l'esito e aggiungi eventuali note.
+Si apre dall'icona **Valutazione** nella tabella dei diari (home o pagina dell'edizione) oppure,
+quando la valutazione è già iniziata, da **Apri la valutazione** nel diario. A sinistra c'è lo
+**Stato valutazione** (stato del diario, esito, proposta della Pattuglia GV, note, chi ha valutato
+e confermato, pubblicazione); a destra le azioni possibili; in basso le **Assegnazioni
+Pattuglia GV**.
 
-Il form è disponibile anche quando il diario è ancora in stato *Inviato*: il sistema
-avvia automaticamente la fase di valutazione al momento della conferma.
+### Valutare direttamente
 
-![Valutazione diretta](screenshots/27_valutazione_diretta.png)
+Nel riquadro **Valuta direttamente** scegli l'**Esito** — *Approvata*, *Non approvata* o
+*Maggiori informazioni richieste* — aggiungi le note e premi **Conferma valutazione**. Funziona
+anche con il diario ancora *Inviato*: la valutazione si avvia da sola.
+
+![Valuta direttamente](screenshots/incaricato_valuta.png)
+
+### Assegnare il diario alla Pattuglia GV
+
+Nel riquadro **Assegnazioni Pattuglia GV** cerca il membro per nome, cognome o gruppo, sceglilo e
+premi **Assegna**. Si possono assegnare più membri; ognuno vedrà il diario tra i propri *Diari
+assegnati*.
+
+### Confermare o rigettare una proposta
+
+Quando un membro della Pattuglia propone *Approvata* o *Non approvata*, il diario va **In
+revisione** e compare il riquadro giallo **Proposta della Pattuglia GV in attesa di conferma**:
+
+- **Conferma proposta** (con eventuali note) rende definitivo l'esito proposto;
+- **Rigetta proposta** riporta il diario *In valutazione*;
+- **Ignora la proposta e valuta direttamente** apre il modulo di valutazione diretta, per
+  decidere un esito diverso.
+
+![Proposta in revisione](screenshots/incaricato_revisione.png)
+
+### Modificare un esito
+
+Finché non è pubblicato, l'esito si può cambiare dal riquadro **Modifica esito** → **Aggiorna
+valutazione**.
 
 ---
 
-## Flusso con Pattuglia GV
+## Pubblicare gli esiti
 
-### Assegnazione
+Gli esiti diventano visibili ai Capi Reparto solo dopo la pubblicazione.
 
-Usa il campo **Assegnazioni Pattuglia GV** nella pagina di valutazione per scegliere
-il membro della pattuglia che valuterà il diario. Puoi assegnare più membri.
+- **Singolo diario**: nella pagina di valutazione, **Pubblica esito**.
+- **Tutti insieme**: nella pagina dell'edizione (**Gestisci edizione**) premi **Pubblica esiti** e
+  scegli *Tutti*, *Solo 1ª scadenza* o *Solo 2ª scadenza*, poi **Pubblica**. Vengono pubblicati
+  gli esiti **confermati** e non ancora pubblicati; le proposte ancora in revisione restano
+  escluse. Lo stesso comando è nelle Statistiche: **Pubblica tutti gli esiti confermati**.
 
-### Proposta in revisione
+![Pubblica gli esiti](screenshots/incaricato_pubblica.png)
 
-Quando la PGV inserisce una proposta *Approvata* o *Non approvata*, il diario entra
-in stato **In revisione**. Nella pagina di valutazione compare la card gialla
-**Proposta Pattuglia in attesa** con i pulsanti **Conferma proposta** e **Rigetta proposta**.
-
-Se preferisci sovrascrivere la proposta e valutare direttamente, espandi la sezione
-*Ignora proposta e valuta direttamente* nella stessa card.
-
-![Proposta in revisione](screenshots/27_valutazione_revisione.png)
-
----
-
-## Pubblicazione
-
-Puoi pubblicare i diari individualmente o in blocco (tutti o per scadenza).
-La pubblicazione rende visibile la valutazione al Capo Squadriglia e al Capo Reparto.
-
-> Dopo la pubblicazione non è più possibile modificare l'esito, salvo riapertura esplicita
-> (consentita solo se siamo ancora nella prima scadenza e la seconda non è ancora passata).
+> Dopo la pubblicazione l'esito non si può più modificare.
 
 ---
 
 ## Riapertura per integrazioni
 
-Se un diario è stato valutato sulla prima scadenza e la seconda scadenza non è ancora passata,
-l'Incaricato può riaprirlo per permettere al Capo Squadriglia di integrare il materiale.
+Un diario *Non approvato* o con *Maggiori informazioni richieste* si può riaprire con **Riapri per
+integrazioni** (riquadro Azioni del diario), purché sia stato valutato sulla **1ª scadenza** e la
+2ª non sia ancora passata. Il diario torna *In compilazione* e il Capo Squadriglia può modificarlo
+di nuovo.
+
+![Diario da riaprire](screenshots/incaricato_riapri.png)
+
+---
+
+## Dilazioni
+
+Dal diario (**Concedi dilazione**) o dalla pagina dell'edizione (riquadro **Dilazioni**) puoi
+concedere a una squadriglia una **Nuova scadenza** con la **Motivazione**, finché il diario non è
+stato inviato allo staff. Il diario mostra il badge *Dilazione concessa*.
 
 ---
 
 ## Statistiche
 
-Dalla voce **Gestione → Statistiche** hai una panoramica degli esiti per zona,
-dei tempi di valutazione e del numero di ticket helpdesk aperti.
+La voce **Statistiche** (sezione *Gestione*) mostra, per l'edizione scelta, gli indicatori
+principali (diari totali, approvati, non approvati, pubblicati, inviati, in compilazione), gli
+**Esiti per zona**, gli esiti pubblicati sul totale, la tabella **Per zona** e i **Ticket
+helpdesk** collegati ai diari, per categoria e per stato. Ogni grafico ha i dati anche in tabella
+(*Dati del grafico in tabella*).
+
+![Statistiche](screenshots/statistiche.png)

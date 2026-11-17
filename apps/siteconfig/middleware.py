@@ -5,7 +5,7 @@ import time
 from django.conf import settings as django_settings
 from django.core.cache import cache
 from django.http import HttpResponse
-from django.shortcuts import render
+from django.template.loader import render_to_string
 
 _API_PREFIXES = ("/api/v1/", "/_allauth/")
 _API_V1 = "/api/v1/"
@@ -222,13 +222,17 @@ class MaintenanceModeMiddleware:
             or any(path.startswith(p) for p in _BYPASS_MANUTENZIONE_API)
         )
         if imp.manutenzione and not bypass:
-            if is_api:
-                from apps.siteconfig.manutenzione import messaggio_manutenzione
+            from apps.siteconfig.manutenzione import messaggio_manutenzione
 
+            messaggio = messaggio_manutenzione(imp)
+            if is_api:
                 return HttpResponse(
-                    json.dumps({"detail": messaggio_manutenzione(imp), "maintenance": True}),
+                    json.dumps({"detail": messaggio, "maintenance": True}),
                     content_type="application/json",
                     status=503,
                 )
-            return render(request, "siteconfig/maintenance.html", status=503)
+            # Percorsi Django rimasti (admin escluso, callback, proxy): pagina statica autonoma.
+            # La SPA è servita da nginx e legge la manutenzione da /api/v1/sito.
+            html = render_to_string("siteconfig/manutenzione.html", {"messaggio": messaggio})
+            return HttpResponse(html, status=503)
         return self.get_response(request)

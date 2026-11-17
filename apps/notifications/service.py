@@ -193,6 +193,7 @@ def invia_inviti_capi_per_edizione(edizione, backend_tipo: str = "massivo") -> d
     seen_crp = set()
     for diario in diari:
         crp = diario.crp
+        assert crp is not None  # esclusi dal queryset
         if crp.pk in seen_crp:
             continue
         seen_crp.add(crp.pk)
@@ -248,6 +249,7 @@ def invia_inviti_csq_per_edizione(edizione, backend_tipo: str = "massivo") -> di
     by_crp: dict = {}
     for diario in diari:
         csq = diario.csq
+        assert csq is not None  # esclusi dal queryset
         utente_csq = crea_o_ottieni_utente_per_socio(csq, "csq")
 
         if Invito.objects.filter(utente=utente_csq, ruolo_target="csq",
@@ -377,8 +379,12 @@ def diari_con_ultimi_inviti(edizione) -> list:
                     invito_per_crp[d.crp.pk] = inv
     for d in diari:
         inviti = sorted(d.inviti.all(), key=_chiave_invio, reverse=True)
-        d.ultimo_invito_csq = next((i for i in inviti if i.ruolo_target == Ruolo.CSQ), None)
-        d.ultimo_invito_crp = invito_per_crp.get(d.crp.pk) if d.crp else None
+        d.ultimo_invito_csq = next(  # type: ignore[attr-defined]  # attributo calcolato
+            (i for i in inviti if i.ruolo_target == Ruolo.CSQ), None
+        )
+        d.ultimo_invito_crp = (  # type: ignore[attr-defined]  # attributo calcolato
+            invito_per_crp.get(d.crp.pk) if d.crp else None
+        )
     return diari
 
 
@@ -397,7 +403,9 @@ def diari_inviti_crp(edizione, socio) -> list:
     )
     for d in diari:
         inviti = sorted(d.inviti.all(), key=_chiave_invio, reverse=True)
-        d.ultimo_invito_csq = next((i for i in inviti if i.ruolo_target == Ruolo.CSQ), None)
+        d.ultimo_invito_csq = next(  # type: ignore[attr-defined]  # attributo calcolato
+            (i for i in inviti if i.ruolo_target == Ruolo.CSQ), None
+        )
     return diari
 
 

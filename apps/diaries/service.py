@@ -233,7 +233,7 @@ def ridimensiona_immagine(file_obj, max_px: int) -> tuple[bytes, str, str]:
     nome_orig = getattr(file_obj, "name", "foto.jpg") or "foto.jpg"
     try:
         file_obj.seek(0)
-        img = Image.open(file_obj)
+        img: Image.Image = Image.open(file_obj)
         img.load()
     except Exception:  # noqa: BLE001 - formato non leggibile: si tiene l'originale
         file_obj.seek(0)
@@ -244,7 +244,7 @@ def ridimensiona_immagine(file_obj, max_px: int) -> tuple[bytes, str, str]:
     w, h = img.size
     if max(w, h) > max_px:
         ratio = max_px / max(w, h)
-        img = img.resize((int(w * ratio), int(h * ratio)), Image.LANCZOS)
+        img = img.resize((int(w * ratio), int(h * ratio)), Image.Resampling.LANCZOS)
 
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=85, optimize=True)

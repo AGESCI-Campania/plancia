@@ -65,7 +65,15 @@ export const allauth = {
   config: () => chiama('GET', '/config'),
   sessione: () => chiama('GET', '/auth/session'),
   esci: () => chiama('DELETE', '/auth/session'),
-  accedi: (email: string, password: string) => chiama('POST', '/auth/login', { email, password }),
+  /** Email o codice socio: senza "@" si invia come `username` (codice socio). */
+  accedi: (identificativo: string, password: string) =>
+    chiama(
+      'POST',
+      '/auth/login',
+      identificativo.includes('@')
+        ? { email: identificativo.trim(), password }
+        : { username: identificativo.trim(), password },
+    ),
   mfaAutentica: (code: string) => chiama('POST', '/auth/2fa/authenticate', { code }),
   riautentica: (password: string) => chiama('POST', '/auth/reauthenticate', { password }),
   mfaRiautentica: (code: string) => chiama('POST', '/auth/2fa/reauthenticate', { code }),

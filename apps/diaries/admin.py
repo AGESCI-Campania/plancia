@@ -1,4 +1,6 @@
 # apps/diaries/admin.py
+import contextlib
+
 from django.contrib import admin
 
 from apps.diaries.models import (
@@ -85,18 +87,14 @@ class DiarioAdmin(admin.ModelAdmin):
     @admin.action(description="Invia diari (In compilazione → Inviato)")
     def invia_diari(self, request, queryset):
         for d in queryset.filter(stato=StatoDiario.IN_COMPILAZIONE):
-            try:
+            with contextlib.suppress(ValueError):
                 d.invia()
-            except ValueError:
-                pass
 
     @admin.action(description="Avvia valutazione (Inviato → In valutazione)")
     def avvia_valutazione(self, request, queryset):
         for d in queryset.filter(stato=StatoDiario.INVIATO):
-            try:
+            with contextlib.suppress(ValueError):
                 d.avvia_valutazione()
-            except ValueError:
-                pass
 
 
 class PostoAzioneInline(admin.TabularInline):

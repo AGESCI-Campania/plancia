@@ -20,11 +20,13 @@ class SessionTokenAuth(APIKeyHeader):
         "Inviare nell'header X-Session-Token."
     )
 
-    def authenticate(self, request, key: str):
+    def authenticate(self, request, key: str | None):
         from allauth.headless import app_settings as headless_settings
 
         from apps.accounts.models import User
 
+        if not key:
+            return None
         strategy = headless_settings.TOKEN_STRATEGY
         session = strategy.lookup_session(key)
         if session is None:

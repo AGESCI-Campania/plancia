@@ -1,7 +1,7 @@
 """Aggiornamento del server dal web: solo Admin. Logica in `apps.aggiornamenti.services`.
 
 Contratto dei file con il runner sull'host e flusso di riautenticazione della SPA:
-`docs/api/fase2-aggiornamenti.md`.
+`docs/api/aggiornamenti.md`.
 """
 from __future__ import annotations
 

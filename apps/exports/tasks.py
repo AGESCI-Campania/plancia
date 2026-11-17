@@ -127,7 +127,7 @@ def _notifica_errore_pdf(utente_pk: int | None, diario, errore: str, traceback_s
                 f"Edizione: {diario.edizione}\n"
                 f"Errore: {errore}\n\n"
                 f"Traceback:\n{traceback_str}\n\n"
-                f"Log: {base_url}/impostazioni/#log-export"
+                f"Log: {base_url}/impostazioni/log-export"
             )
             msg_admin = EmailMultiAlternatives(
                 subject=f"[Plancia] Errore PDF — {diario.squadriglia}",
@@ -149,7 +149,6 @@ def _invia_mail_pdf(chiave: str, utente_pk: int, diario, link_pdf: str = "") -> 
     try:
         from django.conf import settings
         from django.core.mail import EmailMultiAlternatives
-        from django.urls import reverse
 
         from apps.accounts.models import User
         from apps.notifications.models import render_mail
@@ -163,7 +162,7 @@ def _invia_mail_pdf(chiave: str, utente_pk: int, diario, link_pdf: str = "") -> 
 
         if not link_pdf and chiave == "diario_pdf_pronto":
             base_url = getattr(settings, "BASE_URL", "https://plancia.agescicampania.net").rstrip("/")
-            link_pdf = f"{base_url}{reverse('diaries:pdf', args=[diario.pk])}"
+            link_pdf = f"{base_url}/diari/{diario.pk}/pdf"  # pagina PDF della SPA
 
         oggetto, corpo = render_mail(chiave, {
             "nome": utente.first_name or utente.email,
@@ -324,7 +323,7 @@ def task_genera_pdf_massivo(self, edizione_pk: int, utente_pk: int | None = None
                 from apps.storage_drive.models import DriveFile, TipoFile
                 # Salta se cache già presente
                 if DriveFile.objects.filter(diario=diario, tipo=TipoFile.PDF).exists():
-                    link = f"{base_url}/diari/{diario.pk}/pdf/"
+                    link = f"{base_url}/diari/{diario.pk}/pdf"
                     completati.append(f"• {diario.squadriglia} (cached): {link}")
                     continue
 
@@ -334,7 +333,7 @@ def task_genera_pdf_massivo(self, edizione_pk: int, utente_pk: int | None = None
                     from apps.storage_drive.service import carica_pdf_diario
                     carica_pdf_diario(diario)
 
-                link = f"{base_url}/diari/{diario.pk}/pdf/"
+                link = f"{base_url}/diari/{diario.pk}/pdf"
                 completati.append(f"• {diario.squadriglia}: {link}")
                 LogTaskExport.objects.create(
                     tipo=LogTaskExport.Tipo.PDF, stato=LogTaskExport.Stato.OK,
@@ -405,7 +404,7 @@ def task_genera_pdf_massivo(self, edizione_pk: int, utente_pk: int | None = None
         if admin_emails:
             _mail(
                 f"[Plancia] Errori generazione massiva PDF — {edizione_str}",
-                riepilogo + f"\n\nLog: {base_url}/impostazioni/log-export/",
+                riepilogo + f"\n\nLog: {base_url}/impostazioni/log-export",
                 admin_emails,
             )
 

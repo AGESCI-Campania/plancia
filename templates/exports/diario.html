@@ -118,7 +118,7 @@
       {% for pa in impresa.posti_azione.all %}
         <tr>
           <td>{{ pa.chi|default:"—" }}</td>
-          <td>{{ pa.cosa|default:pa.descrizione }}</td>
+          <td>{{ pa.cosa }}</td>
         </tr>
       {% endfor %}
     </table>

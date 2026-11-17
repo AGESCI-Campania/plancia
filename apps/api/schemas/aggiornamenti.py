@@ -54,7 +54,7 @@ class RichiestaIn(Schema):
 class StatoAggiornamentoSchema(Schema):
     installata: str
     richiesta: RichiestaSchema | None
-    stato: dict[str, Any] | None  # contenuto grezzo di stato.json (vedi fase2-aggiornamenti.md)
+    stato: dict[str, Any] | None  # contenuto grezzo di stato.json (vedi aggiornamenti.md)
     in_corso: bool
 
 

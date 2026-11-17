@@ -228,18 +228,3 @@ def test_export_diari_non_staff(client_di, edizione):
     assert client_di("crp").get(f"/api/v1/edizioni/{edizione.pk}/export-diari").status_code == 403
     assert client_di("anonimo").get(
         f"/api/v1/edizioni/{edizione.pk}/export-diari").status_code == 401
-
-
-# --- Viste web (rifattorizzate sui servizi) -----------------------------------------
-
-def test_vista_web_cambio_stato_e_dilazione(client_di, edizione, diario, settings):
-    settings.SKIP_MFA_ENFORCEMENT = True
-    c = client_di("incaricato_eg")
-    r = c.post(f"/edizioni/{edizione.pk}/stato/avvia_valutazione/")
-    assert r.status_code == 302
-    edizione.refresh_from_db()
-    assert edizione.stato == StatoEdizione.IN_VALUTAZIONE
-    r = c.post(f"/edizioni/dilazione/{diario.pk}/",
-               {"nuova_scadenza": "2099-02-01", "motivazione": "Motivo"})
-    assert r.status_code == 302 and Dilazione.objects.count() == 1
-    assert client_di("crp").post(f"/edizioni/{edizione.pk}/stato/chiudi/").status_code == 403

@@ -81,13 +81,13 @@ def _impostazioni(request) -> ImpostazioniSchema:
     )
 
     imp = Impostazioni.objects.get_or_create(pk=1)[0]
-    return ImpostazioniSchema(
-        identita={"titolo": imp.titolo, "sottotitolo": imp.sottotitolo},
-        footer={
+    return ImpostazioniSchema.model_validate({
+        "identita": {"titolo": imp.titolo, "sottotitolo": imp.sottotitolo},
+        "footer": {
             "footer_testo": imp.footer_testo,
             "links": [_link(link) for link in imp.footer_links.all()],
         },
-        email={
+        "email": {
             "email_mode": imp.email_mode,
             "from_name": imp.from_name,
             "from_email": imp.from_email,
@@ -105,27 +105,27 @@ def _impostazioni(request) -> ImpostazioniSchema:
                             "account": imp.smtp_gmail_account},
             "webhook_url": request.build_absolute_uri("/anymail/webhook/"),
         },
-        sicurezza={
+        "sicurezza": {
             "mfa_obbligatoria_ruoli_estesi": imp.mfa_obbligatoria_ruoli_estesi,
             "axes_failure_limit": imp.axes_failure_limit,
             "axes_cooloff_minutes": imp.axes_cooloff_minutes,
             "axes_use_attempt_expiration": imp.axes_use_attempt_expiration,
         },
-        allegati={"allegati_max_px": imp.allegati_max_px},
-        diagnostica={
+        "allegati": {"allegati_max_px": imp.allegati_max_px},
+        "diagnostica": {
             "manutenzione": imp.manutenzione,
             "manutenzione_messaggio": imp.manutenzione_messaggio,
             "debug_toolbar": imp.debug_toolbar,
             "debug_diagnostico": imp.debug_diagnostico,
         },
-        aggiornato_at=imp.aggiornato_at,
-        scelte={
+        "aggiornato_at": imp.aggiornato_at,
+        "scelte": {
             "email_mode": _scelte(EmailMode.choices),
             "email_provider": _scelte(EmailProvider.choices),
             "email_backend": _scelte(BackendPosta.choices),
             "footer_link_tipo": _scelte(TipoLink.choices),
         },
-    )
+    })
 
 
 @router.get("", response={200: ImpostazioniSchema, **_ERRORI},
@@ -462,7 +462,7 @@ def avvia_gmail_oauth(request):
     from apps.siteconfig import services
 
     richiedi_staff(request.auth)
-    return {"url": services.url_autorizzazione_gmail(request.session, origine="spa")}
+    return {"url": services.url_autorizzazione_gmail(request.session)}
 
 
 @router.post("/email/gmail/disconnetti", response={200: ImpostazioniSchema, **_ERRORI},

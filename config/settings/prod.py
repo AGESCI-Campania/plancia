@@ -1,4 +1,6 @@
 # config/settings/prod.py
+from django.utils.csp import CSP
+
 from .base import *  # noqa: F401,F403
 from .base import AUTHENTICATION_BACKENDS, env
 
@@ -24,11 +26,21 @@ SECURE_HSTS_PRELOAD = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 
-# Content-Security-Policy (Django 6 nativo) - da rifinire con gli host reali
+# Content-Security-Policy (Django 6 nativo) delle risposte di Django: admin, pagine d'errore
+# e di manutenzione (CSS inline), callback OAuth (solo redirect), API JSON. La SPA ha la sua
+# CSP, impostata da nginx. I proxy Mailpit/Flower (solo Admin) hanno una CSP più larga
+# (`apps.siteconfig.views.CSP_STRUMENTI`), perché sono interfacce di terzi.
 SECURE_CSP = {
-    "default-src": ["'self'"],
-    "img-src": ["'self'", "data:", "https:"],
-    "style-src": ["'self'", "'unsafe-inline'"],
+    "default-src": [CSP.SELF],
+    "script-src": [CSP.SELF],
+    "style-src": [CSP.SELF, CSP.UNSAFE_INLINE],
+    "img-src": [CSP.SELF, "data:", "https:"],
+    "font-src": [CSP.SELF, "data:"],
+    "connect-src": [CSP.SELF],
+    "object-src": [CSP.NONE],
+    "base-uri": [CSP.SELF],
+    "form-action": [CSP.SELF],
+    "frame-ancestors": [CSP.NONE],
 }
 
 # Cache Redis condivisa tra tutti i worker gunicorn (evita la LocMemCache per-processo)

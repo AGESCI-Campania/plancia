@@ -18,7 +18,8 @@
     "test:watch": "vitest",
     "e2e": "playwright test",
     "api:tipi": "mkdir -p node_modules/.tmp && cd .. && uv run python manage.py esporta_openapi --output frontend/node_modules/.tmp/openapi.json && cd frontend && openapi-typescript node_modules/.tmp/openapi.json -o src/api/schema.d.ts",
-    "icone": "node scripts/genera-icone.mjs"
+    "icone": "node scripts/genera-icone.mjs",
+    "manuale:schermate": "node scripts/schermate-manuale.ts"
   },
   "dependencies": {
     "@floating-ui/dom": "1.8.0",

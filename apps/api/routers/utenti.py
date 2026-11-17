@@ -126,15 +126,21 @@ def crea_staff(request, payload: UtenteStaffCreaSchema):
     attore = request.auth
     richiedi_staff(attore)
     with _errori_nomina():
-        utente, n, creato = services.crea_utente_staff(
+        utente, n, creato, email_inviata = services.crea_utente_staff(
             attore, payload.email, payload.first_name, payload.last_name, payload.ruolo,
             request=request,
         )
     azione = "creato" if creato else "già esistente — nomina aggiunta"
+    esito_email = (
+        "È stata inviata un'email per impostare la password."
+        if email_inviata
+        else "Non è stato possibile inviare l'email per impostare la password: controlla la "
+             "configurazione della posta e usa «Password dimenticata» dalla pagina di accesso."
+    )
     return Status(201, UtenteCreatoSchema(
         utente=_dettaglio(attore, utente), nomina=nomina_schema(n), creato=creato,
         detail=f"Utente {utente.email} {azione} con ruolo {Ruolo(payload.ruolo).label}. "
-               "È stata inviata un'email per impostare la password.",
+               f"{esito_email}",
     ))
 
 

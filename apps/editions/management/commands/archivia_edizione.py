@@ -49,7 +49,7 @@ class Command(BaseCommand):
         try:
             edizione = Edizione.objects.get(pk=edizione_pk)
         except Edizione.DoesNotExist:
-            raise CommandError(f"Edizione {edizione_pk} non trovata.")
+            raise CommandError(f"Edizione {edizione_pk} non trovata.") from None
 
         if edizione.stato != StatoEdizione.CHIUSA:
             raise CommandError(
@@ -111,7 +111,6 @@ class Command(BaseCommand):
 
         if edizione.drive_oauth_account:
             drive_files_count = edizione.drive_files.filter(tipo="excel").count()
-            diari_con_pdf = edizione.diari.filter(drive_files__tipo="pdf").distinct().count()
             if drive_files_count == 0:
                 raise CommandError(
                     "Nessun output trovato su Drive. Eseguire prima --genera."

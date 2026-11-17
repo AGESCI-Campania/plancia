@@ -1,6 +1,8 @@
 """API utenti, profilo, ruoli, sessioni, impersonazione e autocompletamento Socio."""
 from __future__ import annotations
 
+import re
+
 import pytest
 from django.test import Client
 
@@ -437,7 +439,7 @@ def test_revoca_nomina_regole(client_di, utenti):
 # ---------------------------------------------------------------------------
 
 
-def test_crea_staff_segreteria_crea_incaricato(client_di):
+def test_crea_staff_segreteria_crea_incaricato(client_di, mailoutbox):
     r = client_di("segreteria").post("/api/v1/utenti/staff", **json_body({
         "email": "Nuovo.Iabr@Test.it", "first_name": "Nuovo", "last_name": "Iabr",
         "ruolo": "incaricato_eg",
@@ -450,8 +452,38 @@ def test_crea_staff_segreteria_crea_incaricato(client_di):
     u = User.objects.get(email="nuovo.iabr@test.it")
     assert not u.has_usable_password()
     assert u.ruolo == "incaricato_eg"
-    # NB: la mail "imposta password" oggi NON parte (PasswordResetForm di Django ignora gli
-    # utenti con password inutilizzabile): difetto preesistente della vista, segnalato.
+    # Email di allauth con il link alla pagina della SPA per impostare la password
+    assert "inviata un'email" in d["detail"]
+    assert len(mailoutbox) == 1
+    msg = mailoutbox[0]
+    assert msg.to == ["nuovo.iabr@test.it"]
+    corpo = msg.body + "".join(str(a[0]) for a in getattr(msg, "alternatives", []))
+    m = re.search(r"https?://[^/\s\"]+/password/reset/([^\s\"<]+)", corpo)
+    assert m, corpo
+    # La chiave è valida per il reset headless (pagina /password/reset/{key} della SPA)
+    anonimo = Client()
+    r = anonimo.get("/_allauth/browser/v1/auth/password/reset", HTTP_X_PASSWORD_RESET_KEY=m.group(1))
+    assert r.status_code == 200, r.content
+    r = anonimo.post("/_allauth/browser/v1/auth/password/reset", **json_body(
+        {"key": m.group(1), "password": "Nuova-Password-Lunga-42"}))
+    assert r.status_code in (200, 401), r.content  # 401: password impostata, serve il login
+    u.refresh_from_db()
+    assert u.check_password("Nuova-Password-Lunga-42")
+
+
+def test_crea_staff_errore_email_segnalato(client_di, caplog):
+    from unittest import mock
+
+    with mock.patch(
+        "allauth.account.internal.flows.password_reset.request_password_reset",
+        side_effect=RuntimeError("smtp giù"),
+    ):
+        r = client_di("admin").post("/api/v1/utenti/staff", **json_body({
+            "email": "senza.mail@test.it", "ruolo": "incaricato_eg",
+        }))
+    assert r.status_code == 201, r.content
+    assert "Non è stato possibile inviare" in r.json()["detail"]
+    assert "smtp giù" in caplog.text
 
 
 def test_crea_staff_regole(client_di, utenti):

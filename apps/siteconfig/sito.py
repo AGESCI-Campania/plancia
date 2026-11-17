@@ -1,6 +1,6 @@
 """Dati pubblici del sito (titolo, footer, pagine, provider di login, versione).
 
-Usati dal context processor `impostazioni` (template web) e da `GET /api/v1/sito` (SPA).
+Usati da `GET /api/v1/sito` (SPA).
 """
 from __future__ import annotations
 

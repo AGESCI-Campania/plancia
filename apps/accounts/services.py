@@ -1,12 +1,12 @@
 """Servizi di dominio per utenti, profilo, ruoli e sessioni.
 
-Usati sia dalle viste web (`apps/accounts/views.py`) sia dall'API (`apps/api/routers/me.py`,
-`apps/api/routers/utenti.py`): le regole stanno qui, non nelle viste. Le regole di nomina
+Usati dall'API (`apps/api/routers/me.py`, `apps/api/routers/utenti.py`): le regole stanno
+qui, non nei router. Le regole di nomina
 restano in `apps.accounts.roles`.
 
 Eccezioni: `PermissionDenied` (permesso negato), `ValidationError` (dati non validi, anche
 per campo), `ValueError`/`PermissionError` da `roles.nomina` (lasciate passare: le viste le
-mostrano come messaggio, l'API le traduce in 422/403).
+l'API le traduce in 422/403).
 """
 from __future__ import annotations
 
@@ -168,10 +168,11 @@ def crea_utente_staff(
     last_name: str,
     ruolo: str,
     request: HttpRequest | None = None,
-) -> tuple[User, Nomina, bool]:
+) -> tuple[User, Nomina, bool, bool]:
     """Crea un utente Admin/Segreteria/Incaricato EG senza Socio e invia il link per la password.
 
-    Restituisce (utente, nomina, creato). L'invio della mail non è bloccante.
+    Restituisce (utente, nomina, creato, email_inviata). L'invio della mail non blocca la
+    creazione: un errore viene registrato nel log e segnalato con `email_inviata=False`.
     """
     if ruolo not in dict(ruoli_staff_creabili(attore)):
         raise ValidationError({"ruolo": "Ruolo non consentito."})
@@ -182,21 +183,37 @@ def crea_utente_staff(
     from apps.accounts.roles import nomina_staff_diretto
 
     utente, nomina_obj, creato = nomina_staff_diretto(attore, email, first_name, last_name, ruolo)
-    try:
-        from django.contrib.auth.forms import PasswordResetForm
+    email_inviata = invia_link_password(utente, request)
+    return utente, nomina_obj, creato, email_inviata
 
-        form = PasswordResetForm({"email": utente.email})
-        if form.is_valid():
-            form.save(
-                request=request,
-                use_https=request.is_secure() if request is not None else True,
-                from_email=None,
-                subject_template_name="registration/password_reset_subject.txt",
-                email_template_name="registration/password_reset_email.html",
-            )
-    except Exception:  # noqa: BLE001 — la mail non è bloccante
-        pass
-    return utente, nomina_obj, creato
+
+def invia_link_password(utente: User, request: HttpRequest | None = None) -> bool:
+    """Invia l'email di allauth per impostare/reimpostare la password.
+
+    Il link punta alla SPA (`HEADLESS_FRONTEND_URLS["account_reset_password_from_key"]`,
+    `/password/reset/{key}`). L'indirizzo è registrato come verificato: chi apre il link ne
+    ha dimostrato il possesso, e senza password utilizzabile non si entra altrimenti.
+    Restituisce False (e registra l'errore) se l'invio non riesce.
+    """
+    import logging
+
+    from allauth.account.internal.flows.password_reset import request_password_reset
+    from allauth.account.models import EmailAddress
+    from allauth.core import context
+
+    try:
+        EmailAddress.objects.update_or_create(
+            user=utente, email__iexact=utente.email,
+            defaults={"email": utente.email, "verified": True, "primary": True},
+        )
+        with context.request_context(request):
+            request_password_reset(request, utente.email, [utente], None)
+    except Exception:
+        logging.getLogger(__name__).exception(
+            "Invio dell'email per impostare la password non riuscito (utente %s)", utente.pk
+        )
+        return False
+    return True
 
 
 def revoca_nomina(attore: User, nomina_obj: Nomina) -> Nomina:
@@ -244,13 +261,15 @@ def avvia_impersonazione(request: HttpRequest, target: User) -> None:
     (`hijack_history`, durata invariata, niente `last_login`) e stesso segnale `hijack_started`.
     """
     from django.contrib.auth import get_user_model, login
-    from django.db import ConnectionRouter, transaction
+    from django.db import transaction
+    from django.db.utils import ConnectionRouter
     from django.utils.module_loading import import_string
     from hijack import signals
     from hijack.conf import settings as hijack_settings
     from hijack.views import get_used_backend, keep_session_age
 
     hijacker = request.user
+    assert isinstance(hijacker, User)  # vista autenticata
     controllo = import_string(hijack_settings.HIJACK_PERMISSION_CHECK)
     if not controllo(hijacker=hijacker, hijacked=target):
         raise PermissionDenied("Non puoi impersonare questo utente.")
@@ -273,7 +292,8 @@ def avvia_impersonazione(request: HttpRequest, target: User) -> None:
 def termina_impersonazione(request: HttpRequest) -> User:
     """Torna all'utente reale come `hijack.views.ReleaseUserView`; restituisce l'operatore."""
     from django.contrib.auth import get_user_model, login
-    from django.db import ConnectionRouter, transaction
+    from django.db import transaction
+    from django.db.utils import ConnectionRouter
     from hijack import signals
     from hijack.views import get_used_backend, keep_session_age
 
@@ -282,6 +302,7 @@ def termina_impersonazione(request: HttpRequest) -> User:
         raise ValidationError({"__all__": "Nessuna impersonazione in corso."})
     modello = get_user_model()
     hijacked = request.user
+    assert isinstance(hijacked, User)  # vista autenticata
     with transaction.atomic(using=ConnectionRouter().db_for_write(modello)):
         modello._base_manager.select_for_update().get(pk=hijacked.pk)
         hijacker = modello.objects.get(pk=storia.pop())
@@ -297,7 +318,7 @@ def termina_impersonazione(request: HttpRequest) -> User:
 
 
 def flag_menu(user: User) -> dict[str, bool]:
-    """Voci di menu visibili: stesse condizioni della sidebar di `templates/base.html`.
+    """Voci di menu visibili nella SPA (`me.menu`).
 
     Servono solo all'interfaccia: ogni endpoint ricontrolla i permessi.
     """

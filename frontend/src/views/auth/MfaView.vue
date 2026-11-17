@@ -7,6 +7,7 @@ import { allauth, erroriAllauth } from '@/api/allauth'
 import CampoForm from '@/components/CampoForm.vue'
 import IconaBs from '@/components/IconaBs.vue'
 import { firmaConPasskey, passkeySupportate } from '@/composables/webauthn'
+import { vaiDopoAccesso } from '@/composables/destinazione'
 import { useSessioneStore } from '@/stores/sessione'
 
 const sessione = useSessioneStore()
@@ -20,7 +21,7 @@ async function esito(r: Awaited<ReturnType<typeof allauth.mfaAutentica>>): Promi
   await sessione.applica(r)
   if (r.status === 400) errori.value = erroriAllauth(r)
   if (sessione.autenticato)
-    await router.replace(typeof route.query.next === 'string' ? route.query.next : '/')
+    await vaiDopoAccesso(router, route.query.next)
 }
 
 async function verifica(): Promise<void> {

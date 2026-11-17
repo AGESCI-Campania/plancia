@@ -32,12 +32,19 @@ CAMPI_SEGRETI = ("smtp_password", "email_provider_api_key", "email_provider_webh
 # Sezioni del form Impostazioni
 # ---------------------------------------------------------------------------
 
+def _sorgente_template(nome: str) -> str:
+    """Testo sorgente di un template su file (TemplateDoesNotExist se manca)."""
+    from django.template.loader import get_template
+
+    return get_template(nome).template.source  # type: ignore[attr-defined]  # backend Django
+
+
 def salva_sezione(form: forms.ModelForm, sezione: str) -> Impostazioni:
     """Salva un form di sezione già validato aggiornando solo i suoi campi.
 
     Con Gmail OAuth attivo i campi SMTP manuali non si toccano (sono sostituiti da OAuth).
     """
-    update_fields = list(SEZIONE_FORM[sezione].Meta.fields)
+    update_fields = list(SEZIONE_FORM[sezione]._meta.fields or [])
     if sezione == "email" and form.instance.smtp_use_gmail_oauth:
         update_fields = [f for f in update_fields if f not in CAMPI_SMTP_MANUALI]
     saved = form.save(commit=False)
@@ -58,7 +65,7 @@ def aggiorna_sezione(sezione: str, dati: dict[str, Any]) -> Impostazioni:
         raise ValidationError({"sezione": ["Sezione non valida."]})
     form_class = SEZIONE_FORM[sezione]
     imp = Impostazioni.objects.get_or_create(pk=1)[0]  # da DB, non dalla cache
-    campi = list(form_class.Meta.fields)
+    campi = list(form_class._meta.fields or [])
     correnti = model_to_dict(imp, fields=campi)
     nuovi = {k: v for k, v in dati.items() if k in campi and v is not None}
     for segreto in CAMPI_SEGRETI:
@@ -142,11 +149,10 @@ def pagina_per_modifica(slug: str) -> PaginaStatica:
 def importa_pagina_predefinita(slug: str) -> PaginaStatica:
     """Carica il contenuto da templates/siteconfig/default_pages/<slug>.html."""
     from django.template import TemplateDoesNotExist
-    from django.template.loader import get_template
 
     _slug_valido(slug)
     try:
-        contenuto = get_template(f"siteconfig/default_pages/{slug}.html").template.source
+        contenuto = _sorgente_template(f"siteconfig/default_pages/{slug}.html")
     except TemplateDoesNotExist:
         raise ValidationError(f"Nessun template predefinito trovato per «{slug}».") from None
     pagina = pagina_per_modifica(slug)
@@ -178,13 +184,12 @@ def importa_mail_template(chiave: str) -> tuple[MailTemplate, bool]:
     Restituisce (template, trovato_file): senza file il template nasce vuoto.
     """
     from django.template import TemplateDoesNotExist
-    from django.template.loader import get_template
 
     chiave_template_valida(chiave)
     if MailTemplate.objects.filter(chiave=chiave).exists():
         raise ValidationError(f"Il template «{chiave}» esiste già: modifica quello.")
     try:
-        corpo, trovato = get_template(f"mail/{chiave}.html").template.source, True
+        corpo, trovato = _sorgente_template(f"mail/{chiave}.html"), True
     except TemplateDoesNotExist:
         corpo, trovato = "", False
     tpl = MailTemplate.objects.create(
@@ -275,8 +280,6 @@ GMAIL_SMTP_SCOPES = [
 ]
 SESSIONE_GMAIL_STATE = "gmail_smtp_oauth_state"
 SESSIONE_GMAIL_VERIFIER = "gmail_smtp_oauth_code_verifier"
-# "spa" se il flusso è partito dall'API: la callback rimanda alla SPA invece che alla pagina Django.
-SESSIONE_GMAIL_ORIGINE = "gmail_smtp_oauth_origine"
 
 
 def _flow_gmail(state: str | None = None):
@@ -298,8 +301,8 @@ def _flow_gmail(state: str | None = None):
     )
 
 
-def url_autorizzazione_gmail(session, origine: str = "web") -> str:
-    """URL di consenso Google; salva state, code_verifier (PKCE) e origine in sessione."""
+def url_autorizzazione_gmail(session) -> str:
+    """URL di consenso Google; salva state e code_verifier (PKCE) in sessione."""
     code_verifier = secrets.token_urlsafe(96)
     code_challenge = (
         base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest())
@@ -314,7 +317,6 @@ def url_autorizzazione_gmail(session, origine: str = "web") -> str:
     )
     session[SESSIONE_GMAIL_STATE] = state
     session[SESSIONE_GMAIL_VERIFIER] = code_verifier
-    session[SESSIONE_GMAIL_ORIGINE] = origine
     return auth_url
 
 
