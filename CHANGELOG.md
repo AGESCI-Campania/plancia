@@ -4,13 +4,6 @@ Una sezione per release: `## X.Y.Z — AAAA-MM-GG`, dalla più recente. `scripts
 mostra le sezioni tra la versione installata e quella nuova; le note della GitHub Release si
 copiano da qui.
 
-## 3.0.1 — non rilasciata
-
-- **Missione senza posti d'azione**: la missione non è un'impresa. Rimossi il modello
-  `PostoAzioneMissione` (migrazione `diaries.0003`; la tabella era sempre vuota), il campo
-  `posti_azione` del modulo missione nell'API (se un'app non aggiornata lo invia viene
-  ignorato), la colonna nell'export dei diari e la sezione nella pagina del diario.
-
 ## 3.0.0 — 2026-11-17
 
 **Prima versione in produzione.** Le versioni 1.x e 2.x sono state una sperimentazione su larga
@@ -39,6 +32,8 @@ installa da zero (database vuoto, migrazioni ripartite da capo) sul nuovo server
 - **Login con email o codice socio**; rate limit dell'API per sessione invece che per IP (con l'IP
   reale dietro i proxy); immagini dei template email servite; email "imposta la password" per i
   nuovi utenti di staff funzionante.
+- **Missione senza posti d'azione** (non è un'impresa): niente modello, campo API, colonna
+  nell'export né sezione nella pagina del diario.
 - **Manuale d'uso** riscritto per la nuova interfaccia, screenshot generati con Playwright su dati
   demo (`manage.py popola_demo`).
 

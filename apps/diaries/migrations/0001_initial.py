@@ -119,17 +119,6 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.CreateModel(
-            name='PostoAzioneMissione',
-            fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('descrizione', models.CharField(max_length=300)),
-            ],
-            options={
-                'verbose_name': "posto d'azione (missione)",
-                'verbose_name_plural': "posti d'azione (missione)",
-            },
-        ),
-        migrations.CreateModel(
             name='Presentazione',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
