@@ -384,9 +384,10 @@ In sintesi:
 - `installa.sh` — prima installazione: `.env` con segreti (`openssl rand`, mai sovrascritto),
   build, `up -d`, attesa `healthy`, primo superutente (`PLANCIA_ADMIN_EMAIL=… scripts/installa.sh`
   per non rispondere alla domanda; password mostrata una volta), unit systemd, passi manuali.
-- `aggiorna.sh` — nuova release: albero pulito, `git pull --ff-only` + ri-esecuzione
-  (`--dopo-pull`), controllo variabili nuove, build, **backup DB** in `backups/`, `up -d`,
-  attesa `healthy`, unit systemd aggiornate.
+- `aggiorna.sh [vX.Y.Z]` — passa a una release (tag; repo in detached HEAD): albero pulito,
+  novità dal `CHANGELOG.md`, controllo variabili nuove, manutenzione, **backup DB** in
+  `backups/`, checkout del tag, build, `up -d`, attesa `healthy`, ritorno automatico alla
+  versione precedente se la nuova non risponde, unit systemd aggiornate.
 - `backup.sh` — DB + `.env` + media in un archivio; timer `plancia-backup.timer` alle 02:30.
 - `_comune.sh` è una **copia identica** di quello di `agesci-campania-web-frontend` (e di
   Sestante): non modificarlo qui, riallinearlo copiandolo. Funzioni Plancia in `_plancia.sh`.
@@ -399,7 +400,16 @@ niente dipendenza da Sestante). Senza sudo gli script stampano il comando che un
 amministratore deve eseguire. Per fermare in manutenzione: `docker compose stop`.
 
 ### Deploy di una nuova versione
-Commit e push su `main` dal Mac, poi sul server:
+Dal Mac: versione in `pyproject.toml`, sezione `## X.Y.Z — AAAA-MM-GG` in `CHANGELOG.md`
+(manuale e screenshot aggiornati), commit su `main`, poi tag e GitHub Release **insieme**:
+```bash
+git tag vX.Y.Z && git push origin vX.Y.Z
+gh release create vX.Y.Z --title "vX.Y.Z" --notes "<sezione del CHANGELOG.md>"
+```
+La release va pubblicata **prima** di aggiornare il server: `aggiorna.sh` installa i tag
+(il più alto, o quello indicato) e la pagina Impostazioni → Aggiornamenti legge l'ultima
+release GitHub. Le release 1.x/2.x (sperimentazione, senza dati reali) sono *pre-release*.
+Poi sul server (o da Impostazioni → Aggiornamenti):
 ```bash
 ssh <admin>@<server>
 sudo -iu agesci
@@ -407,23 +417,6 @@ cd /opt/plancia && scripts/aggiorna.sh
 ```
 Mai `sudo`/root dentro `/opt/plancia` (git: "dubious ownership"). Verifica:
 `docker compose ps`, `docker compose logs --tail 50 web`, `curl -I https://plancia.agescicampania.net`.
-
-### Release
-
-Ad ogni nuova versione, **dopo** il deploy in produzione:
-
-```bash
-# 1. Bump versione in pyproject.toml, aggiorna changelog in README.md, committa
-# 2. Crea il tag
-git tag vX.Y.Z
-git push origin vX.Y.Z
-
-# 3. Crea la GitHub Release (obbligatorio — non solo il tag)
-gh release create vX.Y.Z --title "vX.Y.Z" --notes "..."
-```
-
-Le note della release si estraggono dalla sezione corrispondente del changelog in `README.md`.
-**Tag e `gh release create` vanno sempre eseguiti insieme** nello stesso deploy.
 
 ## PDF diari
 

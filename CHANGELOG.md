@@ -4,7 +4,12 @@ Una sezione per release: `## X.Y.Z — AAAA-MM-GG`, dalla più recente. `scripts
 mostra le sezioni tra la versione installata e quella nuova; le note della GitHub Release si
 copiano da qui.
 
-## 3.0.0 — non rilasciata
+## 3.0.0 — 2026-11-17
+
+**Prima versione in produzione.** Le versioni 1.x e 2.x sono state una sperimentazione su larga
+scala, senza dati reali: le loro release restano su GitHub come *pre-release*. Plancia 3.0 si
+installa da zero (database vuoto, migrazioni ripartite da capo) sul nuovo server
+`*.agescicampania.net`; non c'è un percorso di aggiornamento dalla 2.x.
 
 ### Plancia 3
 - **Interfaccia nuova**: SPA Vue 3 + Bootstrap 6 (`frontend/`), installabile come PWA con icona
