@@ -294,3 +294,22 @@ class TestNomeDaSestante:
         dati = {"email": "mario@test.it", "first_name": "Mario", "last_name": "Rossi"}
         user = PlanciaSocialAccountAdapter().populate_user(_richiesta(), sl, dati)
         assert (user.first_name, user.last_name) == ("Mario", "Rossi")
+
+
+# ---------------------------------------------------------------------------
+# Configurazione effettiva del provider (config/settings/base.py)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.django_db
+def test_provider_sestante_chiede_lo_scope_avatar(settings):
+    """Gli scope che allauth chiede davvero: con il vecchio formato SERVERS `SCOPE` si perdeva."""
+    from allauth.socialaccount.adapter import get_adapter
+
+    from config.settings.base import SESTANTE_APP
+
+    settings.SOCIALACCOUNT_PROVIDERS = {"openid_connect": {"APPS": [{**SESTANTE_APP, "client_id": "id-test"}]}}
+    provider = get_adapter().get_provider(_richiesta(), "sestante")
+    assert provider.get_scope() == ["openid", "profile", "email", "avatar"]
+    assert provider.server_url == (
+        "https://auth.agescicampania.net/application/o/plancia/.well-known/openid-configuration"
+    )

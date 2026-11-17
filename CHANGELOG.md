@@ -4,6 +4,15 @@ Una sezione per release: `## X.Y.Z — AAAA-MM-GG`, dalla più recente. `scripts
 mostra le sezioni tra la versione installata e quella nuova; le note della GitHub Release si
 copiano da qui.
 
+## 3.0.4 — 2026-11-17
+
+- **Immagine del profilo da SSO AGESCI Campania**: con la 3.0.3 non arrivava. La configurazione
+  dell'SSO era nel formato `SERVERS` di allauth, che scarta lo `SCOPE`: Plancia chiedeva solo
+  `openid profile email` e Sestante non mandava la foto. Ora è nel formato `APPS` e lo scope
+  `avatar` viene chiesto (c'è un test sugli scope effettivi). La foto arriva al primo accesso con
+  l'SSO dopo l'aggiornamento: uscire e rientrare con **Accedi con SSO AGESCI Campania**.
+- **Footer** più compatto: meno spazio sopra e sotto, colonne allineate al centro.
+
 ## 3.0.3 — 2026-11-17
 
 - **Immagine del profilo da SSO AGESCI Campania**: chi entra con l'SSO vede la foto caricata su

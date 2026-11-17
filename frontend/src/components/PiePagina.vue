@@ -22,12 +22,12 @@ const anno = new Date().getFullYear()
 </script>
 
 <template>
-  <footer class="ag-footer py-12">
+  <footer class="ag-footer py-5">
     <div class="container">
-      <div class="row g-7">
+      <div class="row g-5 align-items-center">
         <div class="col-12 md:col-3">
-          <img :src="emblema" alt="AGESCI Campania" class="ag-footer__logo mb-3" />
-          <p class="small">{{ sito.sito?.titolo ?? 'Plancia' }}</p>
+          <img :src="emblema" alt="AGESCI Campania" class="ag-footer__logo mb-2" />
+          <p class="small mb-0">{{ sito.sito?.titolo ?? 'Plancia' }}</p>
         </div>
         <div v-if="footer?.links.length || footer?.manuale_url" class="col-6 md:col-3">
           <ul class="ag-footer__nav">

@@ -19,7 +19,7 @@ abbiano fatto almeno un login SSO riuscito. Non disattivarlo autonomamente.
 
 | Cosa | Valore |
 |---|---|
-| Provider allauth | `openid_connect`, server id **`sestante`**, nome "SSO AGESCI Campania" |
+| Provider allauth | `openid_connect`, provider id **`sestante`**, nome "SSO AGESCI Campania"; `SESTANTE_APP` in formato **`APPS`** (con `SERVERS` allauth scarta `SCOPE`), scope `openid profile email avatar` |
 | Issuer / discovery | `https://auth.agescicampania.net/application/o/plancia/` (`SOCIAL_SESTANTE_SERVER_URL` per sovrascriverlo) |
 | Credenziali | `SOCIAL_SESTANTE_CLIENT_ID`, `SOCIAL_SESTANTE_CLIENT_SECRET` in `.env` (mai nel repo) |
 | Callback (blueprint) | `https://plancia.agescicampania.net/accounts/oidc/sestante/login/callback/` |

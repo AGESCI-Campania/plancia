@@ -293,7 +293,8 @@ Ordine in `MIDDLEWARE`: entrambi **dopo** `CorsMiddleware` e **prima** di `Sessi
   `timezone.datetime.min.replace(tzinfo=timezone.UTC)`.
 
 ### SSO Sestante
-- Provider `openid_connect` con id `sestante`, callback `/accounts/oidc/sestante/login/callback/`
+- Provider `openid_connect` con id `sestante` (`SESTANTE_APP` in formato `APPS`: con `SERVERS` allauth
+  scarta `SCOPE` e lo scope `avatar` non verrebbe chiesto; test sugli scope effettivi), callback `/accounts/oidc/sestante/login/callback/`
   (registrata nel blueprint `provider-plancia.yaml` del repo `sestante`: non cambiarla da sola).
 - Ruoli globali (`admin-multipiattaforma` → Admin, `segreteria` → Segreteria) = `Nomina` con
   `da_sso=True`, create/revocate a ogni login SSO da `_sync_ruoli_globali`. Le Nomine locali non si toccano.

@@ -246,24 +246,23 @@ if _APPLE_CLIENT_ID:
             },
         },
     }
+# SSO AGESCI Campania (Sestante). Callback: /accounts/oidc/sestante/login/callback/
+# Vedi docs/guide/sso_sestante.md. Formato APPS, non SERVERS: nella conversione da SERVERS
+# allauth tiene solo server_url e scarta SCOPE (si userebbero sempre gli scope predefiniti,
+# senza `avatar`). C'è un test sugli scope effettivi.
+SESTANTE_APP = {
+    "provider_id": "sestante",
+    "name": "SSO AGESCI Campania",
+    "client_id": _SESTANTE_CLIENT_ID,
+    "secret":    _SESTANTE_CLIENT_SECRET,
+    "settings": {
+        "server_url": _SESTANTE_SERVER_URL,
+        # avatar: immagine del profilo (claim `picture` in userinfo, apps.accounts.avatar)
+        "scope": ["openid", "profile", "email", "avatar"],
+    },
+}
 if _SESTANTE_CLIENT_ID:
-    # SSO AGESCI Campania (Sestante). Callback: /accounts/oidc/sestante/login/callback/
-    # Vedi docs/guide/sso_sestante.md.
-    SOCIALACCOUNT_PROVIDERS["openid_connect"] = {
-        "SERVERS": [
-            {
-                "id": "sestante",
-                "name": "SSO AGESCI Campania",
-                "server_url": _SESTANTE_SERVER_URL,
-                "APP": {
-                    "client_id": _SESTANTE_CLIENT_ID,
-                    "secret":    _SESTANTE_CLIENT_SECRET,
-                },
-                # avatar: immagine del profilo (claim `picture` in userinfo, apps.accounts.avatar)
-                "SCOPE": ["openid", "profile", "email", "avatar"],
-            }
-        ]
-    }
+    SOCIALACCOUNT_PROVIDERS["openid_connect"] = {"APPS": [SESTANTE_APP]}
 
 SOCIALACCOUNT_AUTO_SIGNUP = False
 SOCIALACCOUNT_EMAIL_REQUIRED = True
