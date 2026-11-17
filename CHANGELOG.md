@@ -4,6 +4,28 @@ Una sezione per release: `## X.Y.Z — AAAA-MM-GG`, dalla più recente. `scripts
 mostra le sezioni tra la versione installata e quella nuova; le note della GitHub Release si
 copiano da qui.
 
+## 3.0.1 — 2026-11-17
+
+Correzioni emerse dalla prima installazione sul nuovo server.
+
+- **SSO AGESCI Campania**: il pulsante dava "Errore interno del server". L'indirizzo di Sestante
+  finiva con `/` e allauth cercava la configurazione OIDC su `…/plancia//.well-known/…` (404);
+  ora la barra finale si toglie sempre, anche da `SOCIAL_SESTANTE_SERVER_URL`.
+- **Primo amministratore**: `scripts/installa.sh` registra la sua email come già verificata.
+  Prima l'accesso restava in attesa della conferma email (obbligatoria in produzione) senza
+  mostrare nulla. Per l'amministratore creato con la 3.0.0 vedi sotto.
+- **Pagina di accesso**: se l'email non è ancora verificata compare un messaggio invece di non
+  succedere niente.
+- **Mostra password**: tutti i campi password hanno il pulsante a occhio per vederla, come nel
+  tema AGESCI.
+- **`/accounts/login/`** (vecchio indirizzo di accesso di Plancia 2) rimanda a `/accesso`.
+
+Server installato con la 3.0.0: se l'amministratore non riesce ad accedere, segnarne l'email come
+verificata una volta (come `agesci`, da `/opt/plancia`):
+`docker compose exec -T web uv run python manage.py shell -c "from allauth.account.models import EmailAddress; from apps.accounts.models import User; u = User.objects.get(email='<email>'); EmailAddress.objects.update_or_create(user=u, email=u.email, defaults={'verified': True, 'primary': True})"`.
+La riga `SOCIAL_SESTANTE_SERVER_URL` aggiunta a mano al `.env` per aggirare l'errore SSO si può
+togliere.
+
 ## 3.0.0 — 2026-11-17
 
 **Prima versione in produzione.** Le versioni 1.x e 2.x sono state una sperimentazione su larga

@@ -144,6 +144,8 @@ PLANCIA_DEMO_PASSWORD=… npm run manuale:schermate [-- gruppo…]   # screensho
 - **Dialog/drawer** Bootstrap 6 sul `<dialog>` nativo (`FinestraDialogo.vue`, sidebar);
   i menu usano la data API di Bootstrap (`import 'bootstrap'` in `main.ts`).
 - Componenti: icone `IconaBs` (sprite di bootstrap-icons), mai `<i class="bi">`.
+- Campi password: `CampoForm` con `tipo="password"` ha già il pulsante mostra/nascondi (come
+  il toggle del tema AGESCI); non rifarlo nelle viste.
 - **Abbreviazioni nell'UI**: CSQ/CRP/PGV non devono apparire nell'interfaccia. Usare "Capo
   Squadriglia", "Capo Reparto", "Pattuglia GV". Le abbreviazioni restano solo nel codice.
 - **Percorsi del backend** (`/admin/`, `/mailadmin/`, `/celery/`): link con caricamento completo
@@ -194,6 +196,9 @@ PLANCIA_DEMO_PASSWORD=… npm run manuale:schermate [-- gruppo…]   # screensho
   registrata come verificata, link per impostarla con il reset di allauth
   (`invia_link_password` → `/password/reset/{key}` della SPA). Un invio fallito non blocca la
   creazione: finisce nel log e nel `detail` della risposta.
+- **Primo amministratore** (`installa.sh`): `createsuperuser` + `EmailAddress` verificata; con
+  `ACCOUNT_EMAIL_VERIFICATION = "mandatory"` un'email non verificata blocca il login (flusso
+  `verify_email`, messaggio in `AccessoView.vue`).
 - **Login con email o codice socio**: `ACCOUNT_LOGIN_METHODS = {"email", "username"}`; gli utenti
   nati da un Socio hanno `username` = codice socio (i Capi Squadriglia spesso non hanno un'email
   vera); la SPA invia `username` se l'identificativo non contiene "@" (`src/api/allauth.ts`).
@@ -289,6 +294,8 @@ Ordine in `MIDDLEWARE`: entrambi **dopo** `CorsMiddleware` e **prima** di `Sessi
 - MFA: si salta solo se `sessione_da_sestante(request)` (metodo di login della sessione), **mai**
   in base all'esistenza di un `SocialAccount` collegato.
 - Il login locale resta attivo: non disattivarlo senza conferma esplicita dell'utente.
+- `SOCIAL_SESTANTE_SERVER_URL` senza `/` finale (in `base.py` c'è `.rstrip("/")`): allauth aggiunge
+  `/.well-known/openid-configuration` e con la doppia barra authentik dà 404 (500 al login SSO).
 - Login rifiutato (senza email, email duplicata): `_rifiuta_login` torna a
   `/accesso?errore=<messaggio>` della SPA.
 

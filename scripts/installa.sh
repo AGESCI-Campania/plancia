@@ -63,6 +63,9 @@ if [[ "$(manage shell -c 'from apps.accounts.models import User; print(User.obje
 	# -e senza valore: la password passa dall'ambiente, non dalla riga di comando
 	DJANGO_SUPERUSER_PASSWORD="$password_admin" docker compose exec -T -e DJANGO_SUPERUSER_PASSWORD web \
 		uv run python manage.py createsuperuser --noinput --email "$email_admin" --username "$email_admin"
+	# Email già verificata: con ACCOUNT_EMAIL_VERIFICATION="mandatory" il login resterebbe
+	# in attesa della conferma, e l'invio di email non è ancora configurato
+	manage shell -c "from allauth.account.models import EmailAddress; from apps.accounts.models import User; u = User.objects.get(email='$email_admin'); EmailAddress.objects.update_or_create(user=u, email=u.email, defaults={'verified': True, 'primary': True})"
 	info "Creato l'amministratore $email_admin."
 else
 	info "Esiste già un amministratore, non ne creo altri."

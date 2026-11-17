@@ -26,6 +26,10 @@ async function dopoLogin(): Promise<void> {
   if (sessione.autenticato) await vaiDopoAccesso(router, route.query.next)
   else if (sessione.passoInSospeso === 'mfa_authenticate')
     await router.push({ name: 'accesso-mfa', query: route.query })
+  else if (sessione.passoInSospeso === 'verify_email')
+    errori.value = {
+      __all__: ["Email non ancora verificata: apri il link di conferma che ti abbiamo inviato e riprova."],
+    }
 }
 
 async function accedi(): Promise<void> {

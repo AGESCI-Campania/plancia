@@ -25,6 +25,12 @@ server {
         return 200 "ok\n";
     }
 
+    # Vecchia pagina di accesso di Plancia 2 (preferiti, email): ora è /accesso della SPA.
+    # Prima del blocco Django: tra le regex nginx usa la prima che corrisponde.
+    location ~ ^/accounts/login/?$ {
+        return 301 /accesso$is_args$args;
+    }
+
     # --- Django ----------------------------------------------------------------
     # API (v1 e gli endpoint della PWA 2.x finché esistono), allauth headless, callback dei
     # provider social/SSO (/accounts/<provider>/login/callback/, registrate presso i provider),

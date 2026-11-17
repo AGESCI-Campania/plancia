@@ -205,10 +205,12 @@ _APPLE_PRIVATE_KEY    = env.str("SOCIAL_APPLE_PRIVATE_KEY", default="").replace(
 _SESTANTE_CLIENT_ID     = env.str("SOCIAL_SESTANTE_CLIENT_ID", default="")
 _SESTANTE_CLIENT_SECRET = env.str("SOCIAL_SESTANTE_CLIENT_SECRET", default="")
 
+# Senza "/" finale: allauth aggiunge "/.well-known/openid-configuration" e con la doppia
+# barra authentik risponde 404 (errore 500 al clic su "Accedi con SSO").
 _SESTANTE_SERVER_URL    = env.str(
     "SOCIAL_SESTANTE_SERVER_URL",
     default="https://auth.agescicampania.net/application/o/plancia/",
-)
+).rstrip("/")
 
 # Un provider senza client id non va configurato: allauth mostrerebbe comunque il
 # pulsante nella pagina di login, che poi fallirebbe. L'app parte anche senza credenziali.

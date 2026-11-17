@@ -104,7 +104,9 @@ dalla pagina **Accedi a Plancia**.
 Modi di accesso:
 
 - **Email o codice socio** e **Password**, poi **Accedi**. I Capi Squadriglia possono scrivere il
-  proprio **codice socio AGESCI** (il numero della tessera) al posto dell'email.
+  proprio **codice socio AGESCI** (il numero della tessera) al posto dell'email. Il pulsante con
+  l'occhio accanto alla password la mostra mentre la scrivi (di nuovo per nasconderla); c'è in
+  tutti i campi password di Plancia.
 - **Accedi con SSO AGESCI Campania**: lo stesso account usato per tutte le piattaforme regionali
   (`https://auth.agescicampania.net`). Al primo accesso Plancia riconosce l'account
   dall'indirizzo email; se non esiste ancora lo crea senza ruoli (li assegnano la Segreteria o
