@@ -1850,7 +1850,7 @@ export interface paths {
         head?: never;
         /**
          * Modifica il proprio profilo
-         * @description Oggi solo l'email, e solo per il Capo Squadriglia (aggiorna anche il Socio).
+         * @description Email (solo Capo Squadriglia, aggiorna anche il Socio); nome e cognome (solo senza Socio).
          */
         patch: operations["apps_api_routers_me_patch_me"];
         trace?: never;
@@ -2305,7 +2305,8 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** Modifica nome e cognome (Admin, Segreteria; utenti senza Socio) */
+        patch: operations["apps_api_routers_utenti_modifica_nome"];
         trace?: never;
     };
     "/api/v1/utenti/{utente_id}/impersona": {
@@ -3722,6 +3723,11 @@ export interface components {
              * @default false
              */
             puo_modificare_email: boolean;
+            /**
+             * Puo Modificare Nome
+             * @default false
+             */
+            puo_modificare_nome: boolean;
             /** Ruoli Attivi */
             ruoli_attivi: components["schemas"]["RuoloSchema"][];
             ruolo: components["schemas"]["RuoloSchema"];
@@ -4116,11 +4122,16 @@ export interface components {
         };
         /**
          * ProfiloPatchSchema
-         * @description Dati del profilo modificabili dall'utente (oggi solo l'email del Capo Squadriglia).
+         * @description Dati del profilo modificabili dall'utente: email (Capo Squadriglia), nome e cognome
+         *     (senza Socio). I campi omessi non cambiano.
          */
         ProfiloPatchSchema: {
             /** Email */
-            email: string;
+            email?: string | null;
+            /** First Name */
+            first_name?: string | null;
+            /** Last Name */
+            last_name?: string | null;
         };
         /**
          * ProfiloSchema
@@ -4908,6 +4919,11 @@ export interface components {
             nomine: components["schemas"]["NominaSchema"][];
             /** Puo Impersonare */
             puo_impersonare: boolean;
+            /**
+             * Puo Modificare Nome
+             * @default false
+             */
+            puo_modificare_nome: boolean;
             /** Ruoli Attivi */
             ruoli_attivi: components["schemas"]["RuoloSchema"][];
             /** Ruoli Nominabili */
@@ -4927,6 +4943,19 @@ export interface components {
             nome_completo: string;
             ruolo: components["schemas"]["RuoloSchema"];
             socio?: components["schemas"]["SocioBreveSchema"] | null;
+        };
+        /**
+         * UtenteNomePatchSchema
+         * @description `PATCH /utenti/{id}`: nome e cognome (solo utenti senza Socio).
+         */
+        UtenteNomePatchSchema: {
+            /** First Name */
+            first_name: string;
+            /**
+             * Last Name
+             * @default
+             */
+            last_name: string;
         };
         /** UtenteStaffCreaSchema */
         UtenteStaffCreaSchema: {
@@ -12365,6 +12394,68 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UtenteDettaglioSchema"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroreSchema"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroreSchema"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroreSchema"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroreValidazioneSchema"];
+                };
+            };
+        };
+    };
+    apps_api_routers_utenti_modifica_nome: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                utente_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UtenteNomePatchSchema"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {

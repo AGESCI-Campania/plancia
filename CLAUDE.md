@@ -144,6 +144,9 @@ PLANCIA_DEMO_PASSWORD=… npm run manuale:schermate [-- gruppo…]   # screensho
 - **Dialog/drawer** Bootstrap 6 sul `<dialog>` nativo (`FinestraDialogo.vue`, sidebar);
   i menu usano la data API di Bootstrap (`import 'bootstrap'` in `main.ts`).
 - Componenti: icone `IconaBs` (sprite di bootstrap-icons), mai `<i class="bi">`.
+- **Sidebar**: sezioni con titolo chiuse di default, una sola aperta alla volta (resta aperta
+  quella della pagina corrente; da compressa si vedono tutte le icone): `sezioneAperta` in
+  `LayoutApp.vue`.
 - Campi password: `CampoForm` con `tipo="password"` ha già il pulsante mostra/nascondi (come
   il toggle del tema AGESCI); non rifarlo nelle viste.
 - **Abbreviazioni nell'UI**: CSQ/CRP/PGV non devono apparire nell'interfaccia. Usare "Capo
@@ -294,6 +297,11 @@ Ordine in `MIDDLEWARE`: entrambi **dopo** `CorsMiddleware` e **prima** di `Sessi
 - MFA: si salta solo se `sessione_da_sestante(request)` (metodo di login della sessione), **mai**
   in base all'esistenza di un `SocialAccount` collegato.
 - Il login locale resta attivo: non disattivarlo senza conferma esplicita dell'utente.
+- Nome dai claim: authentik manda il nome intero in `given_name` e nessun `family_name`;
+  `PlanciaSocialAccountAdapter.populate_user` mette `name` tutto in `first_name` e lascia vuoto
+  `last_name` (niente cognome indovinato). Vale per i nuovi utenti SSO; chi non ha Socio
+  modifica nome e cognome dal profilo (`PATCH /me`, `services.aggiorna_nome`); Admin e Segreteria
+  dalla scheda utente (`PATCH /utenti/{id}`, ranghi di `roles.puo_modificare_nome_di`).
 - `SOCIAL_SESTANTE_SERVER_URL` senza `/` finale (in `base.py` c'è `.rstrip("/")`): allauth aggiunge
   `/.well-known/openid-configuration` e con la doppia barra authentik dà 404 (500 al login SSO).
 - Login rifiutato (senza email, email duplicata): `_rifiuta_login` torna a

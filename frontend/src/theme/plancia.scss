@@ -48,6 +48,23 @@
   white-space: normal;
   .ag-sidebar__label { white-space: normal; min-width: 0; line-height: 1.25; }
 }
+// Titoli di sezione apribili (una sezione alla volta, vedi LayoutApp.vue)
+.ag-sidebar__section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+  &:disabled { cursor: default; }
+}
+.ag-sidebar--collapsed .ag-sidebar__section-toggle .icona { display: none; }
 .ag-sidebar--collapsed .ag-sidebar__section-title {
   font-size: 0;
   padding: .25rem .5rem;

@@ -14,7 +14,7 @@ esclusività Capo Squadriglia, `can_hijack`), `apps/org/services.py` (ricerca so
 | Metodo | Percorso | Ruoli | Descrizione |
 |---|---|---|---|
 | GET | `/me` | tutti | Campi storici (`id`, `email`, `nome_completo`, `ruolo`, `ruoli_attivi`, `is_staff_plancia`, `is_superuser`) + `first_name`, `last_name`, `socio` (codice, nome, cognome, categoria, gruppo, zona), `mfa_attiva`, `mfa_richiesta` (`ruolo_richiede_mfa`), `mfa_da_configurare` (stesse esenzioni del middleware MFA), `menu` (flag della sidebar), `impersonato_da`, `puo_modificare_email` |
-| PATCH | `/me` | Capo Squadriglia | `{"email"}`: aggiorna l'email dell'utente e del Socio (unicità, formato) |
+| PATCH | `/me` | autenticato | Campi facoltativi: `email` (solo Capo Squadriglia: aggiorna anche il Socio; unicità, formato), `first_name`/`last_name` (solo utenti senza Socio, `puo_modificare_nome`; nome obbligatorio) |
 | GET | `/me/profilo` | tutti | Pagina profilo: `utente` (come `/me`), `nomine`, ultimi 10 `accessi`, `social_accounts` collegati (lo scollegamento è in allauth headless) |
 | GET | `/me/nomine` | tutti | Storico delle proprie nomine (anche revocate/scadute) |
 | GET | `/me/accessi` | tutti | Propri `LoginEvent`, paginati (`limit`, `offset`) |
@@ -37,6 +37,7 @@ Flag `menu`: `puo_vedere_diari`, `puo_gestire_edizioni`, `puo_vedere_utenti`, `p
 | GET | `/utenti/{id}` | staff | Dettaglio: socio, ruoli attivi, `nomine` (storico completo con `attiva`/`scaduta`/`da_sso`), ultimi 20 `accessi`, `ruoli_nominabili`, `puo_impersonare` (per questo utente) |
 | POST | `/utenti/staff` | staff (Admin crea Admin/Segreteria/Incaricato; Segreteria crea Incaricato) | `{"email", "first_name", "last_name", "ruolo"}`: utente senza Socio (`nomina_staff_diretto`) + mail per impostare la password; `201` |
 | POST | `/utenti/da-socio` | staff | `{"socio_id", "ruolo"}`: account per un Socio capo + nomina; `201` |
+| PATCH | `/utenti/{id}` | Admin, Segreteria (`roles.puo_modificare_nome_di`) | `{"first_name", "last_name"?}`: nome e cognome di un utente senza Socio; la Segreteria non modifica chi ha una nomina Admin. Risponde come `GET /utenti/{id}` (che espone `puo_modificare_nome`) |
 | POST | `/utenti/{id}/nomine` | staff, secondo `ROLE_CREATABLE_BY` | `{"ruolo", "edizione_id"?, "scadenza"?}` (`roles.nomina`); `201` |
 | POST | `/utenti/{id}/nomine/{nomina_id}/revoca` | staff, secondo `ROLE_CREATABLE_BY` | `attiva=False` (resta nello storico). Non si revocano nomine proprie né derivate da Sestante; se era il ruolo attivo l'utente passa al ruolo rimasto di rango più alto |
 | POST | `/utenti/{id}/impersona` | Admin, Segreteria (`can_hijack`) | Come `hijack:acquire` (segnale `hijack_started`, `hijack_history` in sessione); risponde come `/me` dell'utente impersonato. Solo cookie di sessione (`422` con `X-Session-Token`): il login ruota sessione e token CSRF, la SPA deve rileggere il cookie `csrftoken` |

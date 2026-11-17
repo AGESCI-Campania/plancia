@@ -4,6 +4,23 @@ Una sezione per release: `## X.Y.Z — AAAA-MM-GG`, dalla più recente. `scripts
 mostra le sezioni tra la versione installata e quella nuova; le note della GitHub Release si
 copiano da qui.
 
+## 3.0.2 — 2026-11-17
+
+- **Menu laterale a fisarmonica**: le sezioni *Gestione* e *Sistema* sono chiuse; un clic sul
+  titolo ne apre una e chiude l'altra. Resta aperta quella della pagina corrente; con il menu
+  compresso si vedono tutte le icone.
+- **Nome da SSO AGESCI Campania**: i nuovi utenti avevano il nome ripetuto ("Bruno Andrea
+  Bruno"), perché Sestante manda il nome intero anche in `given_name`. Ora il nome arriva com'è
+  su Sestante, senza un cognome indovinato.
+- **Modifica nome**: chi non è collegato a un socio AGESCI (lo staff) cambia nome e cognome da
+  *Il mio profilo*; Admin e Segreteria anche dalla scheda utente (la Segreteria non per chi ha il
+  ruolo Admin). Per gli altri il nome resta quello dell'anagrafica.
+- **Helpdesk**: per i Capi Reparto la pagina *Nuovo ticket* andava in errore (elenco dei diari
+  collegabili); ora mostra i diari di cui sono Capo Reparto.
+
+Server installato con la 3.0.1: dopo l'aggiornamento, chi è entrato con l'SSO e ha il nome
+ripetuto lo corregge da *Il mio profilo* → **Modifica nome**.
+
 ## 3.0.1 — 2026-11-17
 
 Correzioni emerse dalla prima installazione sul nuovo server.

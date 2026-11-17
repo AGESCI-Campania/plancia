@@ -117,6 +117,12 @@ def test_opzioni(client_di, diario):
     assert client_di("segreteria").get("/api/v1/helpdesk/opzioni").json()["diari"] == []
 
 
+def test_opzioni_capo_reparto(client_di, diario):
+    r = client_di("crp").get("/api/v1/helpdesk/opzioni")
+    assert r.status_code == 200
+    assert [d["id"] for d in r.json()["diari"]] == [diario.pk]
+
+
 # ── Azioni ──────────────────────────────────────────────────────────────────
 
 

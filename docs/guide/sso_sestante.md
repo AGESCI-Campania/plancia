@@ -45,7 +45,8 @@ abbiano fatto almeno un login SSO riuscito. Non disattivarlo autonomamente.
 - più utenti Plancia con la stessa email (confronto case-insensitive) → rifiutato;
 - un utente con quella email → collegato (non duplicato);
 - nessuno → creato (auto-signup solo per `sestante`, `is_auto_signup_allowed`), ruolo CSQ
-  salvo ruoli globali;
+  salvo ruoli globali; nome = claim `name` intero, cognome vuoto (`populate_user`: authentik
+  manda il nome intero anche in `given_name` e nessun `family_name`);
 - le email arrivate da Sestante sono marcate verificate (altrimenti `ACCOUNT_EMAIL_VERIFICATION
   = "mandatory"` chiederebbe una conferma via email ai nuovi utenti).
 

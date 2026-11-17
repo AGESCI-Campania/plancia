@@ -103,6 +103,35 @@ def test_patch_me_email_non_csq(client_di, ruolo):
     assert r.status_code == 403
 
 
+def test_patch_me_nome_senza_socio(client_di, utenti):
+    r = client_di("admin").patch("/api/v1/me", **json_body({"first_name": " Andrea ", "last_name": "Bruno"}))
+    assert r.status_code == 200
+    assert r.json()["nome_completo"] == "Bruno Andrea"
+    assert r.json()["puo_modificare_nome"] is True
+    u = User.objects.get(pk=utenti["admin"].pk)
+    assert (u.first_name, u.last_name) == ("Andrea", "Bruno")
+
+
+def test_patch_me_nome_solo_campo_inviato(client_di, utenti):
+    client_di("admin").patch("/api/v1/me", **json_body({"first_name": "Andrea Bruno", "last_name": ""}))
+    r = client_di("admin").patch("/api/v1/me", **json_body({"first_name": "Andrea"}))
+    assert r.status_code == 200
+    u = User.objects.get(pk=utenti["admin"].pk)
+    assert (u.first_name, u.last_name) == ("Andrea", "")
+
+
+def test_patch_me_nome_vuoto(client_di):
+    r = client_di("admin").patch("/api/v1/me", **json_body({"first_name": "  ", "last_name": "Bruno"}))
+    assert r.status_code == 422
+    assert "first_name" in r.json()["errori"]
+
+
+@pytest.mark.parametrize("ruolo", ["csq", "crp", "segreteria"])
+def test_patch_me_nome_con_socio(client_di, ruolo):
+    r = client_di(ruolo).patch("/api/v1/me", **json_body({"first_name": "Altro"}))
+    assert r.status_code == 403
+
+
 def test_patch_me_anonimo(client_di):
     r = client_di("anonimo").patch("/api/v1/me", **json_body({"email": "x@test.it"}))
     assert r.status_code == 401
@@ -594,3 +623,43 @@ def test_impersona_rifiutata_con_session_token(client_di, utenti):
     r = client_di("admin").post(f"/api/v1/utenti/{utenti['crp'].pk}/impersona",
                                 HTTP_X_SESSION_TOKEN="qualcosa")
     assert r.status_code in (401, 422)
+
+
+# ---------------------------------------------------------------------------
+# PATCH /utenti/{id}: nome e cognome da Admin e Segreteria
+# ---------------------------------------------------------------------------
+
+
+def _staff_senza_socio(email: str = "sso@test.it") -> User:
+    return User.objects.create_user(username=email, email=email, first_name="Andrea Bruno",
+                                    ruolo=Ruolo.SEGRETERIA)
+
+
+@pytest.mark.parametrize("ruolo", ["admin", "segreteria"])
+def test_modifica_nome_altro_utente(client_di, ruolo):
+    target = _staff_senza_socio()
+    assert client_di(ruolo).get(f"/api/v1/utenti/{target.pk}").json()["puo_modificare_nome"] is True
+    r = client_di(ruolo).patch(f"/api/v1/utenti/{target.pk}",
+                               **json_body({"first_name": "Andrea", "last_name": "Bruno"}))
+    assert r.status_code == 200
+    assert r.json()["nome_completo"] == "Bruno Andrea"
+    target.refresh_from_db()
+    assert (target.first_name, target.last_name) == ("Andrea", "Bruno")
+
+
+def test_incaricato_non_modifica_nome(client_di):
+    target = _staff_senza_socio()
+    r = client_di("incaricato_eg").patch(f"/api/v1/utenti/{target.pk}", **json_body({"first_name": "X"}))
+    assert r.status_code == 403
+
+
+def test_segreteria_non_modifica_nome_admin(client_di, utenti):
+    admin = utenti["admin"]
+    assert client_di("segreteria").get(f"/api/v1/utenti/{admin.pk}").json()["puo_modificare_nome"] is False
+    r = client_di("segreteria").patch(f"/api/v1/utenti/{admin.pk}", **json_body({"first_name": "X"}))
+    assert r.status_code == 403
+
+
+def test_modifica_nome_utente_con_socio(client_di, utenti):
+    r = client_di("admin").patch(f"/api/v1/utenti/{utenti['crp'].pk}", **json_body({"first_name": "X"}))
+    assert r.status_code == 403

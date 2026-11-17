@@ -91,6 +91,34 @@ def puo_modificare_email(user: User) -> bool:
     )
 
 
+def puo_modificare_nome(user: User) -> bool:
+    """Nome e cognome si modificano da sé solo senza Socio: altrimenti vengono dall'anagrafica."""
+    return user.socio is None
+
+
+def aggiorna_nome(user: User, first_name: str, last_name: str, attore: User | None = None) -> None:
+    """Aggiorna nome e cognome di un utente senza Socio (es. arrivato da Sestante): da sé, o da
+    Admin/Segreteria (`attore`, regole in `roles.puo_modificare_nome_di`)."""
+    from apps.accounts.roles import puo_modificare_nome_di
+
+    if not puo_modificare_nome(user):
+        raise PermissionDenied("Nome e cognome vengono dall'anagrafica del socio.")
+    if attore is not None and attore.pk != user.pk and not puo_modificare_nome_di(attore, user):
+        raise PermissionDenied("Non puoi modificare il nome di questo utente.")
+    first_name, last_name = (first_name or "").strip(), (last_name or "").strip()
+    if not first_name:
+        raise ValidationError({"first_name": "Il nome non può essere vuoto."})
+    errori = {}
+    for campo, valore in (("first_name", first_name), ("last_name", last_name)):
+        massimo = getattr(User._meta.get_field(campo), "max_length", None)
+        if massimo and len(valore) > massimo:
+            errori[campo] = f"Al massimo {massimo} caratteri."
+    if errori:
+        raise ValidationError(errori)
+    user.first_name, user.last_name = first_name, last_name
+    user.save(update_fields=["first_name", "last_name"])
+
+
 def aggiorna_email(user: User, email: str) -> None:
     """Aggiorna l'email dell'utente e del Socio collegato (solo Capo Squadriglia)."""
     if not (user.ruolo == Ruolo.CSQ and user.socio):

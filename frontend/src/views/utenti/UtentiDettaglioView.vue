@@ -2,12 +2,13 @@
 /**
  * Dettaglio utente (staff): dati e Socio, ruoli attivi, assegnazione di un ruolo, storico
  * delle nomine con revoca, ultimi accessi, impersonazione. Cosa si può fare lo dice l'API
- * (`ruoli_nominabili`, `puo_impersonare`); i controlli veri restano nel backend.
+ * (`ruoli_nominabili`, `puo_impersonare`, `puo_modificare_nome`); i controlli veri restano nel backend.
  */
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 
 import { api, ErroreApi, type ErroriCampo } from '@/api/http'
+import CampoForm from '@/components/CampoForm.vue'
 import IconaBs from '@/components/IconaBs.vue'
 import StatoCaricamento from '@/components/StatoCaricamento.vue'
 import UtentiBadgeRuolo from '@/components/utenti/UtentiBadgeRuolo.vue'
@@ -107,6 +108,41 @@ async function revoca(n: Nomina): Promise<void> {
   }
 }
 
+// --- Nome (utenti senza Socio, Admin e Segreteria) ---------------------------------------
+const modificaNome = ref(false)
+const nome = ref('')
+const cognome = ref('')
+const erroriNome = ref<ErroriCampo>({})
+const salvataggioNome = ref(false)
+
+function apriNome(): void {
+  nome.value = u.value?.first_name ?? ''
+  cognome.value = u.value?.last_name ?? ''
+  erroriNome.value = {}
+  modificaNome.value = true
+}
+
+async function salvaNome(): Promise<void> {
+  erroriNome.value = {}
+  if (!nome.value.trim()) {
+    erroriNome.value = { first_name: ['Inserisci il nome.'] }
+    return
+  }
+  salvataggioNome.value = true
+  try {
+    utente.dati.value = await api.patch<UtenteDettaglio>(`/utenti/${props.id}`, {
+      first_name: nome.value.trim(),
+      last_name: cognome.value.trim(),
+    })
+    modificaNome.value = false
+    avvisi.mostra('Nome aggiornato.')
+  } catch (e) {
+    erroriNome.value = e instanceof ErroreApi ? { ...e.errori, __all__: [messaggioErrore(e.message, e.errori, ['first_name', 'last_name'])] } : { __all__: ['Errore imprevisto.'] }
+  } finally {
+    salvataggioNome.value = false
+  }
+}
+
 // --- Impersonazione ----------------------------------------------------------------------
 async function impersona(): Promise<void> {
   if (!u.value) return
@@ -182,6 +218,23 @@ onMounted(() => {
                 <dt>Accesso al pannello Django</dt>
                 <dd class="mb-0">{{ u.is_staff ? 'Sì' : 'No' }}<template v-if="u.is_superuser"> (superutente)</template></dd>
               </dl>
+              <button
+                v-if="u.puo_modificare_nome && !modificaNome"
+                type="button"
+                class="btn btn-outline btn-sm theme-primary mt-5"
+                @click="apriNome"
+              >
+                <IconaBs nome="pencil" class="me-1" />Modifica nome
+              </button>
+              <form v-if="modificaNome" class="mt-5" novalidate @submit.prevent="salvaNome">
+                <div v-for="e in (erroriNome.__all__ ?? []).filter(Boolean)" :key="e" class="alert theme-danger" role="alert">{{ e }}</div>
+                <CampoForm v-model="nome" etichetta="Nome" obbligatorio :errori="erroriNome.first_name" />
+                <CampoForm v-model="cognome" etichetta="Cognome" :errori="erroriNome.last_name" />
+                <div class="d-flex gap-3">
+                  <button type="submit" class="btn btn-solid btn-sm theme-primary" :disabled="salvataggioNome">Salva</button>
+                  <button type="button" class="btn btn-text btn-sm theme-secondary" @click="modificaNome = false">Annulla</button>
+                </div>
+              </form>
             </div>
           </section>
 

@@ -33,6 +33,7 @@ from apps.api.schemas.utenti import (
     UtenteDaSocioCreaSchema,
     UtenteDettaglioSchema,
     UtenteListaSchema,
+    UtenteNomePatchSchema,
     UtenteStaffCreaSchema,
 )
 
@@ -59,7 +60,7 @@ def _ruoli(coppie: list[tuple[str, str]]) -> list[RuoloSchema]:
 
 def _dettaglio(attore, u) -> UtenteDettaglioSchema:
     from apps.accounts import services
-    from apps.accounts.roles import puo_impersonare
+    from apps.accounts.roles import puo_impersonare, puo_modificare_nome_di
 
     return UtenteDettaglioSchema(
         id=u.pk, email=u.email, nome_completo=u.nome_completo,
@@ -72,6 +73,7 @@ def _dettaglio(attore, u) -> UtenteDettaglioSchema:
         accessi=[login_event_schema(e) for e in u.login_events.all()[:20]],
         ruoli_nominabili=_ruoli(services.ruoli_nominabili(attore)),
         puo_impersonare=puo_impersonare(attore, u),
+        puo_modificare_nome=puo_modificare_nome_di(attore, u),
     )
 
 
@@ -166,6 +168,17 @@ def crea_da_socio(request, payload: UtenteDaSocioCreaSchema):
 def dettaglio(request, utente_id: int):
     richiedi_staff(request.auth)
     return _dettaglio(request.auth, _get_utente(utente_id))
+
+
+@router.patch("/{utente_id}", response={200: UtenteDettaglioSchema, **_ERRORI},
+              summary="Modifica nome e cognome (Admin, Segreteria; utenti senza Socio)")
+def modifica_nome(request, utente_id: int, payload: UtenteNomePatchSchema):
+    from apps.accounts import services
+
+    richiedi_staff(request.auth)
+    utente = _get_utente(utente_id)
+    services.aggiorna_nome(utente, payload.first_name, payload.last_name, attore=request.auth)
+    return _dettaglio(request.auth, utente)
 
 
 @router.post("/{utente_id}/nomine", response={201: NominaSchema, **_ERRORI},

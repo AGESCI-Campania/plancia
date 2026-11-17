@@ -38,6 +38,14 @@ class UtenteDettaglioSchema(Schema):
     accessi: list[LoginEventSchema]
     ruoli_nominabili: list[RuoloSchema]
     puo_impersonare: bool
+    puo_modificare_nome: bool = False
+
+
+class UtenteNomePatchSchema(Schema):
+    """`PATCH /utenti/{id}`: nome e cognome (solo utenti senza Socio)."""
+
+    first_name: str
+    last_name: str = ""
 
 
 class OpzioniUtentiSchema(Schema):

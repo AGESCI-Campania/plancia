@@ -77,12 +77,16 @@ class MeEstesoSchema(Schema):
     menu: MenuSchema | None = None
     impersonato_da: UtenteBreveSchema | None = None
     puo_modificare_email: bool = False
+    puo_modificare_nome: bool = False
 
 
 class ProfiloPatchSchema(Schema):
-    """Dati del profilo modificabili dall'utente (oggi solo l'email del Capo Squadriglia)."""
+    """Dati del profilo modificabili dall'utente: email (Capo Squadriglia), nome e cognome
+    (senza Socio). I campi omessi non cambiano."""
 
-    email: str
+    email: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
 
 
 class CambiaRuoloSchema(Schema):

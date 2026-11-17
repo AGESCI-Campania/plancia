@@ -273,3 +273,24 @@ class TestAdapterSestante:
         user.refresh_from_db()
         assert user.ruolo == Ruolo.CSQ
         assert user.ruoli_attivi == []
+
+
+# ---------------------------------------------------------------------------
+# Nome dai claim di Sestante
+# ---------------------------------------------------------------------------
+
+class TestNomeDaSestante:
+    def test_nome_intero_senza_cognome_inventato(self):
+        """authentik: given_name = nome intero, niente family_name."""
+        sl = _sociallogin("andrea@test.it", [])
+        dati = {"email": "andrea@test.it", "name": "Andrea Bruno", "first_name": "Andrea Bruno", "last_name": None}
+        user = PlanciaSocialAccountAdapter().populate_user(_richiesta(), sl, dati)
+        assert (user.first_name, user.last_name) == ("Andrea Bruno", "")
+        assert user.nome_completo == "Andrea Bruno"
+
+    def test_altri_provider_invariati(self):
+        sl = _sociallogin("mario@test.it", [])
+        sl.account.provider = "google"
+        dati = {"email": "mario@test.it", "first_name": "Mario", "last_name": "Rossi"}
+        user = PlanciaSocialAccountAdapter().populate_user(_richiesta(), sl, dati)
+        assert (user.first_name, user.last_name) == ("Mario", "Rossi")

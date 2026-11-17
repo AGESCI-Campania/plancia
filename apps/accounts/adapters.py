@@ -232,6 +232,17 @@ class PlanciaSocialAccountAdapter(DefaultSocialAccountAdapter):
     def is_auto_signup_allowed(self, request, sociallogin):
         return sociallogin.account.provider == PROVIDER_SESTANTE
 
+    def populate_user(self, request, sociallogin, data):
+        """Sestante (authentik) manda in `given_name` il nome intero e nessun `family_name`:
+        allauth ne farebbe "Andrea Bruno" + cognome "Bruno". Il nome intero va tutto in
+        `first_name`, senza indovinare il cognome (nomi doppi, "De Luca")."""
+        user = super().populate_user(request, sociallogin, data)
+        if sociallogin.account.provider == PROVIDER_SESTANTE:
+            nome = (data.get("name") or data.get("first_name") or "").strip()
+            user.first_name = nome[: getattr(User._meta.get_field("first_name"), "max_length", None)]
+            user.last_name = ""
+        return user
+
     def pre_social_login(self, request, sociallogin):
         """Collega per email gli utenti esistenti; sincronizza ruoli globali per Sestante."""
         da_sestante = sociallogin.account.provider == PROVIDER_SESTANTE

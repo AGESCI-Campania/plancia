@@ -46,14 +46,14 @@ def _richiedi_non_chiuso(ticket: Ticket) -> None:
 
 def diari_selezionabili(user: User) -> QuerySet[Diario]:
     """Diari a cui si può collegare un nuovo ticket: i propri (Capo Squadriglia) o
-    quelli dei reparti di cui si è capo (Capo Reparto); nessuno per gli altri ruoli."""
+    quelli di cui si è Capo Reparto (stessa regola di `diari_visibili`); nessuno per gli altri."""
     from apps.diaries.models import Diario
 
     socio = getattr(user, "socio", None)
     if user.ruolo == Ruolo.CSQ and socio:
         return Diario.objects.filter(csq=socio)
     if user.ruolo == Ruolo.CRP and socio:
-        return Diario.objects.filter(squadriglia__reparto__in=socio.reparti_capo.all())
+        return Diario.objects.filter(crp=socio)
     return Diario.objects.none()
 
 

@@ -142,7 +142,8 @@ aggiornati a ogni accesso con SSO: se vengono tolti lì, spariscono anche qui.
 ## Come è fatta l'app
 
 - **Menu laterale**: le voci dipendono dal ruolo (Home, Diari, Helpdesk; per lo staff anche le
-  sezioni *Gestione* e *Sistema*). Sul computer il pulsante **Menu** in cima lo comprime a sole
+  sezioni *Gestione* e *Sistema*). Le sezioni sono chiuse: un clic sul titolo apre le voci e
+  chiude l'altra sezione; quella della pagina in cui ti trovi resta aperta. Sul computer il pulsante **Menu** in cima lo comprime a sole
   icone; sul telefono si apre con il pulsante con le tre linee in alto a destra.
 - **Percorso** (la barra verde chiaro sotto l'intestazione): mostra dove ti trovi e permette di
   tornare indietro con un tocco.
@@ -158,7 +159,9 @@ aggiornati a ogni accesso con SSO: se vengono tolti lì, spariscono anche qui.
 **Il mio profilo** mostra i dati dell'account (ruolo attivo, gruppo, zona, codice socio, stato
 della verifica in due passaggi), le **Sessioni attive** con il pulsante **Termina le altre
 sessioni**, gli **Account collegati** (SSO o provider social, con **Scollega**), lo **Storico
-nomine** e gli **Ultimi accessi**. Chi può farlo trova anche **Modifica email**.
+nomine** e gli **Ultimi accessi**. Chi può farlo trova anche **Modifica email**. Chi non è
+collegato a un socio AGESCI (per esempio lo staff entrato con l'SSO) trova **Modifica nome**, con
+Nome e Cognome; per gli altri il nome viene dall'anagrafica.
 
 ![Profilo](screenshots/profilo.png)
 

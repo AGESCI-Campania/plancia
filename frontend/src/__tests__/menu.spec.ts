@@ -32,6 +32,7 @@ function utente(ruolo: string, flag: Partial<Menu> = {}): Me {
     mfa_richiesta: false,
     mfa_da_configurare: false,
     puo_modificare_email: false,
+    puo_modificare_nome: false,
     menu: { ...nessunFlag, ...flag },
   }
 }

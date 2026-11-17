@@ -57,6 +57,24 @@ function attiva(to: string): boolean {
   return to === '/' ? route.path === '/' : route.path.startsWith(to)
 }
 
+// Sezioni con titolo chiuse di default, una sola aperta alla volta (fisarmonica): resta aperta
+// quella della pagina corrente. Da compressa (solo icone) si vedono tutte le voci.
+const sezioneAperta = ref<number | null>(null)
+watch(
+  [() => route.path, sezioni],
+  () => {
+    const s = sezioni.value.findIndex((sez) => sez.titolo && sez.voci.some((v) => !v.esterno && attiva(v.to)))
+    if (s >= 0) sezioneAperta.value = s
+  },
+  { immediate: true },
+)
+function alternaSezione(s: number): void {
+  sezioneAperta.value = sezioneAperta.value === s ? null : s
+}
+function sezioneVisibile(s: number): boolean {
+  return !sezioni.value[s]?.titolo || compressa.value || sezioneAperta.value === s
+}
+
 async function cambiaRuolo(ruolo: string): Promise<void> {
   await sessione.cambiaRuolo(ruolo)
   await router.push('/')
@@ -168,8 +186,18 @@ async function terminaImpersonazione(): Promise<void> {
 
       <ul class="ag-sidebar__nav">
         <template v-for="(sezione, s) in sezioni" :key="s">
-          <li v-if="sezione.titolo" class="ag-sidebar__section-title">{{ sezione.titolo }}</li>
-          <li v-for="voce in sezione.voci" :key="voce.to">
+          <li v-if="sezione.titolo" class="ag-sidebar__section-title">
+            <button
+              type="button"
+              class="ag-sidebar__section-toggle"
+              :aria-expanded="sezioneVisibile(s)"
+              :disabled="compressa"
+              @click="alternaSezione(s)"
+            >
+              {{ sezione.titolo }}<IconaBs :nome="sezioneAperta === s ? 'chevron-up' : 'chevron-down'" />
+            </button>
+          </li>
+          <li v-for="voce in sezione.voci" v-show="sezioneVisibile(s)" :key="voce.to">
             <a v-if="voce.esterno" :href="voce.to" target="_blank" rel="noopener" class="ag-sidebar__nav-link">
               <IconaBs :nome="voce.icona" /><span class="ag-sidebar__label">{{ voce.etichetta }}</span>
             </a>

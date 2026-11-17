@@ -118,6 +118,7 @@ def me_schema(request, user: User) -> MeEstesoSchema:
         menu=MenuSchema(**services.flag_menu(user)),
         impersonato_da=utente_breve(operatore),
         puo_modificare_email=services.puo_modificare_email(user),
+        puo_modificare_nome=services.puo_modificare_nome(user),
     )
 
 
@@ -136,11 +137,22 @@ def get_me(request):
 @router.patch("/me", response={200: MeEstesoSchema, **_ERRORI},
               summary="Modifica il proprio profilo")
 def patch_me(request, payload: ProfiloPatchSchema):
-    """Oggi solo l'email, e solo per il Capo Squadriglia (aggiorna anche il Socio)."""
+    """Email (solo Capo Squadriglia, aggiorna anche il Socio); nome e cognome (solo senza Socio)."""
+    from django.db import transaction
+
     from apps.accounts import services
 
-    services.aggiorna_email(request.auth, payload.email)
-    return me_schema(request, request.auth)
+    user = request.auth
+    with transaction.atomic():
+        if payload.email is not None:
+            services.aggiorna_email(user, payload.email)
+        if payload.first_name is not None or payload.last_name is not None:
+            services.aggiorna_nome(
+                user,
+                user.first_name if payload.first_name is None else payload.first_name,
+                user.last_name if payload.last_name is None else payload.last_name,
+            )
+    return me_schema(request, user)
 
 
 @router.get("/me/profilo", response={200: ProfiloSchema, 401: ErroreSchema},

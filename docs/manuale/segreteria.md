@@ -100,6 +100,10 @@ Il dettaglio mostra i dati (email, codice socio, categoria, gruppo, zona, ruoli 
 Da **Assegna ruolo** scegli *Ruolo*, eventualmente *Edizione* (solo per Capo Reparto e Capo
 Squadriglia) e *Scadenza*, poi **Conferma nomina**.
 
+Per gli utenti non collegati a un socio AGESCI (lo staff creato a mano o entrato con l'SSO)
+Admin e Segreteria trovano **Modifica nome**, con Nome e Cognome. La Segreteria non può
+modificare il nome di chi ha il ruolo Admin.
+
 ![Dettaglio utente](screenshots/utente_dettaglio.png)
 
 ### Impersonare un utente

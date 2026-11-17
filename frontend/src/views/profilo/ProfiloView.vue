@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Il mio profilo: dati e Socio, cambio email (solo per chi può, oggi il Capo Squadriglia),
+ * Il mio profilo: dati e Socio, cambio nome (senza Socio) ed email (oggi il Capo Squadriglia),
  * ruoli e storico nomine, ultimi accessi, sessioni attive con "termina le altre", account
  * social collegati (scollegamento via allauth). Password e MFA sono in `profilo/sicurezza`.
  */
@@ -62,6 +62,39 @@ async function salvaEmail(): Promise<void> {
     await profilo.esegui()
   } catch (e) {
     erroriEmail.value = e instanceof ErroreApi ? (e.errori.email ?? e.errori.__all__ ?? [e.message]) : ['Errore imprevisto.']
+  } finally {
+    salvataggio.value = false
+  }
+}
+
+// --- Nome (solo senza Socio) ---------------------------------------------------------------
+const modificaNome = ref(false)
+const nome = ref('')
+const cognome = ref('')
+const erroriNome = ref<Record<string, string[]>>({})
+
+function apriNome(): void {
+  nome.value = u.value?.first_name ?? ''
+  cognome.value = u.value?.last_name ?? ''
+  erroriNome.value = {}
+  modificaNome.value = true
+}
+
+async function salvaNome(): Promise<void> {
+  erroriNome.value = {}
+  if (!nome.value.trim()) {
+    erroriNome.value = { first_name: ['Inserisci il nome.'] }
+    return
+  }
+  salvataggio.value = true
+  try {
+    sessione.me = await api.patch<Me>('/me', { first_name: nome.value.trim(), last_name: cognome.value.trim() })
+    modificaNome.value = false
+    avvisi.mostra('Nome aggiornato.')
+    await profilo.esegui()
+  } catch (e) {
+    erroriNome.value = e instanceof ErroreApi ? e.errori : { __all__: ['Errore imprevisto.'] }
+    if (e instanceof ErroreApi && !Object.keys(e.errori).length) erroriNome.value = { __all__: [e.message] }
   } finally {
     salvataggio.value = false
   }
@@ -159,6 +192,14 @@ onMounted(() => {
             </dl>
             <div class="d-flex flex-wrap gap-3">
               <button
+                v-if="u.puo_modificare_nome && !modificaNome"
+                type="button"
+                class="btn btn-outline btn-sm theme-primary"
+                @click="apriNome"
+              >
+                <IconaBs nome="pencil" class="me-1" />Modifica nome
+              </button>
+              <button
                 v-if="u.puo_modificare_email && !modificaEmail"
                 type="button"
                 class="btn btn-outline btn-sm theme-primary"
@@ -170,6 +211,15 @@ onMounted(() => {
                 <IconaBs nome="key" class="me-1" />Password e sicurezza
               </RouterLink>
             </div>
+            <form v-if="modificaNome" class="mt-5" novalidate @submit.prevent="salvaNome">
+              <div v-for="e in erroriNome.__all__ ?? []" :key="e" class="alert theme-danger" role="alert">{{ e }}</div>
+              <CampoForm v-model="nome" etichetta="Nome" autocomplete="given-name" obbligatorio :errori="erroriNome.first_name" />
+              <CampoForm v-model="cognome" etichetta="Cognome" autocomplete="family-name" :errori="erroriNome.last_name" />
+              <div class="d-flex gap-3">
+                <button type="submit" class="btn btn-solid btn-sm theme-primary" :disabled="salvataggio">Salva</button>
+                <button type="button" class="btn btn-text btn-sm theme-secondary" @click="modificaNome = false">Annulla</button>
+              </div>
+            </form>
             <form v-if="modificaEmail" class="mt-5" novalidate @submit.prevent="salvaEmail">
               <CampoForm
                 v-model="email"

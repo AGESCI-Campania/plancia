@@ -189,6 +189,17 @@ def puo_impersonare(attore, target) -> bool:
     return _rango_massimo(target) <= ROLE_RANK.get(a, 0)
 
 
+def puo_modificare_nome_di(attore, target) -> bool:
+    """Admin e Segreteria correggono nome e cognome degli utenti senza Socio, con gli stessi
+    ranghi dell'impersonazione (la Segreteria non tocca chi ha una nomina Admin)."""
+    if attore is None or target is None or target.socio_id is not None:
+        return False
+    a = getattr(attore, "ruolo", None)
+    if a not in IMPERSONATORI:
+        return False
+    return attore.pk == target.pk or _rango_massimo(target) <= ROLE_RANK.get(a, 0)
+
+
 def can_hijack(hijacker, hijacked) -> bool:
     """HIJACK_PERMISSION_CHECK per django-hijack."""
     return puo_impersonare(hijacker, hijacked)
