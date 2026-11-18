@@ -33,21 +33,11 @@ Per chi installa e configura Plancia:
 - [Configurazione provider email](guide/email_provider.md) — SMTP, Brevo, Mailgun, Postmark, ecc.
 - [Google Drive OAuth](guide/google_drive_oauth.md) — caricamento automatico PDF/Excel su Drive
 - [Autenticazione social](guide/social_auth.md) — Google, Microsoft, Apple login
+- [SSO AGESCI Campania](guide/sso_sestante.md) — accesso con Sestante
 
 ---
 
-## Stack e deployment
-
-| Componente | Tecnologia |
-|---|---|
-| Backend | Python ≥ 3.14, Django ≥ 6.0 |
-| Database | PostgreSQL ≥ 17 |
-| Task asincroni | Redis + Celery |
-| Frontend | Bootstrap 5, django-agesci-campania-theme |
-| Auth | django-allauth, MFA, social login |
-| PDF / Excel | WeasyPrint, openpyxl |
-| Gestione dipendenze | uv |
+## Installazione
 
 Per installazione e deployment consulta il [README](https://github.com/AGESCI-Campania/plancia#readme)
 del repository.
-
