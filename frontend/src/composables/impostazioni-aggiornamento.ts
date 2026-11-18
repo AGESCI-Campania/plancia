@@ -42,6 +42,24 @@ export function righeLog(stato: StatoAggiornamento | null): string[] {
   return testo ? testo.split('\n') : []
 }
 
+/**
+ * Attende che l'nginx serva di nuovo la SPA prima di ricaricarla: a fine aggiornamento il
+ * compose ricrea anche l'nginx (immagine nuova) e un ricaricamento in quel momento finirebbe
+ * sull'errore di Caddy. Dopo `massimoMs` si ricarica comunque.
+ */
+export async function attendiSpa(intervalloMs = 2000, massimoMs = 300_000): Promise<void> {
+  const fine = Date.now() + massimoMs
+  while (Date.now() < fine) {
+    try {
+      const risposta = await fetch('/index.html', { cache: 'no-store' })
+      if (risposta.ok) return
+    } catch {
+      // nginx non ancora in ascolto: si riprova
+    }
+    await new Promise((fatto) => setTimeout(fatto, intervalloMs))
+  }
+}
+
 export interface OpzioniMonitoraggio {
   intervalloMs?: number
   /** Chiamata quando l'aggiornamento è finito (con la fase finale). */

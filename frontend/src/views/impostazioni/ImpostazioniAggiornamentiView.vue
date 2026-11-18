@@ -13,6 +13,7 @@ import StatoCaricamento from '@/components/StatoCaricamento.vue'
 import type { Aggiornamenti } from '@/components/impostazioni/tipi'
 import { conferma } from '@/composables/conferma'
 import {
+  attendiSpa,
   righeLog,
   useMonitoraggioAggiornamento,
   type Fase,
@@ -49,7 +50,7 @@ const monitor = useMonitoraggioAggiornamento({
         ricaricoTra.value--
         if (ricaricoTra.value <= 0) {
           clearInterval(conto)
-          window.location.reload()
+          void attendiSpa().then(() => window.location.reload())
         }
       }, 1000)
     } else {

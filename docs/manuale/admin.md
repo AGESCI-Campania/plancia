@@ -58,7 +58,8 @@ link al manuale e quelli alle pagine legali compaiono da soli.
 - **Backend email standard** (email di sistema: reset password, verifica, notifiche singole) e
   **Backend invii massivi** (inviti in blocco): SMTP o provider transazionale.
 - **Backend SMTP**: host, porta, TLS, utente e password; in alternativa **Gmail OAuth2**
-  (**Collega Gmail** / **Scollega**, vedi sotto).
+  (**Collega Gmail** / **Scollega**, vedi sotto). Se il relay SMTP rifiuta il nome con cui
+  Plancia si presenta (EHLO), il nome del server va nella variabile `EMAIL_EHLO` del `.env`.
 - **Backend provider transazionale** (Brevo, Mailgun…): provider, API key, webhook secret e
   l'URL del webhook da configurare nel provider (serve a tracciare consegne e rimbalzi).
 - **Salva posta elettronica**, poi **Test SMTP** / **Test provider transazionale** inviano una mail
@@ -249,7 +250,7 @@ Quando c'è una versione nuova:
    (backup, costruzione e riavvio); ti viene chiesto di confermare la tua identità;
 2. la pagina segue l'avanzamento (fasi, percentuale e **Log dell'aggiornamento**), anche durante
    il riavvio del server, quando Plancia per qualche istante non risponde;
-3. a fine aggiornamento l'app si ricarica da sola. Se qualcosa va storto il server torna alla
+3. a fine aggiornamento l'app si ricarica da sola, appena il server serve di nuovo le pagine. Se qualcosa va storto il server torna alla
    versione precedente; l'Admin riceve comunque un'email con l'esito e il log completo resta sul
    server in `aggiornamenti/log/`.
 

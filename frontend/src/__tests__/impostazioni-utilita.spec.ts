@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { ErroreApi } from '@/api/http'
-import { erroreDiRiavvio, faseDa, righeLog, type StatoAggiornamento } from '@/composables/impostazioni-aggiornamento'
+import { attendiSpa, erroreDiRiavvio, faseDa, righeLog, type StatoAggiornamento } from '@/composables/impostazioni-aggiornamento'
 import { dimensioneLeggibile, inserisciInTesto, richiedeSorgente, segnaposto, sposta } from '@/composables/impostazioni-editor'
 import { markdownSicuro } from '@/composables/impostazioni-markdown'
 import { tipoRiautenticazione } from '@/composables/riautenticazione'
@@ -101,6 +101,27 @@ describe('monitoraggio aggiornamento', () => {
     expect(righeLog(stato({ stato: { log: ['uno', 'due'] } }))).toEqual(['uno', 'due'])
     expect(righeLog(stato({ esito: 'in_corso' }))).toEqual(['a', 'b'])
     expect(righeLog(null)).toEqual([])
+  })
+})
+
+describe('attesa della SPA dopo l\'aggiornamento', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('riprova finché nginx non serve index.html', async () => {
+    const fetch = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError('rete'))
+      .mockResolvedValueOnce(new Response('', { status: 502 }))
+      .mockResolvedValueOnce(new Response('<html>', { status: 200 }))
+    vi.stubGlobal('fetch', fetch)
+    await attendiSpa(1, 10_000)
+    expect(fetch).toHaveBeenCalledTimes(3)
+    expect(fetch).toHaveBeenCalledWith('/index.html', { cache: 'no-store' })
+  })
+
+  it('dopo il tempo massimo smette di aspettare', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('', { status: 502 })))
+    await expect(attendiSpa(1, 20)).resolves.toBeUndefined()
   })
 })
 

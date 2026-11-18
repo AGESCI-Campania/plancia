@@ -123,6 +123,26 @@ def _get_gmail_access_token(creds) -> str:
     return creds.access_token
 
 
+class SmtpEhloBackend(SmtpBackend):
+    """Backend SMTP che si presenta con `settings.SMTP_EHLO` (variabile `EMAIL_EHLO`).
+
+    Il backend di Django usa `socket.getfqdn()`, che nel container è il suo ID: i relay SMTP
+    senza PTR configurabile (es. smtp-relay.gmail.com) possono rifiutarlo.
+    """
+
+    @property
+    def connection_class(self):
+        classe = super().connection_class
+        nome = settings.SMTP_EHLO
+        if not nome:
+            return classe
+
+        def connetti(*args, **kwargs):
+            return classe(*args, **{**kwargs, "local_hostname": nome})
+
+        return connetti
+
+
 class GmailOAuth2Backend(SmtpBackend):
     """Backend SMTP Gmail con autenticazione XOAUTH2 (OAuth2).
 
@@ -149,7 +169,9 @@ class GmailOAuth2Backend(SmtpBackend):
         access_token = _get_gmail_access_token(creds)
 
         try:
-            conn = smtplib.SMTP("smtp.gmail.com", 587, timeout=self.timeout)
+            conn = smtplib.SMTP(
+                "smtp.gmail.com", 587, settings.SMTP_EHLO or None, timeout=self.timeout
+            )
             conn.ehlo()
             conn.starttls()
             conn.ehlo()
@@ -177,7 +199,7 @@ def _smtp_backend(imp, fail_silently: bool = False) -> BaseEmailBackend:
     if imp.smtp_use_gmail_oauth:
         return GmailOAuth2Backend(alias=_ALIAS_INTERNO, fail_silently=fail_silently)
     riserva = settings.SMTP_RISERVA
-    return SmtpBackend(
+    return SmtpEhloBackend(
         alias=_ALIAS_INTERNO,
         host=imp.smtp_host or riserva["host"],
         port=imp.smtp_port or riserva["port"],

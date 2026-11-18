@@ -330,6 +330,8 @@ Ordine in `MIDDLEWARE`: entrambi **dopo** `CorsMiddleware` e **prima** di `Sessi
   Inviare con `msg.send(using="standard")` o `mailers["massivo"]`; **mai** `connection=`,
   `fail_silently=` né impostazioni `EMAIL_*` (deprecate; con `MAILERS` definito sono errori).
   SMTP di riserva in `settings.SMTP_RISERVA`, modalità simulata in `EMAIL_SIMULATO_DIR`.
+  Nome EHLO da `EMAIL_EHLO` (`settings.SMTP_EHLO`, backend `SmtpEhloBackend` e Gmail OAuth):
+  serve con i relay che rifiutano il nome del container (Aruba non permette di impostare il PTR).
   I backend costruiti in `email_backends.py` ricevono sempre `alias=`.
 - **Container non root**: utente `plancia` con uid/gid di `agesci` (`APP_UID`/`APP_GID`,
   esportati da `scripts/_plancia.sh`, build args nel compose).
@@ -487,7 +489,10 @@ niente `{% extends %}`, niente DB: `templates/403.html`, `404.html`, `500.html`,
 `403_csrf.html`, `403_mfa.html`, `siteconfig/manutenzione.html`, stile di
 `frontend/public/errore-servizio.html`); su `/api/` e `/_allauth/` JSON `{"detail": …}`.
 - **404**: notifica agli ADMINS via `mail_admins()`. **500**: email da `AdminEmailHandler`
-  (`LOGGING["loggers"]["django.request"]`). **CSRF**: `CSRF_FAILURE_VIEW`.
+  (`LOGGING["loggers"]["django.request"]`), senza i 503 della manutenzione (filtro
+  `config.log.non_manutenzione`); il logger `django` è ridefinito senza gestori, altrimenti il
+  `mail_admins` della configurazione di default di Django manda email doppie e anche i 503
+  (test in `apps/siteconfig/tests/test_log.py`). **CSRF**: `CSRF_FAILURE_VIEW`.
 - **CSP** (`config/settings/prod.py`, `SECURE_CSP` + `ContentSecurityPolicyMiddleware`): vale per
   le risposte di Django (admin, errori, callback, API); la CSP della SPA la imposta nginx.
 - **Configurazione admin**: variabile d'ambiente `ADMIN_EMAILS` (lista separata da virgola).

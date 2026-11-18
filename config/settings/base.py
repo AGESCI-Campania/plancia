@@ -374,6 +374,9 @@ SMTP_RISERVA = {
     "username": env.str("EMAIL_HOST_USER", default=""),
     "password": env.str("EMAIL_HOST_PASSWORD", default=""),
 }
+# Nome con cui Plancia si presenta al server SMTP (EHLO); vuoto = nome del container.
+# Serve con i relay che rifiutano un EHLO che non sia un nome di dominio completo.
+SMTP_EHLO = env.str("EMAIL_EHLO", default="")
 
 # Cartella dove la modalita' "simulato" scrive i messaggi (un file per invio).
 LOG_DIR = BASE_DIR / "logs"
@@ -405,6 +408,12 @@ LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {"std": {"format": "%(asctime)s %(levelname)s %(name)s %(message)s"}},
+    "filters": {
+        "non_manutenzione": {
+            "()": "django.utils.log.CallbackFilter",
+            "callback": "ext://config.log.non_manutenzione",
+        }
+    },
     "handlers": {
         "console": {"class": "logging.StreamHandler", "formatter": "std"},
         "file": {
@@ -414,16 +423,21 @@ LOGGING = {
             "backupCount": 5,
             "formatter": "std",
         },
-        # Invia email agli ADMINS per ogni errore 500 (livello ERROR su django.request).
-        # fail_silently=True evita eccezioni secondarie se l'email non è configurata.
+        # Invia email agli ADMINS per ogni errore 500 (livello ERROR su django.request),
+        # tranne i 503 della manutenzione.
         "mail_admins": {
             "level": "ERROR",
             "class": "django.utils.log.AdminEmailHandler",
             "include_html": True,
+            "filters": ["non_manutenzione"],
         },
     },
     "root": {"handlers": ["console", "file"], "level": "INFO"},
     "loggers": {
+        # Va ridefinito: la configurazione di default di Django gli lascia un proprio
+        # mail_admins senza filtro, a cui risalgono gli errori di django.request (email
+        # doppie, e quelle della manutenzione inviate comunque). Così va solo a root.
+        "django": {"handlers": [], "level": "INFO", "propagate": True},
         "django.request": {
             "handlers": ["mail_admins"],
             "level": "ERROR",

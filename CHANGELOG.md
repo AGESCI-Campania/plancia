@@ -4,6 +4,25 @@ Una sezione per release: `## X.Y.Z — AAAA-MM-GG`, dalla più recente. `scripts
 mostra le sezioni tra la versione installata e quella nuova; le note della GitHub Release si
 copiano da qui.
 
+## 3.0.6 — 2026-11-18
+
+- **Nome del server per il relay SMTP**: nuova variabile `EMAIL_EHLO` (in `.env.template`, può
+  restare vuota), il nome con cui Plancia si presenta al server SMTP al posto di quello del
+  container. Serve con i relay che lo rifiutano quando il PTR dell'IP non si può impostare (server
+  Aruba); es. `EMAIL_EHLO=plancia.agescicampania.net`. Vale per l'SMTP di Impostazioni, Gmail OAuth2
+  e il test invio. Guida: `docs/guide/email_provider.md`.
+- **Niente email agli amministratori per i 503 della manutenzione**: durante un aggiornamento ogni
+  richiesta all'API (la SPA riprova di continuo) mandava una email. Il logger `django` della
+  configurazione di default di Django aveva un proprio invio senza filtro: ora i 503 restano solo
+  nel log e gli altri errori non arrivano più doppi.
+- **Ricaricamento a fine aggiornamento dal web**: la pagina Aggiornamenti aspetta che il server
+  serva di nuovo la SPA prima di ricaricarla, invece di finire sull'errore di Caddy mentre l'nginx
+  riparte.
+
+Server: aggiungere `EMAIL_EHLO` al `.env` (anche vuota: `aggiorna.sh` si ferma finché manca).
+Le email dei 503 possono arrivare ancora durante questo aggiornamento (gira la versione
+precedente); dal successivo no.
+
 ## 3.0.5 — 2026-11-17
 
 - **Aggiornamento non riuscito con il database cambiato**: se la versione nuova migra il database

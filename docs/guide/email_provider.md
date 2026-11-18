@@ -45,6 +45,17 @@ Seleziona **SMTP** come backend e compila i campi:
 | SMTP password | Password o App Password |
 | Usa TLS | Abilitato per STARTTLS |
 
+**Nome del server (EHLO)**: Plancia si presenta al server SMTP con il nome del container, che
+alcuni relay (es. `smtp-relay.gmail.com`) rifiutano se non è un nome di dominio completo che
+corrisponde al PTR dell'IP. Dove il PTR non si può impostare (server Aruba) si indica il nome nel
+`.env` del server e si riavvia lo stack:
+
+```bash
+EMAIL_EHLO=plancia.agescicampania.net
+```
+
+Vale per l'SMTP classico, per Gmail OAuth2 e per il test invio; vuoto = nome del container.
+
 ### Gmail OAuth2 SMTP (consigliato per Gmail)
 
 Google richiede OAuth2 per l'accesso SMTP a Gmail senza App Password. Plancia supporta
