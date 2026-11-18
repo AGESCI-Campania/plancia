@@ -70,8 +70,10 @@ abbiano fatto almeno un login SSO riuscito. Non disattivarlo autonomamente.
 **MFA**: la verifica Sestante. Plancia non la richiede a chi è entrato via SSO **in questa
 sessione**: il criterio è `sessione_da_sestante(request)`, cioè
 `{"method": "socialaccount", "provider": "sestante"}` in
-`request.session["account_authentication_methods"]`. Lo usano sia `PlanciaMFAAdapter.is_mfa_enabled`
-(durante il login) sia `MFAEnforcementMiddleware` (attivazione TOTP forzata). **Non** usare
+`request.session["account_authentication_methods"]`. Lo usano `PlanciaMFAAdapter.is_mfa_enabled`
+(durante il login) e la regola unica `adapters.mfa_da_configurare`, applicata da
+`apps/api/auth.py` (403 `mfa_da_configurare` sull'API, tranne `/api/v1/me…`) e da
+`MFAEnforcementMiddleware` (403 `403_mfa.html` sui percorsi Django). **Non** usare
 l'esistenza di un `SocialAccount` collegato: un utente collegato che entra con la password
 locale deve restare soggetto alla MFA di Plancia.
 

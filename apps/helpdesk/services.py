@@ -1,7 +1,6 @@
 """Regole dell'helpdesk: chi vede quali ticket e chi può fare cosa. Vedi docs sez. 13.
 
-Usate sia dalle viste web (`apps/helpdesk/views.py`) sia dal router API
-`apps/api/routers/helpdesk.py`.
+Usate dal router API `apps/api/routers/helpdesk.py`.
 """
 from __future__ import annotations
 

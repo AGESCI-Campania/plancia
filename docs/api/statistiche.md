@@ -1,7 +1,8 @@
 # API Fase 2 — Statistiche
 
-Router `apps/api/routers/statistiche.py`, calcoli in `apps/stats/services.py` (condivisi con
-`apps/stats/views.py`). Ruoli: **Admin, Segreteria, Incaricati EG**; gli altri 403, anonimo 401.
+Router `apps/api/routers/statistiche.py`, calcoli in `apps/stats/services.py`. Ruoli: **Admin,
+Segreteria, Incaricati EG** (anche la voce di menu, `puo_vedere_statistiche`); gli altri 403,
+anonimo 401.
 
 | Metodo | Percorso | Ruoli | Descrizione |
 |---|---|---|---|

@@ -25,9 +25,11 @@ esclusività Capo Squadriglia, `can_hijack`), `apps/org/services.py` (ricerca so
 | POST | `/me/impersonazione/termina` | utente impersonato | Come `hijack:release` (segnale `hijack_ended`); risponde come `/me` dell'operatore. Solo cookie di sessione |
 
 Flag `menu`: `puo_vedere_diari`, `puo_gestire_edizioni`, `puo_vedere_utenti`, `puo_gestire_inviti`,
-`puo_gestire_inviti_crp`, `puo_importare`, `puo_vedere_statistiche` (Admin, Incaricato EG),
+`puo_gestire_inviti_crp`, `puo_importare`, `puo_vedere_statistiche` (staff),
 `puo_vedere_impostazioni` (Admin), `puo_vedere_helpdesk`, `puo_gestire_helpdesk` (staff),
-`puo_usare_admin_django` (Admin). Servono solo all'interfaccia.
+`puo_usare_admin_django` (Admin), `puo_usare_flower` e `puo_usare_mailpit` (Admin, solo se il
+profilo compose `flower`/`mailpit` è attivo: `COMPOSE_PROFILES` nel `.env` →
+`settings.FLOWER_ATTIVO`/`MAILPIT_ATTIVO`). Servono solo all'interfaccia.
 
 ## Gestione utenti (`/utenti`)
 
@@ -48,4 +50,5 @@ Flag `menu`: `puo_vedere_diari`, `puo_gestire_edizioni`, `puo_vedere_utenti`, `p
 
 | Metodo | Percorso | Ruoli | Descrizione |
 |---|---|---|---|
+| GET | `/org/albero` | autenticato | Albero organizzativo completo: zone → `gruppi` → `reparti` → `squadriglie`, ognuno con `id` e `nome` (nessun dato personale) |
 | GET | `/org/soci` | staff; Capo Reparto (solo ragazzi) | Autocompletamento Socio, max 20: `q` (nome, cognome, zona, gruppo, inizio codice), `categoria`, `ruolo` (ruolo attivo dell'utente collegato). Ogni voce: `id`, `user_pk`, `codice_socio`, `categoria`, `nome`, `cognome`, `gruppo`, `zona`, `label` |

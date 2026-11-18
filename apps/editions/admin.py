@@ -34,7 +34,7 @@ class EdizioneAdmin(admin.ModelAdmin):
         }),
         ("Timestamp", {"fields": ("creato_at", "aggiornato_at"), "classes": ("collapse",)}),
     )
-    actions = ["apri_edizioni", "avvia_valutazione", "chiudi_edizioni"]
+    actions = ["apri_edizioni", "avvia_valutazione_edizioni", "chiudi_edizioni"]
 
     @admin.display(description="diari")
     def num_diari(self, obj):

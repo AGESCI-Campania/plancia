@@ -196,18 +196,24 @@ class AxesSettingsSyncMiddleware:
 
 class MaintenanceModeMiddleware:
     """Se Impostazioni.manutenzione e' attiva, mostra una pagina di cortesia
-    a tutti TRANNE gli amministratori. Vedi docs sez. 15.
+    a tutti TRANNE gli amministratori (ruolo attivo Admin o superuser). Vedi docs sez. 15.
+
+    Il login headless (`/_allauth/`) resta aperto, altrimenti un Admin non potrebbe entrare
+    dalla SPA: chi non è Admin, una volta entrato, riceve comunque 503 su `/api/v1/`.
     """
 
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
+        from apps.accounts.models import Ruolo
         from apps.siteconfig.models import Impostazioni
 
         imp = Impostazioni.get()
         user = getattr(request, "user", None)
-        is_admin = bool(user and user.is_authenticated and user.is_superuser)
+        is_admin = bool(
+            user and user.is_authenticated and (user.is_superuser or user.ruolo == Ruolo.ADMIN)
+        )
         path = request.path_info
         is_api = any(path.startswith(p) for p in _API_PREFIXES)
         # admin, login e healthcheck bypassano in silenzio; API ricevono 503 JSON invece di HTML
@@ -216,6 +222,7 @@ class MaintenanceModeMiddleware:
         # fa polling dello stato mentre aggiorna.sh tiene attiva la manutenzione) restano raggiungibili.
         bypass = (
             is_admin
+            or path.startswith("/_allauth/")
             or path.startswith("/admin")
             or path.startswith("/accounts")
             or path == "/healthz/"

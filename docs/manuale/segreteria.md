@@ -1,15 +1,19 @@
 # Guida — Segreteria
 
 La Segreteria gestisce le edizioni, gli utenti e le nomine, gli inviti, gli import delle
-anagrafiche, i cambi di referente e l'helpdesk. Le stesse funzioni di gestione sono disponibili
-agli Incaricati EG e agli Admin; le **Impostazioni** della piattaforma sono riservate agli Admin.
+anagrafiche, i cambi di referente e l'helpdesk, e consulta le **Statistiche**. Le stesse funzioni
+di gestione sono disponibili agli Incaricati EG (tranne **Impersona utente**) e agli Admin; la
+pubblicazione degli esiti spetta a Incaricati EG e Admin, le **Impostazioni** della piattaforma
+solo agli Admin.
 
 > La Segreteria deve usare la **verifica in due passaggi**: al primo accesso Plancia porta alla
 > pagina *Password e sicurezza* per configurarla (salvo accesso con SSO AGESCI Campania, o se
 > l'Admin l'ha resa facoltativa).
 
 Le voci di gestione sono nella sezione **Gestione** del menu laterale: **Edizioni**, **Utenti**,
-**Inviti**, **Import**.
+**Inviti**, **Import**, **Statistiche** (descritte nella
+[guida dell'Incaricato EG](incaricato.md#statistiche); il pulsante per pubblicare tutti gli esiti
+compare solo a Incaricati EG e Admin).
 
 ---
 
@@ -44,7 +48,8 @@ La barra in alto contiene:
 - **Esiti Excel**: il file con gli esiti di tutti i diari dell'edizione;
 - **Esporta diari** → *Excel (xlsx)*, *Calc (ods)* o *CSV*: un foglio unico con il contenuto di
   tutti i moduli. Con molti diari il file viene preparato in background e arriva per email;
-- **Pubblica esiti** (vedi la [guida dell'Incaricato EG](incaricato.md#pubblicare-gli-esiti));
+- **Pubblica esiti**, solo per Incaricati EG e Admin (vedi la
+  [guida dell'Incaricato EG](incaricato.md#pubblicare-gli-esiti));
 - il pulsante del prossimo stato: **Apri edizione** (da bozza: Capi Squadriglia e Capi Reparto
   possono compilare), **Avvia valutazione**, **Chiudi edizione** (non si può annullare).
 

@@ -1,10 +1,9 @@
 # apps/evaluations/actions.py
 """Funzioni di servizio per le azioni FSM sul Diario e la Valutazione.
 
-Unica fonte di verità per permessi e logica di dominio — usata sia dalle
-view web sia dai router API. Le view web mantengono RuoloRequiredMixin
-per il controllo HTTP grossolano; queste funzioni aggiungono il controllo
-fine-grained (es. "il CSQ deve essere il CSQ di questo specifico diario").
+Unica fonte di verità per permessi e logica di dominio — usata dai router API, che
+fanno il controllo grossolano con `richiedi_ruolo`; queste funzioni aggiungono il
+controllo fine-grained (es. "il CSQ deve essere il CSQ di questo specifico diario").
 """
 from __future__ import annotations
 
@@ -92,15 +91,21 @@ def riapri(diario: Diario, user) -> None:
 # ---------------------------------------------------------------------------
 
 def assegna_pgv(diario: Diario, pgv_user, user) -> tuple[bool, Valutazione]:
-    """Assegna un membro PGV a un diario. Ritorna (creata, valutazione)."""
+    """Assegna un membro PGV a un diario. Ritorna (creata, valutazione).
+
+    Un diario solo inviato passa IN_VALUTAZIONE: la Pattuglia GV può proporre solo da lì.
+    """
     if not (user.is_superuser or user.is_staff_plancia):
         raise PermessoNegato("Accesso non consentito.")
     if pgv_user.ruolo != Ruolo.PGV:
         raise StatoNonValido("L'utente indicato non è un membro della Pattuglia GV.")
-    val, _ = Valutazione.objects.get_or_create(diario=diario)
-    _, created = AssegnazionePGV.objects.get_or_create(
-        valutazione=val, pgv=pgv_user, defaults={"assegnato_da": user}
-    )
+    with _transizione():
+        if diario.stato == StatoDiario.INVIATO:
+            diario.avvia_valutazione()
+        val, _ = Valutazione.objects.get_or_create(diario=diario)
+        _, created = AssegnazionePGV.objects.get_or_create(
+            valutazione=val, pgv=pgv_user, defaults={"assegnato_da": user}
+        )
     return created, val
 
 

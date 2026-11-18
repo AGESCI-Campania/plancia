@@ -1,7 +1,6 @@
 # API Fase 2 — Helpdesk
 
-Router `apps/api/routers/helpdesk.py`, regole in `apps/helpdesk/services.py` (condivise con
-`apps/helpdesk/views.py`). Ogni utente autenticato apre ticket e vede **solo i propri**;
+Router `apps/api/routers/helpdesk.py`, regole in `apps/helpdesk/services.py`. Ogni utente autenticato apre ticket e vede **solo i propri**;
 **Admin, Segreteria e Incaricati EG** (staff) vedono e gestiscono tutti i ticket. Anonimo 401.
 
 | Metodo | Percorso | Ruoli | Descrizione |

@@ -5,7 +5,7 @@ il superuser passa sempre). Errori: 401 non autenticato, 403 permesso negato, 40
 422 dati non validi (`errori` per campo) o azione non consentita. Le scritture con cookie di
 sessione richiedono il token CSRF (`X-CSRFToken`), come il resto dell'API.
 
-Logica condivisa con le viste web: `apps/notifications/service.py` e `apps/siteconfig/services.py`.
+Logica nei servizi: `apps/notifications/service.py` e `apps/siteconfig/services.py` (validazione con i form di `apps/siteconfig/forms.py`).
 
 ## Notifiche — `/notifiche`
 
@@ -29,11 +29,11 @@ Logica condivisa con le viste web: `apps/notifications/service.py` e `apps/sitec
 | GET | `/impostazioni` | Staff | Tutte le sezioni (identità, footer con link, email, sicurezza, allegati, diagnostica) + `scelte` per i campi a scelta. Segreti mai restituiti: `smtp_password_impostato`, `email_provider_api_key_impostato`, `email_provider_webhook_secret_impostato`; `webhook_url` da configurare nel provider |
 | PATCH | `/impostazioni/identita` | Staff | `titolo`, `sottotitolo` |
 | PATCH | `/impostazioni/footer` | Staff | `footer_testo` (HTML) |
-| PATCH | `/impostazioni/email` | Staff | Campi della sezione Posta elettronica; segreti vuoti/assenti = invariati; con Gmail OAuth attivo i campi SMTP manuali non vengono modificati. Stesse validazioni del form web |
+| PATCH | `/impostazioni/email` | Staff | Campi della sezione Posta elettronica; segreti vuoti/assenti = invariati; con Gmail OAuth attivo i campi SMTP manuali non vengono modificati. Validato con il form della sezione |
 | PATCH | `/impostazioni/sicurezza` | Staff | MFA ruoli estesi, parametri axes |
 | PATCH | `/impostazioni/allegati` | Staff | `allegati_max_px` |
-| PATCH | `/impostazioni/diagnostica` | Staff | `manutenzione`, `debug_toolbar`, `debug_diagnostico` |
-| GET / PUT | `/impostazioni/manutenzione` | Staff | Stato / `{"attiva": bool}` (non esiste un campo "messaggio" in `Impostazioni`) |
+| PATCH | `/impostazioni/diagnostica` | Staff | `manutenzione`, `manutenzione_messaggio`, `debug_toolbar`, `debug_diagnostico` |
+| GET / PUT | `/impostazioni/manutenzione` | Staff | Stato `{"manutenzione", "messaggio"}` / `{"attiva": bool, "messaggio"?: str}` (`Impostazioni.manutenzione_messaggio`; vuoto = testo predefinito). In manutenzione `/api/v1/` risponde 503 a chi non è Admin (vedi [overview](overview.md#manutenzione)) |
 | GET / POST | `/impostazioni/footer/link` | Staff | Elenco in ordine / crea (max 4; `tipo` dedotto `sito_web` se manca) |
 | PATCH / DELETE | `/impostazioni/footer/link/{link_id}` | Staff | Modifica / elimina |
 | POST | `/impostazioni/footer/link/ordina` | Staff | `{"ids": [...]}`: tutti gli id nel nuovo ordine |
@@ -65,6 +65,4 @@ Logica condivisa con le viste web: `apps/notifications/service.py` e `apps/sitec
 ### Callback Gmail SMTP OAuth
 
 La callback resta la vista Django `/impostazioni/gmail-smtp/oauth/callback/` (registrata presso
-Google). Se il flusso è partito dall'API rimanda alla SPA:
-`/impostazioni/email?esito=ok|errore&messaggio=...`; se è partito dalla vecchia pagina Django
-torna a quella (messaggi flash), finché le viste web esistono.
+Google) e rimanda sempre alla SPA: `/impostazioni/email?esito=ok|errore&messaggio=...`.

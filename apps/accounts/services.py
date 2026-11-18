@@ -360,7 +360,7 @@ def flag_menu(user: User) -> dict[str, bool]:
         "puo_gestire_inviti": staff,
         "puo_gestire_inviti_crp": user.ruolo == Ruolo.CRP,
         "puo_importare": staff,
-        "puo_vedere_statistiche": admin or user.ruolo == Ruolo.INCARICATO_EG,
+        "puo_vedere_statistiche": staff,
         "puo_vedere_impostazioni": admin,
         "puo_vedere_helpdesk": True,
         "puo_gestire_helpdesk": staff,

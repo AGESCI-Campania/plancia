@@ -1,7 +1,7 @@
 # apps/api/routers/notifiche.py
 """Inviti: gestione (staff), inviti del Capo Reparto, reinvio, attivazione account (pubblica).
 
-La logica sta in `apps.notifications.service` (condivisa con le viste web).
+La logica sta in `apps.notifications.service`.
 """
 
 import uuid

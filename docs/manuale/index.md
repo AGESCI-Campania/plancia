@@ -63,8 +63,9 @@ Alle imprese e alla missione si allegano le **foto**.
 2. Il diario passa in **Relazione finale**: il **Capo Reparto** compila il modulo 6 e preme
    **Invia il diario allo staff**.
 3. Il diario è **Inviato**: gli Incaricati EG lo valutano, direttamente o con la Pattuglia GV,
-   e pubblicano l'esito. Prima della pubblicazione l'esito non è visibile a nessuno fuori dallo
-   staff; il Capo Squadriglia non vede mai né la Relazione finale né la valutazione.
+   e pubblicano l'esito. Prima della pubblicazione l'esito lo vedono solo lo staff e la Pattuglia
+   GV a cui il diario è assegnato; il Capo Squadriglia non vede mai né la Relazione finale né la
+   valutazione.
 
 ---
 

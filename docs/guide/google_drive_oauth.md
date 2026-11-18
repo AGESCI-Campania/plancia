@@ -1,17 +1,18 @@
 # Guida: Configurazione Google OAuth per Google Drive — Plancia
 
-Stack: **google-auth-oauthlib** · scope `drive` · modello `DriveCredenziali` · view `DriveOAuthInitView` / `DriveOAuthCallbackView`
+Stack: **google-auth-oauthlib** · scope `drive` · modello `DriveCredenziali` · avvio `POST /api/v1/drive/oauth` · callback `DriveOAuthCallbackView`
 
 ---
 
 ## 1. Funzionamento
 
 ```
-Admin → /drive/oauth/init/?edizione=<pk>
+SPA (pagina dell'edizione o Impostazioni → Sistema → Google Drive)
+     → POST /api/v1/drive/oauth (PKCE e state in sessione, restituisce l'URL Google)
      → Google OAuth consent screen
      → /drive/oauth/callback/ (exchange code → access+refresh token)
-     → DriveCredenziali salvate in DB
-     → redirect all'edizione
+     → DriveCredenziali salvate in DB (una per account Google)
+     → ritorno alla SPA: /edizioni/<pk>?drive=ok|errore oppure /impostazioni/drive?esito=ok|errore
 ```
 
 Il token viene usato da `apps.storage_drive.service` per:
@@ -40,7 +41,7 @@ In entrambi i casi il procedimento è identico dal passo 3 in poi.
 2. **API e servizi** → **Libreria**.
 3. Cerca e abilita:
    - **Google Drive API** — obbligatoria per creare cartelle e caricare file.
-   - **People API** o **Google+ API** — necessaria solo se non l'hai già abilitata per il social login (serve per recuperare l'email dell'account durante il flusso OAuth).
+   - Per l'email dell'account Plancia usa l'endpoint `oauth2 v2 userinfo` con lo scope `userinfo.email`: non serve abilitare altre API.
 
 ---
 
@@ -140,12 +141,19 @@ Il default `GOOGLE_OAUTH_REDIRECT_URI` in `config/settings/base.py` è già `htt
 
 ## 8. Come autorizzare Drive da UI (flusso operativo)
 
-1. Accedi con un account **Admin** o **Staff** (i soli che hanno accesso a `StaffPlanciaRequiredMixin`).
-2. Vai in **Gestione → Elenco edizioni** → apri l'edizione.
-3. Nella sezione Drive dell'edizione clicca **Autorizza Google Drive** (lancia `DriveOAuthInitView`).
+1. Accedi con un account dello staff (Admin, Segreteria o Incaricato EG: l'API usa `richiedi_staff`).
+2. Vai in **Gestione → Edizioni** → apri l'edizione.
+3. Nella sezione Google Drive dell'edizione clicca **Connetti account Google Drive** (o **Cambia
+   account Drive** se ce n'è già uno).
 4. Accedi con l'account Google che possiede (o ha accesso alla) cartella Drive del territorio.
 5. Accetta le autorizzazioni richieste (Drive + email).
-6. Vieni reindirizzato all'edizione. Da questo momento `DriveCredenziali` è salvato per l'edizione.
+6. Torni alla pagina dell'edizione. Le credenziali sono salvate **per account Google**
+   (`DriveCredenziali`, una per email) e l'edizione ricorda quale account usare
+   (`drive_oauth_account`): lo stesso account può servire più edizioni.
+
+In alternativa l'Admin collega un account da **Impostazioni → Sistema → Google Drive**
+(`/impostazioni/drive`), che mostra anche gli account già collegati; le cartelle si scelgono
+comunque dalla pagina dell'edizione.
 
 Il token include un **refresh token** (grazie a `access_type=offline` e `prompt=consent`): non scadrà a meno di non revocare l'accesso dal portale Google.
 
@@ -155,11 +163,14 @@ Il token include un **refresh token** (grazie a `access_type=offline` e `prompt=
 
 Google OAuth richiede HTTPS in produzione. Per dev su `localhost` (HTTP):
 
-- La variabile `OAUTHLIB_INSECURE_TRANSPORT=1` viene impostata automaticamente in `DriveOAuthCallbackView` (`os.environ.setdefault("OAUTHLIB_INSECURE_TRANSPORT", "1")`).  
-  Non servono modifiche manuali per il solo flusso Drive.
-- Se usi ngrok per HTTPS, puoi rimuovere quella riga o ignorarla (non crea problemi in produzione perché `setdefault` non sovrascrive se già impostata).
+- Con `DEBUG` attivo `completa_oauth_drive` (`apps/storage_drive/oauth.py`) imposta da sola
+  `OAUTHLIB_INSECURE_TRANSPORT=1` (con `setdefault`): non servono modifiche manuali. Lo stesso
+  vale per Gmail SMTP OAuth.
+- In produzione (`DEBUG` falso) non viene impostata: dietro Caddy la callback arriva in https
+  (`SECURE_PROXY_SSL_HEADER`).
 
-> **Non impostare `OAUTHLIB_INSECURE_TRANSPORT=1` in produzione** — Django non lo fa automaticamente, ma verifica che non sia presente nei tuoi script di avvio.
+> **Non impostare `OAUTHLIB_INSECURE_TRANSPORT=1` in produzione** — verifica che non sia presente
+> nel `.env` né negli script di avvio.
 
 ---
 
@@ -170,8 +181,11 @@ Da Google:
 - Cerca `Plancia` (o il nome app configurato) → **Rimuovi accesso**.
 
 Da Plancia:
-- Elimina il record `DriveCredenziali` dell'edizione da Admin → **Storage Drive → Drive credenziali**.
-- Al prossimo export il task Celery fallirà chiedendo di rieseguire l'autorizzazione.
+- Elimina le credenziali dell'account dall'admin Django → **Storage_Drive → Credenziali Drive**
+  (sola lettura: i token non si vedono, si può solo eliminare per scollegare l'account). Nella
+  stessa sezione **File Drive** elenca i file caricati.
+- Le edizioni che usavano quell'account lo mostrano come non più collegato: ricollegalo dalla
+  pagina dell'edizione.
 
 ---
 
@@ -201,5 +215,5 @@ Possono condividere lo stesso **client OAuth** (stesse credenziali GCP) o avere 
 | URI produzione nelle credenziali | — | ✓ |
 | `GOOGLE_OAUTH_CLIENT_ID` e `SECRET` nel `.env` | ✓ | ✓ |
 | `GOOGLE_OAUTH_REDIRECT_URI` produzione nel `.env` | — | ✓ |
-| Token autorizzato via UI (edizione) | per ogni edizione | per ogni edizione |
-| `OAUTHLIB_INSECURE_TRANSPORT` assente in prod | — | ✓ verifica |
+| Account collegato e scelto nell'edizione (UI) | per ogni edizione | per ogni edizione |
+| `OAUTHLIB_INSECURE_TRANSPORT` assente dal `.env` di prod | — | ✓ verifica |

@@ -3,7 +3,8 @@
 L'Incaricato EG guida la valutazione: valuta direttamente o coinvolge la Pattuglia GV, conferma o
 rigetta le proposte, può modificare qualunque esito fino alla pubblicazione e pubblica gli esiti
 ufficiali. Ha anche accesso alla gestione (edizioni, utenti, inviti, import: vedi la
-[guida della Segreteria](segreteria.md)) e alle **Statistiche**.
+[guida della Segreteria](segreteria.md), tranne **Impersona utente**, riservato a Segreteria e
+Admin) e alle **Statistiche**.
 
 > L'Incaricato EG deve usare la **verifica in due passaggi**: al primo accesso Plancia porta alla
 > pagina *Password e sicurezza* per configurarla (salvo accesso con SSO AGESCI Campania, o se
@@ -24,7 +25,8 @@ Diario inviato → Valutazione dell'Incaricato → Pubblicazione
 **Flusso con la Pattuglia GV**
 
 ```
-Diario inviato → Assegnazione → Proposta della Pattuglia GV (In revisione)
+Diario inviato → Assegnazione (il diario passa In valutazione)
+              → Proposta della Pattuglia GV (In revisione)
               → Conferma dell'Incaricato → Pubblicazione
 ```
 
@@ -47,8 +49,8 @@ La voce **Diari** apre l'elenco completo di tutte le squadriglie, con ricerca, f
 
 ## La pagina di valutazione
 
-Si apre dall'icona **Valutazione** nella tabella dei diari (home o pagina dell'edizione) oppure,
-quando la valutazione è già iniziata, da **Apri la valutazione** nel diario. A sinistra c'è lo
+Si apre dall'icona **Valutazione** nella tabella dei diari (home o pagina dell'edizione) oppure
+da **Apri la valutazione** nel diario, che compare appena il diario è inviato. A sinistra c'è lo
 **Stato valutazione** (stato del diario, esito, proposta della Pattuglia GV, note, chi ha valutato
 e confermato, pubblicazione); a destra le azioni possibili; in basso le **Assegnazioni
 Pattuglia GV**.
@@ -65,7 +67,8 @@ anche con il diario ancora *Inviato*: la valutazione si avvia da sola.
 
 Nel riquadro **Assegnazioni Pattuglia GV** cerca il membro per nome, cognome o gruppo, sceglilo e
 premi **Assegna**. Si possono assegnare più membri; ognuno vedrà il diario tra i propri *Diari
-assegnati*.
+assegnati*. Un diario ancora *Inviato* passa **In valutazione** alla prima assegnazione, così la
+Pattuglia può proporre l'esito.
 
 ### Confermare o rigettare una proposta
 

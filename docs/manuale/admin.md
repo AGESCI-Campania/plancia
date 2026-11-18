@@ -90,7 +90,9 @@ rinnova da solo.
 - **Allegati**: *Lato maggiore delle immagini (px)*; le foto caricate vengono ridotte a questa
   misura (JPEG qualità 85); nel PDF entrano a 480 px.
 - **Stato e diagnostica**: **Modalità manutenzione** con il messaggio da mostrare (solo gli Admin
-  possono usare Plancia; gli altri vedono il messaggio in cima alla pagina), **Debug toolbar**,
+  possono usare Plancia: chi ha il ruolo Admin attivo, anche da SSO, e i superuser; l'accesso
+  resta aperto a tutti, ma gli altri vedono il messaggio in cima alla pagina e non possono
+  lavorare), **Debug toolbar**,
   **Log diagnostico**; collegamenti ad Attività in background e Mailpit.
 - **Strumenti**: collegamenti a Cache PDF, Log export, Google Drive, Aggiornamenti del server e
   Import tracciati.

@@ -2,9 +2,9 @@
 """Impostazioni di piattaforma: sezioni del form, footer, pagine statiche, template email,
 email di test, Gmail SMTP OAuth, log export, cache PDF, progresso task, axes, manutenzione.
 
-Permessi come le viste web: Admin, Segreteria e Incaricati EG; eliminazione dei template
+Permessi: Admin, Segreteria e Incaricati EG; eliminazione dei template
 email e sblocco IP solo Admin. Lettura delle pagine statiche pubblica.
-La logica sta in `apps.siteconfig.services` (condivisa con le viste web).
+La logica sta in `apps.siteconfig.services` .
 """
 
 from typing import Any
@@ -180,7 +180,7 @@ def aggiorna_diagnostica(request, payload: DiagnosticaIn):
 
     richiedi_staff(request.auth)
     dati = payload.dict(exclude_unset=True)
-    # Il messaggio non è nel form della vista web (che altrimenti lo azzererebbe):
+    # Il messaggio non è nel form della sezione (che altrimenti lo azzererebbe):
     # si salva a parte, come fa il comando `manutenzione`.
     messaggio = dati.pop("manutenzione_messaggio", None)
     imp = services.aggiorna_sezione("diagnostica", dati)

@@ -171,7 +171,8 @@ config/      progetto Django (settings split, urls, celery, wsgi/asgi)
 apps/        app di dominio (accounts, org, editions, diaries, evaluations,
              notifications, storage_drive, exports, helpdesk, stats,
              siteconfig, imports, api)
-scripts/     installa.sh, aggiorna.sh, backup.sh (+ funzioni condivise _comune.sh, _plancia.sh)
+scripts/     installa.sh, aggiorna.sh, backup.sh, esegui-aggiornamento.sh
+             (+ funzioni condivise _comune.sh, _plancia.sh)
 deploy/      entrypoint del container, conf dell'nginx interno (SPA + proxy)
 frontend/    SPA Vue (Vite), PWA, Dockerfile dell'immagine nginx
 fixtures/    CSV sintetici per provare gli import (nessun dato reale)
@@ -210,31 +211,30 @@ Questo garantisce che ogni diario abbia sempre un Capo Reparto, anche prima dell
 **Gestione errori per record**: se un singolo record causa un errore DB (valore troppo lungo,
 violazione di unicità, ecc.) viene marcato `SCARTATA` nello storico con il messaggio di errore come
 nota — l'import **non si interrompe** e prosegue sui record successivi. I record scartati con il
-relativo messaggio di errore sono visibili nel dettaglio del log (`/import/<pk>/`) e scaricabili come
-CSV (`/import/<pk>/scarti.csv`).
+relativo messaggio di errore sono visibili nel dettaglio del log (`/import/<pk>`) e scaricabili come
+CSV (`GET /api/v1/importazioni/log/{id}/scarti.csv`, pulsante nella stessa pagina).
 
 **Creazione account durante import**: `import_squadriglie` crea automaticamente gli account (con
 password inutilizzabile) per Capo Squadriglia e Capo Reparto già presenti nel tracciato. Gli account
-vengono attivati tramite il flusso inviti (`/notifiche/inviti/`).
+vengono attivati tramite il flusso inviti (Gestione → Inviti, `/gestione/inviti`).
 
-**Box di avvio import**: le schede per lanciare i tre import (Co.Ca., Ragazzi, Squadriglie iscritte)
-si trovano nella pagina **`/import/`**, non più in `/impostazioni/`.
+**Avvio import**: le schede per lanciare i tre import (Co.Ca., Ragazzi, Squadriglie iscritte)
+si trovano nella pagina **`/import`** (Gestione → Import).
 
-## Impostazioni di piattaforma (solo Admin/Segreteria/IABR)
-Pagina `/impostazioni/` organizzata in sezioni:
+## Impostazioni di piattaforma (menu solo Admin)
+Pagina `/impostazioni` (menu *Sistema*) organizzata in schede:
 
-| Sezione | Contenuto |
+| Scheda | Contenuto |
 |---|---|
-| **Identità** | Titolo · Sottotitolo (visualizzati nella navbar) |
-| **Footer** | Testo rich text · Fino a 4 link tipizzati con etichetta opzionale · link Manuale fisso come ultimo elemento |
+| **Identità e footer** | Titolo · Sottotitolo · Testo del footer · Fino a 4 link tipizzati con etichetta opzionale · link Manuale fisso come ultimo elemento |
 | **Posta elettronica** | Nome mittente · Indirizzo from · Modalità email · Provider · API key · SMTP · Gmail OAuth2 · Test invio |
 | **Sicurezza** | MFA obbligatoria · Protezione brute-force axes · IP bloccati |
-| **Allegati** | Dimensione massima immagini upload (default 1024px) |
-| **Diagnostica** | Manutenzione · Debug toolbar · Link Flower/Mailpit |
-| **Strumenti** | Link Cache PDF (`/impostazioni/cache-pdf/`) · Log export (`/impostazioni/log-export/`) |
-| **Import tracciati** | Avvia import Co.Ca. / Ragazzi / Evento + link storico |
-| **Pagine legali** | Privacy Policy · Condizioni del Servizio · Carica testo predefinito |
+| **Sistema** | Dimensione massima delle immagini caricate (default 1024px) · Manutenzione · Debug · link a Flower/Mailpit (se attivi) · Strumenti: Cache PDF, Log export, Google Drive, Aggiornamenti, Import |
 | **Template email** | Elenco chiavi con stato (DB / file default) · Editor rich text |
+| **Pagine legali** | Privacy Policy · Condizioni del Servizio · Carica testo predefinito |
+
+Rate limiting dell'API e controllo della versione dell'app mobile si configurano dall'admin
+Django (*Impostazioni*), non dalla SPA.
 
 **Cache PDF** (`/impostazioni/cache-pdf`): lista PDF in cache per edizione, invalidazione singola/massiva,
 generazione massiva con task Celery (email aggiornamento ogni 10 diari; blocca PDF singoli durante la generazione).
@@ -252,8 +252,9 @@ di tracking va configurato nel pannello del provider con l'URL `/anymail/webhook
 Guida completa: [`docs/guide/email_provider.md`](docs/guide/email_provider.md).
 
 **Modalità Mailpit (debug)**: selezionare la modalità "Mailpit" per intercettare tutte le email
-senza inviarle ai destinatari reali. Richiede il profilo Docker `mailpit`. Le email intercettate
-sono visibili su `/mailadmin/` (solo Admin/staff).
+senza inviarle ai destinatari reali. Richiede il profilo compose `mailpit` (`COMPOSE_PROFILES`
+nel `.env`). Le email intercettate sono visibili su `/mailadmin/` (solo Admin, voce *Mailpit* nel
+menu *Sistema*).
 
 **Aggiornamenti** (`/impostazioni/aggiornamenti`, solo Admin): versione installata e ultima release
 su GitHub (controllo giornaliero), note di rilascio, pulsante "Aggiorna" con riautenticazione,

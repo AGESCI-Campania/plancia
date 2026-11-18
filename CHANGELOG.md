@@ -4,6 +4,25 @@ Una sezione per release: `## X.Y.Z — AAAA-MM-GG`, dalla più recente. `scripts
 mostra le sezioni tra la versione installata e quella nuova; le note della GitHub Release si
 copiano da qui.
 
+## 3.0.7 — 2026-11-18
+
+- **Proposte della Pattuglia GV**: assegnare un diario inviato a un membro della Pattuglia GV lo
+  porta *In valutazione*. Prima il diario restava *Inviato* e la Pattuglia non vedeva il riquadro
+  **Proponi valutazione**.
+- **Manutenzione**: durante la manutenzione usano Plancia gli Admin (anche per nomina o da
+  Sestante), non solo i superuser, e il login dalla SPA resta aperto (prima nessuno poteva entrare).
+- **Statistiche anche per la Segreteria**: la voce di menu ora compare a tutto lo staff, come già
+  consentiva l'API.
+- **Google OAuth (Drive e Gmail)**: il trasporto non https per la callback è ammesso solo in
+  sviluppo.
+- **Admin Django**: credenziali Drive e file caricati su Drive consultabili (le credenziali si
+  possono eliminare per scollegare un account); corrette le azioni *Avvia valutazione* delle
+  edizioni (non compariva) e *Invia diari* (non inviava nulla).
+- Testo di conferma di *Pubblica tutti gli esiti*: i Capi Squadriglia non vedono la valutazione.
+- **Documentazione** allineata a Plancia 3: guide tecniche (esempio Apple Sign In con `key` e
+  `secret` corretti, Drive, email), documentazione API (paginazione `limit`/`offset`, errori MFA e
+  di validazione, endpoint mancanti), manuale d'uso e README.
+
 ## 3.0.6 — 2026-11-18
 
 - **Nome del server per il relay SMTP**: nuova variabile `EMAIL_EHLO` (in `.env.template`, può

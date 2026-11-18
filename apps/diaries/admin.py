@@ -83,9 +83,9 @@ class DiarioAdmin(admin.ModelAdmin):
     def is_pubblicato(self, obj):
         return obj.pubblicato_at is not None
 
-    @admin.action(description="Invia diari (In compilazione → Inviato)")
+    @admin.action(description="Invia diari (Relazione finale → Inviato)")
     def invia_diari(self, request, queryset):
-        for d in queryset.filter(stato=StatoDiario.IN_COMPILAZIONE):
+        for d in queryset.filter(stato=StatoDiario.RELAZIONE_FINALE):
             with contextlib.suppress(ValueError):
                 d.invia()
 

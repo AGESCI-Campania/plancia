@@ -85,6 +85,17 @@ class TestManutenzione:
         assert client.get("/api/v1/sito").status_code == 200
         assert client.get("/healthz/").status_code == 200
 
+    def test_admin_per_ruolo_passa(self, client):
+        # Admin per nomina o da Sestante (non superuser): usa Plancia durante la manutenzione
+        client.force_login(self._utente(Ruolo.ADMIN))
+        assert client.get("/api/v1/me").status_code == 200
+        client.force_login(self._utente(Ruolo.SEGRETERIA))
+        assert client.get("/api/v1/me").status_code == 503
+
+    def test_login_headless_aperto(self, client):
+        # Senza il login dalla SPA nemmeno un Admin potrebbe entrare
+        assert client.get("/_allauth/browser/v1/config").status_code == 200
+
 
 @pytest.mark.django_db
 def test_csp_inviata_dal_middleware(client):

@@ -1,8 +1,7 @@
 # API Fase 2 — Importazioni
 
-Router `apps/api/routers/importazioni.py`, logica in `apps/imports/services.py` (condivisa con
-`apps/imports/views.py` e `siteconfig.views.LanciaImportView`). Ruoli: **Admin, Segreteria,
-Incaricati EG** (come le viste web); gli altri 403, anonimo 401.
+Router `apps/api/routers/importazioni.py`, logica in `apps/imports/services.py` (usata anche
+dai comandi `import_*`). Ruoli: **Admin, Segreteria, Incaricati EG**; gli altri 403, anonimo 401.
 
 | Metodo | Percorso | Ruoli | Descrizione |
 |---|---|---|---|
@@ -16,5 +15,4 @@ Incaricati EG** (come le viste web); gli altri 403, anonimo 401.
 
 Note: `coca`/`ragazzi`/`squadriglie` girano in Celery e scrivono un `LogImportazione`;
 `risposte_eg` invia l'esito per email agli Admin (nessun log). Il `task_id` è l'id Celery.
-La pagina "viewer" degli scarti (`ScartiCsvViewerView`) non serve alla SPA: scarica il CSV
-direttamente da `scarti.csv`.
+La SPA mostra gli scarti nella pagina `/import/{id}` e scarica il CSV da `scarti.csv`.

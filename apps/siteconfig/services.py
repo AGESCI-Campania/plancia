@@ -1,5 +1,5 @@
 # apps/siteconfig/services.py
-"""Logica delle Impostazioni condivisa da viste web e API (`apps/api/routers/impostazioni.py`).
+"""Logica delle Impostazioni usata dall'API (`apps/api/routers/impostazioni.py`).
 
 Sezioni del form, pagine statiche, template email, email di test, Gmail SMTP OAuth (PKCE),
 cache PDF e generazione massiva, sblocco IP (axes), progresso dei task Celery.
@@ -56,7 +56,7 @@ def salva_sezione(form: forms.ModelForm, sezione: str) -> Impostazioni:
 def aggiorna_sezione(sezione: str, dati: dict[str, Any]) -> Impostazioni:
     """Aggiornamento parziale di una sezione: i campi assenti restano invariati.
 
-    Usa lo stesso form della vista web (stessi controlli); i segreti vuoti o assenti
+    Valida con il form della sezione (`apps/siteconfig/forms.py`); i segreti vuoti o assenti
     mantengono il valore salvato. ValidationError con gli errori per campo.
     """
     from django.forms.models import model_to_dict
@@ -335,7 +335,8 @@ def completa_oauth_gmail(session, state_ricevuto: str | None, authorization_resp
     if not state or state != state_ricevuto:
         raise ValidationError("Sessione OAuth non valida. Riprova.")
 
-    os.environ.setdefault("OAUTHLIB_INSECURE_TRANSPORT", "1")
+    if settings.DEBUG:  # redirect URI http solo in dev (come per Drive)
+        os.environ.setdefault("OAUTHLIB_INSECURE_TRANSPORT", "1")
     flow = _flow_gmail(state=state)
     flow.fetch_token(authorization_response=authorization_response, code_verifier=code_verifier)
     creds = flow.credentials

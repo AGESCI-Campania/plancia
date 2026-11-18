@@ -1,8 +1,7 @@
 <script setup lang="ts">
 /**
  * Home: l'edizione attiva (aperta o in valutazione più recente) con il riepilogo per il
- * ruolo — come la home Django, che reindirizzava al dettaglio dell'edizione — oppure la
- * pagina informativa se non ce n'è una (`GET /edizioni/attiva`).
+ * ruolo, oppure la pagina informativa se non ce n'è una (`GET /edizioni/attiva`).
  */
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'

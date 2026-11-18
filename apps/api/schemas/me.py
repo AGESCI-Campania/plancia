@@ -42,7 +42,7 @@ class UtenteBreveSchema(Schema):
 
 
 class MenuSchema(Schema):
-    """Voci di menu della SPA: stesse condizioni della sidebar di `templates/base.html`."""
+    """Voci di menu della SPA (`accounts.services.flag_menu`)."""
 
     puo_vedere_diari: bool
     puo_gestire_edizioni: bool

@@ -1,4 +1,4 @@
-"""Flusso OAuth di Google Drive (PKCE), condiviso tra la vista web e l'API.
+"""Flusso OAuth di Google Drive (PKCE): avvio dall'API, callback dalla vista Django.
 
 L'avvio salva `state`, `code_verifier` e l'edizione in sessione e restituisce l'URL di
 autorizzazione; la callback (vista Django su `/drive/oauth/callback/`, percorso registrato
@@ -108,8 +108,10 @@ def completa_oauth_drive(request) -> EsitoOAuthDrive:
     if request.GET.get("error"):
         raise OAuthDriveErrore("Autorizzazione a Google Drive negata.")
 
-    # In dev il redirect URI è http: oauthlib richiede https salvo questa env var
-    os.environ.setdefault("OAUTHLIB_INSECURE_TRANSPORT", "1")
+    # In dev il redirect URI è http: oauthlib richiede https salvo questa env var.
+    # In produzione no: dietro Caddy la callback è https (SECURE_PROXY_SSL_HEADER).
+    if settings.DEBUG:
+        os.environ.setdefault("OAUTHLIB_INSECURE_TRANSPORT", "1")
 
     try:
         flow = Flow.from_client_config(

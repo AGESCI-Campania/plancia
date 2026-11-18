@@ -1,7 +1,7 @@
 # API Fase 2 — Sito pubblico
 
-Router `apps/api/routers/sito.py` (`auth=None`), dati da `apps/siteconfig/sito.py` (usato anche
-dal context processor `impostazioni`) e `apps/siteconfig/versione.py`. Raggiungibile prima del
+Router `apps/api/routers/sito.py` (`auth=None`), dati da `apps/siteconfig/sito.py` e
+`apps/siteconfig/versione.py`. Raggiungibile prima del
 login e **anche con la manutenzione attiva** (bypass in `MaintenanceModeMiddleware`).
 
 | Metodo | Percorso | Ruoli | Descrizione |
@@ -23,6 +23,7 @@ Risposta di `GET /sito`:
   client id, come la pagina di login). `id` va passato come `provider` a
   `POST /_allauth/browser/v1/auth/provider/redirect` (`google`, `microsoft`, `apple`, `sestante`).
 
-Con la manutenzione attiva gli altri endpoint `/api/v1/` rispondono ai non superuser
-`503 {"detail": "<messaggio>", "maintenance": true}` (prima mancava `maintenance`).
+Con la manutenzione attiva gli altri endpoint `/api/v1/` rispondono a chi non è Admin (ruolo
+attivo Admin o superuser) `503 {"detail": "<messaggio>", "maintenance": true}`; il login
+`/_allauth/` resta aperto.
 Comando `manage.py manutenzione`: vedi `aggiornamenti.md`.

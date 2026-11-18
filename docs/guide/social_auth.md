@@ -1,6 +1,6 @@
 # Guida: Configurazione Autenticazione Social — Plancia
 
-Stack: **django-allauth 65.18.0** · provider Google, Microsoft, Apple · modello utente custom `apps.accounts.User`
+Stack: **django-allauth 65.22.1** · provider Google, Microsoft, Apple · modello utente custom `apps.accounts.User`
 
 ---
 
@@ -11,7 +11,7 @@ Browser → allauth socialaccount → provider OAuth → callback → allauth
     → SocialAccount (DB) → User (accounts.User) → LoginEvent (audit)
 ```
 
-L'email ricavata dal provider deve corrispondere a un `User` già esistente (creato da Segreteria/Admin tramite `Invito`). Il social login **non crea nuovi utenti** da solo — vedi §5 per come bloccare la registrazione spontanea.
+L'email ricavata dal provider deve corrispondere a un `User` già esistente (creato da Segreteria/Admin tramite `Invito`). Google, Microsoft e Apple **non creano nuovi utenti** — vedi §7. Fa eccezione l'SSO Sestante, che crea l'utente al primo accesso ([guida SSO](sso_sestante.md)).
 
 ---
 
@@ -27,7 +27,7 @@ L'email ricavata dal provider deve corrispondere a un `User` già esistente (cre
 
 ## 3. Variabili d'ambiente
 
-Aggiungi in `.env.dev` (valori reali) e nel vault/secret di produzione.
+Aggiungi in `.env.dev` (valori reali) e nel `.env` del server di produzione (creato da `.env.template`).
 I placeholder sono già in `.env.dev.example`.
 
 ```bash
@@ -144,33 +144,41 @@ Prerequisito: account [Apple Developer Program](https://developer.apple.com/prog
 
 ## 5. Settings (`config/settings/base.py`)
 
-Il blocco è già configurato nel progetto. Per riferimento:
+Il blocco è già configurato nel progetto. Un provider senza client id **non viene configurato**
+(non compare nella pagina di accesso e l'app parte lo stesso). Per riferimento:
 
 ```python
-SOCIALACCOUNT_PROVIDERS = {
-    "google": {
+SOCIALACCOUNT_PROVIDERS: dict = {}
+if _GOOGLE_CLIENT_ID:
+    SOCIALACCOUNT_PROVIDERS["google"] = {
         "APP": {"client_id": _GOOGLE_CLIENT_ID, "secret": _GOOGLE_CLIENT_SECRET, "key": ""},
         "SCOPE": ["profile", "email"],
         "AUTH_PARAMS": {"access_type": "online"},
         "FETCH_USERINFO": True,
-    },
-    "microsoft": {
+    }
+if _MS_CLIENT_ID:
+    SOCIALACCOUNT_PROVIDERS["microsoft"] = {
         "APP": {"client_id": _MS_CLIENT_ID, "secret": _MS_CLIENT_SECRET},
         "TENANT": "common",   # sostituire con Tenant ID per limitare a un'org
         "SCOPE": ["User.Read"],
-    },
-    "apple": {
+    }
+if _APPLE_CLIENT_ID:
+    SOCIALACCOUNT_PROVIDERS["apple"] = {
         "APP": {
             "client_id": _APPLE_CLIENT_ID,
-            "secret": _APPLE_PRIVATE_KEY,
-            "key": _APPLE_KEY_ID,
-            "certificate_key": _APPLE_PRIVATE_KEY,
+            "secret": _APPLE_KEY_ID,       # KEY_ID — `kid` nell'header JWT
+            "key": _APPLE_TEAM_ID,         # TEAM_ID — `iss` nel JWT
+            "settings": {"certificate_key": _APPLE_PRIVATE_KEY},  # chiave privata PEM
         },
-        "TEAM_ID": _APPLE_TEAM_ID,
-    },
-}
+    }
+# più il provider openid_connect di Sestante (docs/guide/sso_sestante.md)
+```
 
-SOCIALACCOUNT_AUTO_SIGNUP = False                   # no nuovi utenti via social
+> **Apple: non invertire `key` e `secret`.** `key` = TEAM_ID, `secret` = KEY_ID: con i campi
+> scambiati il callback risponde 401.
+
+```python
+SOCIALACCOUNT_AUTO_SIGNUP = False   # Sestante li crea comunque (adapter, §7)
 SOCIALACCOUNT_EMAIL_REQUIRED = True
 SOCIALACCOUNT_QUERY_EMAIL = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
@@ -204,30 +212,16 @@ s = Site.objects.get(pk=1); s.domain = 'plancia.agescicampania.net'; s.name = 'P
 
 Il file `apps/accounts/adapters.py` è già presente nel progetto con `PlanciaSocialAccountAdapter`:
 
-- `is_auto_signup_allowed` → sempre `False`: nessun `User` nuovo creato via social.
+- `is_auto_signup_allowed` → `False` per Google, Microsoft e Apple (nessun `User` nuovo creato via social); `True` solo per Sestante.
 - `pre_social_login` → se l'email del provider combacia con un `User` esistente, lo collega automaticamente senza passare per il signup.
 
 ---
 
-## 8. Template
+## 8. Pulsanti nella pagina di accesso
 
-I pulsanti social in `templates/account/login.html` sono già presenti:
-
-```html
-{% get_providers as socialaccount_providers %}
-{% if socialaccount_providers %}
-<hr class="my-3">
-<div class="d-grid gap-2">
-  {% for provider in socialaccount_providers %}
-  <a href="{% provider_login_url provider.id %}" class="btn btn-outline-secondary">
-    {% blocktrans with name=provider.name %}Accedi con {{ name }}{% endblocktrans %}
-  </a>
-  {% endfor %}
-</div>
-{% endif %}
-```
-
-Il blocco appare automaticamente solo se almeno un provider ha `client_id` valorizzato nell'env.
+Con `HEADLESS_ONLY` non ci sono template di login Django: i pulsanti li disegna la SPA
+(pagina `/accesso`), che legge i provider configurati da `GET /api/v1/sito` → `login.provider`.
+Compaiono solo i provider con `client_id` valorizzato nell'env.
 
 ---
 

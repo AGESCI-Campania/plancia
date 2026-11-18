@@ -2,8 +2,8 @@
 """Endpoint API per transizioni FSM e azioni di valutazione (montato su `/diari`).
 
 Permessi fine-grained e stato: sempre `apps.evaluations.actions` (le eccezioni diventano
-403/422 tramite i gestori globali). Qui, come `ruoli_ammessi` delle viste web, il controllo
-grossolano sul ruolo attivo e la visibilità del diario (`diari_visibili`).
+403/422 tramite i gestori globali). Qui il controllo grossolano sul ruolo attivo e la
+visibilità del diario (`diari_visibili`).
 """
 from ninja import Router, Status
 from ninja.errors import HttpError
@@ -25,7 +25,7 @@ router = Router(tags=["valutazione"])
 
 _AZIONI_FSM = ("csq-invia", "invia", "riapri")
 
-#: Stessi `ruoli_ammessi` delle viste web di `apps/evaluations/views.py`.
+#: Controllo grossolano dei ruoli; quello fine sta in `apps/evaluations/actions.py`.
 _RUOLI_VALUTAZIONE_DIRETTA = (Ruolo.INCARICATO_EG, Ruolo.ADMIN, Ruolo.SEGRETERIA)
 _RUOLI_CONFERMA = (Ruolo.INCARICATO_EG, Ruolo.ADMIN)
 

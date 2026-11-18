@@ -74,7 +74,7 @@ async function pubblicaTutti(): Promise<void> {
   const ed = stat.dati.value?.edizione
   if (!ed) return
   const ok = await conferma(
-    `Pubblicare tutti gli esiti confermati dell'edizione ${ed.anno}? I Capi Squadriglia e i Capi Reparto li vedranno subito.`,
+    `Pubblicare tutti gli esiti confermati dell'edizione ${ed.anno}? I Capi Reparto li vedranno subito.`,
     { titolo: 'Pubblica esiti', testoConferma: 'Pubblica tutti', pericolosa: true },
   )
   if (!ok) return

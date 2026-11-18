@@ -328,7 +328,7 @@ def _invia_riepilogo_csq_a_crp(crp, diario_ref, squadriglie: list, backend_tipo:
 
 
 # ---------------------------------------------------------------------------
-# Gestione inviti — logica condivisa da viste web e API
+# Gestione inviti — logica usata dall'API
 # ---------------------------------------------------------------------------
 
 BACKEND_INVIO = ("standard", "massivo")

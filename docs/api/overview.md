@@ -12,7 +12,7 @@ L'API supporta due modalità di autenticazione, equivalenti per funzionalità:
 
 ### 1. Sessione web (cookie)
 
-Esegui login tramite l'interfaccia web o tramite `/_allauth/browser/v1/auth/login` (allauth headless).
+Esegui login dalla SPA (pagina `/accesso`) o direttamente con `/_allauth/browser/v1/auth/login` (allauth headless).
 Il cookie di sessione Django viene inviato automaticamente dal browser.
 
 ```
@@ -75,18 +75,18 @@ La valutazione **non è visibile** al Capo Squadriglia finché non pubblicata.
 
 ## Paginazione
 
-Gli endpoint di lista restituiscono:
+Gli endpoint di lista paginati (es. `GET /diari`, i log delle Impostazioni, lo storico degli
+aggiornamenti) usano `LimitOffsetPagination` di django-ninja e restituiscono:
 
 ```json
 {
-  "count": 42,
-  "next": "/api/v1/diari?page=2",
-  "previous": null,
-  "items": [...]
+  "items": [...],
+  "count": 42
 }
 ```
 
-Parametro `page` (default 1), dimensione pagina configurabile via `?page_size=N` (max 100).
+Parametri `limit` (default 100) e `offset` (default 0), es. `GET /api/v1/diari?limit=50&offset=50`.
+Le altre liste restituiscono un array semplice.
 
 ---
 
@@ -95,7 +95,7 @@ Parametro `page` (default 1), dimensione pagina configurabile via `?page_size=N`
 Le chiamate a `/api/v1/` sono soggette a rate limiting basato su Redis (fixed window).  
 Il client è identificato dalla sessione (`X-Session-Token` o cookie, solo se la sessione esiste) e altrimenti dall'IP reale dietro Caddy + nginx (penultimo `X-Forwarded-For`, come per axes): più utenti dietro lo stesso NAT non si bloccano a vicenda.
 
-I limiti sono configurabili in **Impostazioni → API** da Admin/Segreteria:
+I limiti si configurano nell'admin Django (**Impostazioni** → sezione *API — rate limiting*; nella SPA non c'è una scheda dedicata):
 
 | Parametro | Default |
 |---|---|
@@ -112,7 +112,7 @@ Content-Type: application/json
 {"detail": "Troppe richieste. Riprova tra 23 secondi.", "retry_after": 23}
 ```
 
-Il rate limiting può essere disabilitato globalmente da Impostazioni (`api_ratelimit_abilitato = false`).
+Il rate limiting si disabilita globalmente dalla stessa sezione (`api_ratelimit_abilitato = false`).
 
 ---
 
@@ -126,7 +126,8 @@ X-Session-Token: <token>
 X-App-Version: 1.2.0
 ```
 
-Il server risponde con comportamenti diversi in base alla versione configurata in Impostazioni:
+Il server risponde con comportamenti diversi in base alle versioni configurate nell'admin Django
+(**Impostazioni** → sezione *App version control*):
 
 | Condizione | Risposta |
 |---|---|
@@ -135,7 +136,7 @@ Il server risponde con comportamenti diversi in base alla versione configurata i
 | Versione < `app_versione_minima` | `426 Upgrade Required` (blocco hard) |
 | Header assente | Nessuna azione (client browser) |
 
-Risposta `426`:
+Risposta `426` (`detail` è `app_messaggio_aggiornamento` se impostato, altrimenti il testo predefinito):
 ```json
 {
   "detail": "Versione app non supportata. Aggiorna l'app per continuare.",
@@ -145,7 +146,20 @@ Risposta `426`:
 ```
 
 Per controllare la compatibilità al lancio dell'app senza autenticazione, usa `GET /api/v1/app-status`
-(vedi [`endpoints.md`](endpoints.md)).
+(con `X-App-Version`):
+
+```json
+{
+  "upgrade_required": false,
+  "upgrade_available": true,
+  "versione_minima": "2.0.0",
+  "deprecata_sotto": "2.3.0",
+  "messaggio": "È disponibile una nuova versione.",
+  "funzioni_limitate": ["foto"]
+}
+```
+
+`funzioni_limitate` è valorizzato solo se `upgrade_available` è vero.
 
 ---
 
@@ -153,15 +167,34 @@ Per controllare la compatibilità al lancio dell'app senza autenticazione, usa `
 
 | HTTP | Significato | Struttura risposta |
 |---|---|---|
-| `400` | Dati non validi | `{"error": "validation", "errors": {campo: [msg]}}` |
+| `400` | Dati non validi nei `PUT` dei moduli e della relazione finale | `{"error": "validation", "errors": {campo: [msg]}}` |
 | `401` | Non autenticato | `{"detail": "..."}` |
 | `403` | Permesso negato | `{"detail": "..."}` |
+| `403` | MFA da configurare (vedi sotto) | `{"detail": "...", "mfa_da_configurare": true}` |
 | `404` | Risorsa non trovata | `{"detail": "..."}` |
 | `409` | Conflitto versione (optimistic lock) | `{"error": "conflict", "server_version": N}` |
+| `422` | Dati non validi (validazione dei servizi) | `{"detail": "Dati non validi.", "errori": {campo: [msg]}}` |
 | `422` | Stato non valido per l'azione | `{"detail": "..."}` |
 | `426` | Versione app non supportata | `{"detail": "...", "upgrade_required": true, "versione_minima": "..."}` |
 | `429` | Rate limit superato | `{"detail": "...", "retry_after": N}` |
-| `503` | Manutenzione | `{"detail": "Servizio in manutenzione", "maintenance": true}` |
+| `503` | Manutenzione | `{"detail": "<messaggio di manutenzione>", "maintenance": true}` |
+
+Nei router basta sollevare le eccezioni: `PermessoNegato`/`PermissionDenied` → 403,
+`StatoNonValido`/`AzioneNonConsentita` → 422, `ObjectDoesNotExist` → 404, `ValidationError` → 422
+con `errori` per campo (`apps/api/errors.py`).
+
+### MFA obbligatoria
+
+Chi ha un ruolo che richiede la verifica in due passaggi e non l'ha ancora configurata riceve
+`403` con `"mfa_da_configurare": true` su tutto `/api/v1/`, tranne `/api/v1/me…` (serve alla SPA
+per mostrare la configurazione in Profilo → Sicurezza). Regola unica: `adapters.mfa_da_configurare`.
+
+### Manutenzione
+
+Con la manutenzione attiva, `/api/v1/` risponde `503` a tutti tranne gli Admin (ruolo attivo
+Admin o superuser). Restano raggiungibili `GET /api/v1/sito` (dice alla SPA che c'è manutenzione
+e con quale messaggio), `/api/v1/aggiornamenti` e il login headless `/_allauth/`: chi non è Admin
+può entrare ma riceve comunque `503`.
 
 ### Optimistic locking (moduli write)
 
@@ -172,7 +205,8 @@ I moduli 1–5 hanno un campo `version`. Per aggiornare un modulo:
 3. Se nel frattempo qualcun altro ha salvato → `409 Conflict` con `server_version`
 4. Ricarica, mostra conflitto all'utente, riprova
 
-La relazione finale **non ha** optimistic locking (campo `version` assente).
+Anche la relazione finale (`PUT /api/v1/diari/{id}/relazione-finale`) ha `version`: è facoltativa,
+ma se la invii il server risponde `409` in caso di conflitto.
 
 ---
 
@@ -185,6 +219,8 @@ La versione corrente è `1.0.0` (campo `info.version` nello schema OpenAPI).
 
 ## CORS
 
-In produzione, le origini autorizzate si configurano con la variabile d'ambiente `CORS_ALLOWED_ORIGINS`
-(lista separata da virgola). `CORS_ALLOW_CREDENTIALS = True` è necessario per i cookie di sessione.
-L'header `X-Session-Token` è nella whitelist CORS.
+Il CORS serve solo all'app mobile (la SPA è same-origin) e vale solo per `/api/v1/` e
+`/_allauth/app/` (`CORS_URLS_REGEX`). Le origini autorizzate si configurano con la variabile
+d'ambiente `CORS_ALLOWED_ORIGINS` (lista separata da virgola; vuota = nessuna).
+`CORS_ALLOW_CREDENTIALS = False`: l'app usa `X-Session-Token`, mai i cookie. L'header
+`X-Session-Token` è nella whitelist CORS.

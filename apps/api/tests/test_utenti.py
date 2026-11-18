@@ -44,7 +44,7 @@ def test_me_campi_storici_e_nuovi(client_di, utenti):
 
 @pytest.mark.parametrize(("ruolo", "utenti_", "impostazioni", "statistiche"), [
     ("admin", True, True, True),
-    ("segreteria", True, False, False),
+    ("segreteria", True, False, True),
     ("incaricato_eg", True, False, True),
     ("pgv", False, False, False),
     ("crp", False, False, False),

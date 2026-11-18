@@ -1,6 +1,6 @@
 """Calcolo delle statistiche di chiusura per zona: esiti, tempi, ticket. Vedi docs sez. 13.
 
-Usato dalla dashboard web (`apps/stats/views.py`) e dal router API `/statistiche`.
+Usato dal router API `/statistiche`.
 """
 from __future__ import annotations
 

@@ -1,6 +1,6 @@
 """Importazioni: lancio per tracciato, storico log, anomalie, scarti, riconciliazione.
 
-Riservato a Admin, Segreteria e Incaricati EG (come le viste web `apps/imports/views.py`).
+Riservato a Admin, Segreteria e Incaricati EG.
 Logica in `apps.imports.services`.
 """
 from __future__ import annotations

@@ -15,6 +15,7 @@ un diario non visibile dà 403, inesistente 404.
 | Metodo | Percorso | Ruoli | Descrizione |
 |---|---|---|---|
 | GET | `/diari` | tutti (diari visibili) | Lista paginata (`limit`, `offset`). Filtri: `edizione_id`, `zona_id`, `gruppo_id`, `reparto_id`, `stato` (più valori separati da virgola), `tipo`, `specialita`, `q` (nome/cognome di Capo Squadriglia e Capo Reparto, nome squadriglia; ogni parola deve comparire), `ordina` (`squadriglia`, `reparto`, `gruppo`, `zona`, `tipo`, `stato`, `csq`, `crp`, `edizione`, `aggiornato`; `-` = decrescente; più campi separati da virgola; 422 se non valido). Righe con `csq`, `crp`, `specialita`, `puo_pdf` oltre ai campi storici |
+| GET | `/diari/moduli/opzioni` | tutti | Scelte per i campi dei moduli: `tipi_diario`, `specialita_squadriglia`, `specialita_individuali`, `brevetti`, `ruoli_squadriglia`, `sentieri`, `stati_specialita`, `moduli_foto` (`{valore, etichetta}` o stringhe) e limiti delle foto `allegati_max_px` (`Impostazioni.allegati_max_px`), `allegati_max_mb`, `allegati_tipi` (MIME ammessi) |
 | GET | `/diari/filtri` | tutti | Valori per i filtri (edizioni, zone, gruppi, reparti, specialità presenti tra i diari visibili; stati, tipi, ordinamenti). `edizione_id` facoltativo |
 | GET | `/diari/{id}` | visibile | Dettaglio: moduli 1–5, relazione (mai al Capo Squadriglia), valutazione (solo se visibile), `csq`/`crp`, `scadenze`, `stato_moduli` (presenza, obbligatorietà per tipo, `versioni`), `allegati`, `permessi` |
 | GET | `/diari/{id}/stato` | visibile | Stato leggero per la compilazione offline (equivale a `GET /api/diari/<pk>/` della PWA) + `versioni` |
@@ -50,9 +51,8 @@ invece di un 409 o di una foto doppia. Senza header il comportamento è quello d
 
 ## Versioni dei moduli
 
-`version` cresce a ogni salvataggio da API, PWA **e form web** (prima il form web non la
-incrementava e un salvataggio dal browser non generava conflitto). La relazione finale ha ora
-`version` (migrazione `diaries.0011`).
+`version` cresce a ogni salvataggio, dalla SPA come dall'app mobile: due salvataggi concorrenti
+dello stesso modulo producono sempre un 409. Anche la relazione finale (modulo 6) ha `version`.
 
 ## Mappa PWA 2.x → v1 (gli endpoint `/api/diari/` sono stati rimossi in 3.0)
 

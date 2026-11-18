@@ -1,6 +1,6 @@
 """Regole di permesso sul singolo Diario (moduli, allegati, PDF, referenti).
 
-Unica fonte di verità usata dalle viste web, dall'API `/api/v1/diari` e dagli endpoint PWA.
+Unica fonte di verità usata dall'API `/api/v1/diari`.
 La *visibilità* (chi vede quale diario) sta in `apps.diaries.visibility.diari_visibili`; le
 transizioni FSM e la valutazione in `apps.evaluations.actions`: qui solo cosa può fare un
 utente su un diario che già vede.

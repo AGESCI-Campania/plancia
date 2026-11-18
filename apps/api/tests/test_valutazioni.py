@@ -69,11 +69,11 @@ def test_azioni_con_valutazione(client_di, inviato, utenti):
     assert azioni["puo_pubblicare"] is True
 
 
-def test_pgv_puo_proporre_solo_in_valutazione(client_di, inviato, utenti):
+def test_assegnazione_avvia_valutazione(client_di, inviato, utenti):
+    # Un diario solo inviato passa in valutazione all'assegnazione: la Pattuglia GV può proporre
     assegna_pgv(inviato, utenti["pgv"], utenti["incaricato_eg"])
-    assert client_di("pgv").get(_url(inviato)).json()["azioni"]["puo_proporre"] is False
-    inviato.stato = StatoDiario.IN_VALUTAZIONE
-    inviato.save()
+    inviato.refresh_from_db()
+    assert inviato.stato == StatoDiario.IN_VALUTAZIONE
     assert client_di("pgv").get(_url(inviato)).json()["azioni"]["puo_proporre"] is True
 
 
@@ -149,7 +149,6 @@ def test_assegna_pgv(client_di, inviato, utenti):
 
 def test_proposta_conferma(client_di, inviato, utenti):
     assegna_pgv(inviato, utenti["pgv"], utenti["incaricato_eg"])
-    inviato.avvia_valutazione()
     r = client_di("pgv").post(_url(inviato, "/proposta"),
                               **json_body({"esito": "maggiori_info"}))
     assert r.status_code == 422  # la Pattuglia GV non propone "maggiori informazioni"
@@ -170,7 +169,6 @@ def test_proposta_conferma(client_di, inviato, utenti):
 
 def test_rigetta_proposta(client_di, inviato, utenti):
     assegna_pgv(inviato, utenti["pgv"], utenti["incaricato_eg"])
-    inviato.avvia_valutazione()
     proponi_pgv(inviato, "non_approvata", "", utenti["pgv"])
     assert client_di("pgv").post(_url(inviato, "/rigetta")).status_code == 403
     r = client_di("admin").post(_url(inviato, "/rigetta"))

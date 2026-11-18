@@ -109,7 +109,7 @@ export function campiValorizzati(dati: Record<string, unknown>): [string, string
     .map(([k, v]) => [k, typeof v === 'object' ? JSON.stringify(v) : String(v)])
 }
 
-/** Tipo di avviso dopo "Riprova anomalie" (come i messages della vista Django). */
+/** Tipo di avviso dopo "Riprova anomalie". */
 export function tipoAvvisoRiprova(risolte: number, aperte: number): 'success' | 'warning' | 'info' {
   if (risolte) return 'success'
   if (aperte) return 'warning'

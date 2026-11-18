@@ -1,7 +1,7 @@
 # API REST Plancia — Indice degli endpoint
 
 Tutti gli endpoint sono sotto `/api/v1/`; autenticazione richiesta tranne dove indicato
-(`/app-status`, `/sito`, attivazione degli inviti). Per autenticazione, ruoli, rate limiting e
+(`/app-status`, `/sito`, `GET /impostazioni/pagine/{slug}`, lettura e attivazione degli inviti). Per autenticazione, ruoli, rate limiting e
 gestione degli errori vedi [`overview.md`](overview.md).
 
 Il riferimento completo e sempre aggiornato è lo schema **OpenAPI** generato da django-ninja:

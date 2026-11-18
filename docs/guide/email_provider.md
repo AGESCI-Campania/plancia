@@ -48,7 +48,7 @@ Seleziona **SMTP** come backend e compila i campi:
 **Nome del server (EHLO)**: Plancia si presenta al server SMTP con il nome del container, che
 alcuni relay (es. `smtp-relay.gmail.com`) rifiutano se non è un nome di dominio completo che
 corrisponde al PTR dell'IP. Dove il PTR non si può impostare (server Aruba) si indica il nome nel
-`.env` del server e si riavvia lo stack:
+`.env` del server e si ricreano i container con `docker compose up -d` (il restart non basta):
 
 ```bash
 EMAIL_EHLO=plancia.agescicampania.net
@@ -199,7 +199,8 @@ Con i provider transazionali Plancia registra lo stato di consegna di ogni email
 
 Amazon SES usa credenziali IAM (non API key). **Non compilare il campo API key**.
 
-1. Configura le credenziali AWS sul server di produzione tramite variabili d'ambiente IAM:
+1. Aggiungi le credenziali IAM al `.env` del server (boto3 le legge dall'ambiente; non sono in
+   `.env.template`) e ricrea i container con `docker compose up -d`:
    ```bash
    AWS_ACCESS_KEY_ID=...
    AWS_SECRET_ACCESS_KEY=...
@@ -240,19 +241,23 @@ il routing per tipo:
 | Simulato | Non invia: scrive i messaggi in `logs/email/` (file `.eml`) |
 | Invio reale | Usa i backend configurati con il routing per tipo |
 | Simulato + invio reale | Scrive su file E invia via backend configurato |
-| Mailpit (debug) | Intercetta tutto su Mailpit locale (`/mailadmin/`, solo staff) |
+| Mailpit (debug) | Intercetta tutto su Mailpit locale (`/mailadmin/`, solo Admin) |
 
 ---
 
 ## Mailpit in produzione (debug)
 
-Mailpit è incluso nel `docker-compose.prod.yml` come servizio interno (nessuna porta esposta).
+Mailpit è un servizio facoltativo di `docker-compose.yml` (profilo `mailpit`, nessuna porta
+esposta): parte solo se il profilo è attivo.
 
 Per abilitarlo:
 
-1. In **Impostazioni → Posta elettronica**: seleziona modalità **Mailpit (debug)**.
-2. Accedi alla web UI di Mailpit su `https://tuo-dominio.org/mailadmin/` (richiede login admin).
-3. Quando hai finito il debug, torna alla modalità **Invio reale**.
+1. Nel `.env` del server aggiungi il profilo a `COMPOSE_PROFILES` (es. `COMPOSE_PROFILES=mailpit`
+   oppure `mailpit,flower`) e ricrea i container con `docker compose up -d`.
+2. In **Impostazioni → Posta elettronica**: seleziona modalità **Mailpit (debug)**.
+3. Apri **Mailpit** dal menu *Sistema* (`https://tuo-dominio.org/mailadmin/`).
+4. Quando hai finito il debug, torna alla modalità **Invio reale** e togli il profilo.
 
-> La web UI `/mailadmin/` è protetta dalla sessione Django: deve essere loggato un utente con
-> ruolo Admin, Segreteria o Incaricato EG. Non è accessibile pubblicamente.
+> La web UI `/mailadmin/` è protetta dalla sessione Django e riservata a chi ha il ruolo attivo
+> Admin (o è superuser). Non è accessibile pubblicamente. La voce di menu compare solo con il
+> profilo attivo.

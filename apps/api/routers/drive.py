@@ -1,6 +1,6 @@
 """Google Drive: avvio OAuth, stato del collegamento, picker cartelle, cartelle dell'edizione.
 
-Tutto riservato allo staff (Admin, Segreteria, Incaricati EG) come le viste web. La callback
+Tutto riservato allo staff (Admin, Segreteria, Incaricati EG). La callback
 OAuth resta la vista Django `/drive/oauth/callback/` (registrata presso Google) e reindirizza
 alla SPA. Le chiamate a Google stanno in `apps.storage_drive.service` / `.oauth`.
 """

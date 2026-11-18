@@ -1,7 +1,7 @@
 """Servizi delle importazioni: lancio per tracciato, scarti, riconciliazione.
 
-Usati sia dalle viste web (`apps/imports/views.py`, `siteconfig.views.LanciaImportView`)
-sia dal router API `apps/api/routers/importazioni.py`. Vedi docs sez. 14.
+Usati dal router API `apps/api/routers/importazioni.py` e dai comandi `import_*`.
+Vedi docs sez. 14.
 """
 from __future__ import annotations
 

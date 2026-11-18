@@ -41,7 +41,8 @@ apps/           # accounts org editions diaries evaluations notifications
 frontend/       # SPA Vue (vedi "Frontend")
 templates/      # solo email (mail/, account/email/), PDF (exports/), pagine predefinite
                 # (siteconfig/default_pages/), pagine d'errore e manutenzione statiche
-scripts/        # installa.sh, aggiorna.sh, backup.sh, _comune.sh (copia dal frontend), _plancia.sh
+scripts/        # installa.sh, aggiorna.sh, backup.sh, esegui-aggiornamento.sh, _comune.sh
+                # (copia dal frontend), _plancia.sh
 deploy/         # entrypoint.sh, nginx/default.conf.template (nginx interno, solo HTTP)
 fixtures/       # CSV sintetici (NIENTE dati reali)
 docs/           # specifica di progetto; docs/api/ (REST API)
@@ -222,6 +223,8 @@ PLANCIA_DEMO_PASSWORD=… npm run manuale:schermate [-- gruppo…]   # screensho
   `diario.avvia_valutazione()` automaticamente — non serve più che l'edizione transiti prima.
   Se c'è una proposta PGV `IN_REVISIONE`, l'Incaricato può comunque sovrascriverla con
   `valuta_direttamente()`. Test in `apps/evaluations/tests/test_flussi.py`.
+- **Assegnazione Pattuglia GV**: `actions.assegna_pgv` porta un diario `INVIATO` in
+  `IN_VALUTAZIONE` (la proposta `proponi_pgv` è ammessa solo da `IN_VALUTAZIONE`/`IN_REVISIONE`).
 
 ### Azioni FSM e valutazione — `apps/evaluations/actions.py`
 
@@ -258,9 +261,10 @@ Non duplicare questa logica altrove.
 - **Admin Django**: `admin.site.login` reindirizza a `/accesso?next=/admin/…` della SPA
   (password + MFA via allauth); il form password dell'admin non si usa.
 - `MaintenanceModeMiddleware` (`apps/siteconfig/middleware.py`): JSON
-  `{"detail": "...", "maintenance": true}` (503) su `/api/v1/` e `/_allauth/`, pagina statica
-  `templates/siteconfig/manutenzione.html` sugli altri percorsi Django. Restano raggiungibili
-  admin (e i superuser), `/accounts/`, `/healthz/`, `/api/v1/sito`, `/api/v1/aggiornamenti`.
+  `{"detail": "...", "maintenance": true}` (503) su `/api/v1/`, pagina statica
+  `templates/siteconfig/manutenzione.html` sugli altri percorsi Django. Passano gli Admin
+  (ruolo attivo Admin o superuser) e restano raggiungibili `/_allauth/` (login dalla SPA),
+  `/admin/`, `/accounts/`, `/healthz/`, `/api/v1/sito`, `/api/v1/aggiornamenti`.
   La SPA legge la manutenzione da `/api/v1/sito`. Non aggiungere redirect HTML su `/api/v1/`.
 
 **Middleware API** (in `apps/siteconfig/middleware.py`, attivi solo su `/api/v1/`):
@@ -450,7 +454,7 @@ Mai `sudo`/root dentro `/opt/plancia` (git: "dubious ownership"). Verifica:
 ## PDF diari
 
 PDF = moduli 1–5 (CSQ) + Relazione finale CRP (modulo 6). Mai l'esito della valutazione.
-Accessibile solo a CRP, Incaricati EG e Admin — non al Capo Squadriglia.
+Accessibile a chi vede il diario tranne il Capo Squadriglia (`permessi.puo_scaricare_pdf`).
 
 - **`genera_pdf_diario(diario, include_relazione=True)`** in `apps/exports/service.py`
 - **Lock anti-duplicati**: chiave Redis `pdf_task_lock:{diario_pk}` (TTL 30 min); impostata
@@ -473,7 +477,7 @@ Accessibile solo a CRP, Incaricati EG e Admin — non al Capo Squadriglia.
 - **Export riassuntivo diari**: `GET /api/v1/edizioni/{id}/export-diari?formato=xlsx|ods|csv`.
   Foglio unico con tutti i moduli (visibilità filtrata per ruolo), `genera_export_diari()` in
   `apps/exports/service.py`. Async ibrido: CSV sempre sync; xlsx/ods → sync se diari ≤
-  `EXPORT_DIARI_SOGLIA_ASYNC` (default 50), altrimenti task Celery + email. **Non confondere**
+  `settings.EXPORT_DIARI_SOGLIA_ASYNC` (50, non da env), altrimenti task Celery + email. **Non confondere**
   con l'export Esiti: quello è solo voti/esiti; questo contiene tutto il contenuto dei moduli.
 
 ## Allegati

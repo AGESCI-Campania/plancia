@@ -1,8 +1,8 @@
 # Export riassuntivo diari
 
-L'export riassuntivo genera un unico foglio con tutti i diari dell'edizione (o un sottoinsieme filtrato per ruolo), combinando anagrafica, moduli CSQ, relazione finale CRP e valutazione.
+L'export riassuntivo genera un unico foglio con tutti i diari dell'edizione, combinando anagrafica, moduli del Capo Squadriglia, relazione finale del Capo Reparto e valutazione.
 
-**URL:** `GET /edizioni/<pk>/export-diari/?formato=xlsx|ods|csv`
+**URL:** `GET /api/v1/edizioni/{id}/export-diari?formato=xlsx|ods|csv` (default `xlsx`)
 
 ---
 
@@ -18,11 +18,10 @@ L'export riassuntivo genera un unico foglio con tutti i diari dell'edizione (o u
 
 ## Ruoli e visibilità
 
-| Ruolo | Diari inclusi | Relazione finale | Valutazione |
-|---|---|---|---|
-| `incaricato_eg`, `admin`, `segreteria` | Tutti | Sì | Sì (se presente) |
-| `crp` | Solo il proprio reparto | Sì | Solo se pubblicata |
-| `csq` | Solo il proprio diario | No | Solo se pubblicata |
+L'endpoint è riservato allo **staff** (`richiedi_staff`: Admin, Segreteria, Incaricati EG; 403
+agli altri ruoli). Il foglio contiene tutti i diari dell'edizione, con relazione finale e
+valutazione (se presente). `genera_export_diari()` filtra comunque le colonne in base al ruolo
+di chi lo richiede.
 
 ---
 
@@ -54,22 +53,12 @@ L'export può essere sincrono o asincrono in base alla dimensione:
 | xlsx/ods, diari ≤ `EXPORT_DIARI_SOGLIA_ASYNC` | Sincrono — risposta immediata con file |
 | xlsx/ods, diari > `EXPORT_DIARI_SOGLIA_ASYNC` | Asincrono — risposta `202 Accepted`, file inviato via email |
 
-La soglia è configurabile con la variabile d'ambiente `EXPORT_DIARI_SOGLIA_ASYNC` (default 50).
+La soglia è l'impostazione Django `EXPORT_DIARI_SOGLIA_ASYNC` in `config/settings/base.py`
+(fissa a 50, non letta dall'ambiente).
 
-Quando l'export è asincrono, la view risponde con una pagina di conferma e invia l'export via email al richiedente al termine del task Celery.
-
----
-
-## Configurazione
-
-Variabili d'ambiente rilevanti:
-
-```env
-# Soglia diari oltre cui xlsx/ods diventano asincroni (default 50)
-EXPORT_DIARI_SOGLIA_ASYNC=50
-```
-
-Il formato CSV è sempre sincrono e non è configurabile.
+Quando l'export è asincrono l'API risponde `202` con
+`{"detail": "...", "formato": "xlsx", "diari": N}` e invia l'export via email al richiedente al
+termine del task Celery.
 
 ---
 
@@ -77,8 +66,8 @@ Il formato CSV è sempre sincrono e non è configurabile.
 
 | Export | URL | Contenuto | Formato |
 |---|---|---|---|
-| **Esiti** (M3, già esistente) | `/edizioni/<pk>/excel/visualizza/` | Solo esiti/voti per edizione | xlsx |
-| **Diari** (M6, nuovo) | `/edizioni/<pk>/export-diari/?formato=…` | Tutti i campi dei diari | xlsx, ods, csv |
+| **Esiti** | `GET /api/v1/edizioni/{id}/esiti-excel` | Solo esiti/voti per edizione | xlsx |
+| **Diari** | `GET /api/v1/edizioni/{id}/export-diari?formato=…` | Tutti i campi dei diari | xlsx, ods, csv |
 
 L'export Esiti è generato da `genera_excel_edizione()` in `apps/exports/service.py` ed è sempre sincrono.
 L'export Diari usa `genera_export_diari()` con la soglia async.

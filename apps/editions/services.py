@@ -1,4 +1,4 @@
-"""Servizi di dominio delle edizioni, usati sia dalle viste web sia dall'API.
+"""Servizi di dominio delle edizioni, usati dall'API.
 
 Le regole (permessi staff, transizioni di stato, dilazioni, export) stanno qui e non nelle
 viste. Gli errori usano le eccezioni di `apps.evaluations.actions` (`PermessoNegato`,
@@ -101,7 +101,7 @@ def riepilogo_edizione(edizione: Edizione, user: User) -> dict[str, Any]:
     return {
         "edizione": edizione,
         "puo_gestire": gestione,
-        # Stessi ruoli di `POST /edizioni/{id}/pubblica-esiti` (e della vista web)
+        # Stessi ruoli di `POST /edizioni/{id}/pubblica-esiti`
         "puo_pubblicare_esiti": bool(
             user.is_superuser or user.ruolo in (Ruolo.INCARICATO_EG, Ruolo.ADMIN)
         ),
