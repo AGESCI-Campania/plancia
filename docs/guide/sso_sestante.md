@@ -93,6 +93,15 @@ locale deve restare soggetto alla MFA di Plancia.
 **Logout**: chiude solo la sessione di Plancia (quella su Sestante resta). Un logout globale via
 `end-session` si implementa solo se l'utente lo chiede.
 
+**Utenti invitati da un'altra piattaforma** (contratto § 10, `docs/INVITI-PIATTAFORME.md` di
+Sestante): un account Sestante nato da un invito di un'altra piattaforma (per esempio Tana) vale
+solo per quella. La policy `sestante-accesso-piattaforme`, legata all'applicazione Plancia in
+`provider-plancia.yaml`, gli nega l'accesso su Sestante, prima del callback: Plancia non riceve
+nulla e non crea account. Se la persona ha anche un account locale in Plancia, il login con email
+o codice socio funziona; per farla entrare con SSO la segreteria di Sestante aggiunge `plancia` a
+`piattaforme_consentite` (o toglie l'attributo). Plancia non crea inviti su Sestante: ha i suoi
+inviti locali e i Capi Squadriglia non devono avere un account Sestante.
+
 Test: `apps/accounts/tests/test_sso_sestante.py`, `test_avatar.py`, `apps/api/tests/test_avatar.py`.
 
 ## Cosa NON fare
