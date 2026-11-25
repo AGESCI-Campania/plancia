@@ -4,13 +4,13 @@ Una sezione per release: `## X.Y.Z — AAAA-MM-GG`, dalla più recente. `scripts
 mostra le sezioni tra la versione installata e quella nuova; le note della GitHub Release si
 copiano da qui.
 
-## Non rilasciata
+## 3.0.8 — 2026-11-25
 
 - **Tema AGESCI 3.0.0a5 e Bootstrap 6.0.0-alpha.2**: griglia con spaziature regolari, niente più
   striscia vuota a destra su desktop, menu laterale su telefono corretto.
 - **Avviso nei browser troppo vecchi**: invece di una pagina bianca compare un messaggio che invita
   ad aggiornare. Il requisito resta iOS 18 o successivo.
-- Screenshot del manuale rigenerati.
+- Guida SSO Sestante: utenti invitati da un'altra piattaforma. Screenshot del manuale rigenerati.
 
 ## 3.0.7 — 2026-11-18
 
