@@ -35,7 +35,7 @@ async function accedi(page: Page, email: string, { riusa = true } = {}): Promise
 
 /** Conferma nella finestra di `conferma()`. */
 async function confermaDialogo(page: Page, pulsante: string): Promise<void> {
-  const dialogo = page.getByRole('dialog')
+  const dialogo = page.locator('dialog[open]') // su desktop anche la sidebar è un <dialog>
   await expect(dialogo).toBeVisible()
   await dialogo.getByRole('button', { name: pulsante, exact: true }).click()
 }

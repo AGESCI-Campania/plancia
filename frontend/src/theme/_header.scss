@@ -74,7 +74,7 @@
 // ── Drawer mobile (Bootstrap 6: <dialog class="drawer">) ───────────────────────
 #agOffcanvas {
   // BS6 lo rende un pannello "floating" (inset + angoli): qui a tutta altezza, come prima
-  --bs-drawer-inset: 0;
+  --bs-drawer-inset: 0px; // con unita': entra nei calc() di Bootstrap
   --bs-drawer-border-radius: 0;
   overflow: hidden;
 

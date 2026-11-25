@@ -3,7 +3,9 @@
 // =============================================================
 
 .ag-sidebar {
-  display: flex;
+  // display: solo da lg (sotto). Dalla alpha.2 un drawer chiuso e' display:none e
+  // aperto display:flex: dichiararlo qui (fuori dai @layer) lo terrebbe sempre
+  // renderizzato.
   flex-direction: column;
   flex-shrink: 0;
   overflow: hidden;
@@ -11,7 +13,7 @@
   // Bootstrap 6: la sidebar e' un <dialog class="lg:drawer drawer-start">.
   // Sotto lg e' un drawer; qui lo vogliamo a tutta altezza (senza inset e
   // angoli arrotondati) e largo 280px, come l'offcanvas della v2.
-  --bs-drawer-inset: 0;
+  --bs-drawer-inset: 0px; // con unita': entra nei calc() di Bootstrap
   --bs-drawer-border-radius: 0;
   --bs-drawer-width: 280px;
 
@@ -20,6 +22,7 @@
   // fuori dai @layer, quindi sempre prioritario) e nasconderebbe la sidebar
   // dietro il backdrop.
   @media (min-width: 1024px) {
+    display: flex;
     position: relative;
     z-index: 2;
     flex-grow: 0; // .lg:drawer ha flex-grow:1 (non !important)

@@ -55,6 +55,14 @@
 // ── Masonry ───────────────────────────────────────────────────────────────────
 .ag-masonry-grid {
   [data-masonry] { transition-duration: .3s; }
+
+  // Le righe di Bootstrap 6 usano gap, che Masonry (position:absolute) ignora:
+  // legge lo spazio tra le colonne dalla larghezza di questo elemento.
+  .ag-masonry-gutter {
+    position: absolute;
+    width: var(--bs-gutter-x);
+    visibility: hidden;
+  }
 }
 
 // ── Multiselect dropdown ─────────────────────────────────────────────────────

@@ -30,8 +30,12 @@
   position: relative;
 }
 
-// Chip input (widget InputChip): Bootstrap 6 colora di rosso il bordo di
-// .form-control.is-invalid, ma .chip-input non e' un .form-control.
-.chip-input.is-invalid {
-  --bs-control-border-color: var(--bs-danger-border);
+// Menu dell'InputChip (combobox modificabile): le voci gia' diventate chip non
+// vanno riproposte; restano come suggerimenti solo quelle rimosse. Senza voci
+// visibili il menu non deve apparire come riquadro vuoto.
+.ag-chip-menu {
+  > .menu-item.selected,
+  &:not(:has(> .menu-item:not(.selected))) {
+    display: none;
+  }
 }

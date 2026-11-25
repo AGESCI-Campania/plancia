@@ -276,7 +276,7 @@ async function crp(): Promise<void> {
   const pantere = await idDiario(page, 'Pantere')
   await page.goto(`/diari/${pantere}`)
   await page.getByRole('button', { name: 'Cambia Capo Squadriglia' }).click()
-  const dialogo = page.getByRole('dialog')
+  const dialogo = page.locator('dialog[open]') // su desktop anche la sidebar è un <dialog>
   await dialogo.waitFor()
   await dialogo.getByRole('combobox', { name: 'Nuovo Capo Squadriglia' }).fill('Fe')
   await page.waitForTimeout(900)

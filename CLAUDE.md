@@ -118,7 +118,7 @@ Documentazione API: `docs/api/overview.md` (auth, ruoli, rate limiting, errori) 
 
 ## Frontend (SPA, Plancia 3 — `frontend/`)
 Vue 3.5 + TypeScript 6 + Vite 8 + vue-router 5 + Pinia 4 + Dexie 4 + vite-plugin-pwa 2,
-**Bootstrap 6 alpha** (pin esatto) con i partial SCSS del tema AGESCI 3.0.0a3 copiati in
+**Bootstrap 6.0.0-alpha.2** (pin esatto) con i partial SCSS del tema AGESCI 3.0.0a5 copiati in
 `frontend/src/theme/` (non modificarli: ricopiarli; stili propri in `plancia.scss`).
 ```bash
 cd frontend && npm install
@@ -142,6 +142,9 @@ PLANCIA_DEMO_PASSWORD=… npm run manuale:schermate [-- gruppo…]   # screensho
 - **Permessi in UI**: solo i flag di `me.menu` e i `puo_*` calcolati dal backend.
 - **Versioni**: `__VERSIONE_APP__` da `pyproject.toml`; footer con App/Server
   (`/api/v1/sito.versione`); modale `AggiornamentoApp.vue` se diverse (SW in modalità prompt).
+- **Browser minimi**: iOS/Safari 18, Chrome 130, Firefox 132 (`build.target`), anche se Bootstrap
+  alpha.2 dichiara Safari 26: aggiornando Bootstrap riverificare su iOS 18. `public/avviso-browser.js`
+  (dal `browser-check.js` del tema, ES5, fuori dal bundle) avvisa i browser più vecchi.
 - **Dialog/drawer** Bootstrap 6 sul `<dialog>` nativo (`FinestraDialogo.vue`, sidebar);
   i menu usano la data API di Bootstrap (`import 'bootstrap'` in `main.ts`).
 - Componenti: icone `IconaBs` (sprite di bootstrap-icons), mai `<i class="bi">`.
